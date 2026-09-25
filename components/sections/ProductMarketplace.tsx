@@ -71,7 +71,7 @@ export function ProductMarketplace({ items }: { items: ProductCard[] }) {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search products" className="field rounded-full pl-10" />
         </label>
       </div>
-      {cats.length > 1 && (
+      {tab !== "all" && cats.length > 1 && (
         <div className="mb-8 flex flex-wrap gap-2">
           <button onClick={() => setCat(null)} className={cn("chip", !cat && "border-white/25 text-fg")}>
             All categories
