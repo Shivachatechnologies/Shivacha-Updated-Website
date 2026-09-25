@@ -10,11 +10,11 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default function OG() {
-  const colors = ["#8e6bff", "#4c82ff", "#1fc38e", "#2fd6ee", "#48b8fa"];
+  const colors = ["#6b7cff", "#0195ff", "#14c8b0", "#22d3ee", "#5cc8ff"];
   const labels = ["AI", "Digital", "FinTech", "Web3", "Cloud"];
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "#04060b", padding: 72, color: "#e9edf5", fontFamily: "sans-serif" }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "#03070f", padding: 72, color: "#e9edf5", fontFamily: "sans-serif" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
           <img src={svg(MARK_VIEWBOX, BRAND_BLUE, MARK_PATH)} width={84} height={84} alt="" />
           <img src={svg(WORDMARK_VIEWBOX, "#ffffff", WORDMARK_PATH)} width={245} height={50} alt="" />

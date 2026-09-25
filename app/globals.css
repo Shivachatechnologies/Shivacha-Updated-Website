@@ -4,12 +4,13 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
 
-  --color-ink-950: #04060b;
-  --color-ink-900: #070b14;
-  --color-ink-850: #0a101d;
-  --color-ink-800: #0e1526;
-  --color-ink-700: #172036;
-  --color-ink-600: #222d47;
+  /* Surfaces: deep navy tinted toward the logo blue */
+  --color-ink-950: #03070f;
+  --color-ink-900: #06101c;
+  --color-ink-850: #0a1626;
+  --color-ink-800: #0e1c30;
+  --color-ink-700: #16283f;
+  --color-ink-600: #203551;
 
   --color-fg: #e9edf5;
   --color-muted: #9aa5b8;
@@ -18,11 +19,19 @@
   --color-line: rgb(255 255 255 / 0.08);
   --color-line-strong: rgb(255 255 255 / 0.14);
 
-  --color-brand-blue: #4c82ff;
-  --color-brand-violet: #8e6bff;
-  --color-brand-cyan: #2fd6ee;
-  --color-brand-emerald: #1fc38e;
-  --color-brand-sky: #48b8fa;
+  /* Brand: taken from the Shivacha logo (#0195FF) */
+  --color-brand-300: #66bfff;
+  --color-brand-400: #33aaff;
+  --color-brand-500: #0195ff;
+  --color-brand-600: #0073cc;
+  --color-brand-700: #005fa8;
+  --color-brand-blue: #0195ff;
+
+  /* Division accents: an analogous palette around the brand blue */
+  --color-brand-indigo: #6b7cff;
+  --color-brand-cyan: #22d3ee;
+  --color-brand-teal: #14c8b0;
+  --color-brand-sky: #5cc8ff;
 
   --animate-dash: dash 3s linear infinite;
   --animate-pulse-soft: pulse-soft 3.2s ease-in-out infinite;
@@ -71,7 +80,7 @@ body {
 }
 
 ::selection {
-  background: rgb(76 130 255 / 0.35);
+  background: rgb(1 149 255 / 0.35);
   color: white;
 }
 
@@ -124,7 +133,7 @@ body {
     @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-all duration-200 select-none;
   }
   .btn-primary {
-    @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-all duration-200 select-none bg-fg text-ink-950 hover:bg-white hover:shadow-[0_0_0_4px_rgb(255_255_255/0.08)];
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-all duration-200 select-none bg-brand-600 text-white shadow-[0_8px_24px_-8px_rgb(1_149_255/0.55)] hover:bg-brand-700 hover:shadow-[0_0_0_4px_rgb(1_149_255/0.18)];
   }
   .btn-secondary {
     @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-all duration-200 select-none border border-line-strong bg-white/[0.03] text-fg hover:border-white/25 hover:bg-white/[0.06];
@@ -148,10 +157,10 @@ body {
     @apply h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent;
   }
   .text-gradient {
-    @apply bg-gradient-to-br from-white via-white to-white/55 bg-clip-text text-transparent;
+    @apply bg-gradient-to-br from-white via-white to-brand-300/70 bg-clip-text text-transparent;
   }
   .text-spectrum {
-    background-image: linear-gradient(90deg, #8e6bff, #4c82ff 30%, #2fd6ee 60%, #1fc38e);
+    background-image: linear-gradient(90deg, #33aaff, #0195ff 35%, #22d3ee 75%, #66bfff);
     @apply bg-clip-text text-transparent;
   }
   .prose-sh {

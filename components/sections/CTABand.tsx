@@ -18,7 +18,7 @@ export function CTABand({
           <div className="grid-bg pointer-events-none absolute inset-0 opacity-60" aria-hidden />
           <div
             className="pointer-events-none absolute -right-24 -bottom-40 size-[480px] rounded-full opacity-25 blur-[100px]"
-            style={{ background: "conic-gradient(from 180deg, #8e6bff, #4c82ff, #2fd6ee, #1fc38e, #8e6bff)" }}
+            style={{ background: "conic-gradient(from 180deg, #0195ff, #33aaff, #22d3ee, #0073cc, #0195ff)" }}
             aria-hidden
           />
           <div className="relative max-w-2xl">

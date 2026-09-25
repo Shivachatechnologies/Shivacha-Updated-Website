@@ -35,7 +35,7 @@ export function SolutionTemplate({ solution }: { solution: Solution }) {
         }
         title={solution.h1}
         lede={solution.summary}
-        accent={isHybrid ? "#1fc38e" : "#4c82ff"}
+        accent={isHybrid ? "#14c8b0" : "#0195ff"}
       >
         <LinkButton href={`/start-a-project?division=${primary.id}`} track={`cta:solution-${solution.slug}`}>
           {cta}

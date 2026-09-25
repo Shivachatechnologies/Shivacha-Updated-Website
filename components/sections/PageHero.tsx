@@ -9,7 +9,7 @@ export function PageHero({
   lede,
   children,
   aside,
-  accent = "#4c82ff",
+  accent = "#0195ff",
 }: {
   crumbs: Crumb[];
   eyebrow?: ReactNode;

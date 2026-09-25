@@ -139,7 +139,7 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
   if (status === "done")
     return (
       <div className={cn("card flex flex-col items-start gap-3 p-8", className)} role="status">
-        <CheckCircle2 className="size-6 text-brand-emerald" />
+        <CheckCircle2 className="size-6 text-brand-teal" />
         <p className="text-lg font-medium text-fg">Received.</p>
         <p className="text-sm text-muted">{v.success}</p>
       </div>

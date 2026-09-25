@@ -22,7 +22,7 @@ export function NewsletterForm() {
     } else setState("error");
   }
 
-  if (state === "done") return <p className="text-sm text-brand-emerald">Subscribed. Thank you.</p>;
+  if (state === "done") return <p className="text-sm text-brand-teal">Subscribed. Thank you.</p>;
 
   return (
     <form onSubmit={onSubmit} className="flex max-w-md gap-2" aria-label="Newsletter signup">

@@ -39,11 +39,11 @@ export function HybridFintechDiagram() {
     <figure aria-label="Hybrid fintech architecture: traditional finance and digital assets connected through the Shivacha integration layer">
       <style>{`@keyframes flow{from{transform:translateY(-8px)}to{transform:translateY(16px)}}`}</style>
       <div className="grid items-center gap-4 lg:grid-cols-[1fr_auto_1.15fr_auto_1fr]">
-        <Column title="Traditional Finance" sub="Web2 rails" items={traditional} color="#1fc38e" />
+        <Column title="Traditional Finance" sub="Web2 rails" items={traditional} color="#14c8b0" />
         <Connector />
         <Column title="Shivacha Integration Layer" sub="Hybrid core" items={integration} color="#e9edf5" center />
         <Connector />
-        <Column title="Digital Assets" sub="Web3 rails" items={digital} color="#2fd6ee" />
+        <Column title="Digital Assets" sub="Web3 rails" items={digital} color="#22d3ee" />
       </div>
       <figcaption className="mt-5 text-center text-xs text-dim">
         One API, one identity and risk profile, one ledger — across bank rails and programmable digital assets. Regulated services on each rail are provided by licensed partners.
@@ -56,7 +56,7 @@ function Connector() {
   return (
     <div className="flex items-center justify-center py-1 lg:py-0" aria-hidden>
       <div className="relative h-8 w-px overflow-hidden bg-white/15 lg:h-px lg:w-10">
-        <span className="absolute inset-0 animate-pulse-soft bg-gradient-to-r from-brand-emerald via-white to-brand-cyan" />
+        <span className="absolute inset-0 animate-pulse-soft bg-gradient-to-r from-brand-teal via-white to-brand-cyan" />
       </div>
     </div>
   );

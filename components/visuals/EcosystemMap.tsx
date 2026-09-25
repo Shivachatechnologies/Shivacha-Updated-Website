@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { BRAND_BLUE, MARK_PATH, MARK_VIEWBOX } from "@/lib/brand/mark";
 
 export interface EcosystemNode {
   id: string;
@@ -34,8 +35,8 @@ export function EcosystemMap({ nodes }: { nodes: EcosystemNode[] }) {
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="w-full" role="img" aria-label="Shivacha technology ecosystem: AI, Digital, FinTech, Web3 and Cloud connected to the Shivacha core">
         <defs>
           <radialGradient id="core-glow">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+            <stop offset="0%" stopColor={BRAND_BLUE} stopOpacity="0.4" />
+            <stop offset="100%" stopColor={BRAND_BLUE} stopOpacity="0" />
           </radialGradient>
           {placed.map((p) => (
             <radialGradient key={p.id} id={`g-${p.id}`}>
@@ -102,11 +103,11 @@ export function EcosystemMap({ nodes }: { nodes: EcosystemNode[] }) {
 
         {/* core */}
         <circle cx={C} cy={C} r={90} fill="url(#core-glow)" />
-        <circle cx={C} cy={C} r={54} fill="#070b14" stroke="white" strokeOpacity={0.25} />
-        <circle cx={C} cy={C} r={62} fill="none" stroke="white" strokeOpacity={0.08} className="animate-pulse-soft" />
-        <text x={C} y={C + 5} textAnchor="middle" className="fill-white text-[13px] font-semibold tracking-[0.24em]">
-          SHIVACHA
-        </text>
+        <circle cx={C} cy={C} r={54} fill="#06101c" stroke={BRAND_BLUE} strokeOpacity={0.45} />
+        <circle cx={C} cy={C} r={62} fill="none" stroke={BRAND_BLUE} strokeOpacity={0.18} className="animate-pulse-soft" />
+        <svg x={C - 26} y={C - 26} width={52} height={52} viewBox={MARK_VIEWBOX} role="img" aria-label="Shivacha">
+          <path fill={BRAND_BLUE} fillRule="evenodd" d={MARK_PATH} />
+        </svg>
 
         {/* division nodes */}
         {placed.map((p) => {
@@ -124,7 +125,7 @@ export function EcosystemMap({ nodes }: { nodes: EcosystemNode[] }) {
               className="cursor-pointer outline-none"
             >
               <circle cx={p.x} cy={p.y} r={56} fill={`url(#g-${p.id})`} opacity={on ? 1 : 0.55} className="transition-opacity" />
-              <circle cx={p.x} cy={p.y} r={34} fill="#070b14" stroke={p.color} strokeOpacity={on ? 1 : 0.55} strokeWidth={on ? 2 : 1.2} />
+              <circle cx={p.x} cy={p.y} r={34} fill="#06101c" stroke={p.color} strokeOpacity={on ? 1 : 0.55} strokeWidth={on ? 2 : 1.2} />
               <text x={p.x} y={p.y + 4.5} textAnchor="middle" className="fill-white text-[12.5px] font-semibold">
                 {p.short}
               </text>

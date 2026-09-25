@@ -72,7 +72,7 @@ export function CheckList({ items, className }: { items: string[]; className?: s
     <ul className={cn("grid gap-3 sm:grid-cols-2", className)}>
       {items.map((it) => (
         <li key={it} className="flex items-start gap-3 text-[15px] text-muted">
-          <Check className="mt-0.5 size-4 shrink-0 text-brand-emerald" aria-hidden />
+          <Check className="mt-0.5 size-4 shrink-0 text-brand-teal" aria-hidden />
           {it}
         </li>
       ))}
