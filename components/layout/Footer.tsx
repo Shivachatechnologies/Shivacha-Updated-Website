@@ -58,7 +58,7 @@ export function Footer() {
 
         <div className="flex flex-col gap-6 border-t border-line pt-8 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <Logo />
+            <Logo size="lg" />
             <span className="hidden text-xs text-dim md:inline">AI · Digital · FinTech · Web3 · Cloud</span>
           </div>
           <div className="flex items-center gap-5 text-xs text-dim">

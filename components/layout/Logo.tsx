@@ -1,31 +1,31 @@
+import Image from "next/image";
+import { BRAND_BLUE, MARK_PATH, MARK_VIEWBOX } from "@/lib/brand/mark";
 import { cn } from "@/lib/cn";
 
-/** Shivacha mark: a core node connected to five division nodes. */
+/** Official Shivacha mark (see public/brand). */
 export function LogoMark({ className }: { className?: string }) {
-  const pts = [0, 1, 2, 3, 4].map((i) => {
-    const a = (-90 + i * 72) * (Math.PI / 180);
-    return { x: 16 + Math.cos(a) * 11, y: 16 + Math.sin(a) * 11 };
-  });
-  const colors = ["#8e6bff", "#4c82ff", "#1fc38e", "#2fd6ee", "#48b8fa"];
   return (
-    <svg viewBox="0 0 32 32" className={cn("size-7", className)} aria-hidden="true">
-      {pts.map((p, i) => (
-        <line key={i} x1="16" y1="16" x2={p.x} y2={p.y} stroke="white" strokeOpacity="0.35" strokeWidth="1.2" />
-      ))}
-      <circle cx="16" cy="16" r="11" fill="none" stroke="white" strokeOpacity="0.12" />
-      {pts.map((p, i) => (
-        <circle key={`c${i}`} cx={p.x} cy={p.y} r="2.6" fill={colors[i]} />
-      ))}
-      <circle cx="16" cy="16" r="4" fill="white" />
+    <svg viewBox={MARK_VIEWBOX} className={cn("size-8", className)} aria-hidden="true">
+      <path fill={BRAND_BLUE} fillRule="evenodd" d={MARK_PATH} />
     </svg>
   );
 }
 
-export function Logo({ className }: { className?: string }) {
+/** Mark + "SHIVACHA / SIMPLIFYING TECH SOLUTIONS" wordmark, proportioned as in the official lockup. */
+export function Logo({ className, size = "md" }: { className?: string; size?: "md" | "lg" }) {
+  const lg = size === "lg";
   return (
-    <span className={cn("flex items-center gap-2.5", className)}>
-      <LogoMark />
-      <span className="text-[15px] font-semibold tracking-[0.22em] text-fg">SHIVACHA</span>
+    <span className={cn("flex items-center", lg ? "gap-3.5" : "gap-2.5", className)}>
+      <LogoMark className={lg ? "size-12" : "size-9"} />
+      <Image
+        src="/brand/shivacha-wordmark.svg"
+        alt="Shivacha — Simplifying Tech Solutions"
+        width={lg ? 147 : 108}
+        height={lg ? 30 : 22}
+        unoptimized
+        priority={!lg}
+        className={lg ? "h-[30px] w-auto" : "h-[22px] w-auto"}
+      />
     </span>
   );
 }

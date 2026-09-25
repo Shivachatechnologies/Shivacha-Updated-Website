@@ -1,4 +1,9 @@
 import { ImageResponse } from "next/og";
+import { BRAND_BLUE, MARK_PATH, MARK_VIEWBOX } from "@/lib/brand/mark";
+import { WORDMARK_PATH, WORDMARK_VIEWBOX } from "@/lib/brand/wordmark";
+
+const svg = (viewBox: string, fill: string, d: string) =>
+  `data:image/svg+xml;base64,${Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}"><path fill="${fill}" fill-rule="evenodd" d="${d}"/></svg>`).toString("base64")}`;
 
 export const alt = "Shivacha Technologies — Technology for companies building what comes next.";
 export const size = { width: 1200, height: 630 };
@@ -10,9 +15,9 @@ export default function OG() {
   return new ImageResponse(
     (
       <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "#04060b", padding: 72, color: "#e9edf5", fontFamily: "sans-serif" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 28, letterSpacing: 8, fontWeight: 600 }}>
-          <div style={{ width: 22, height: 22, borderRadius: 11, background: "white" }} />
-          SHIVACHA
+        <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
+          <img src={svg(MARK_VIEWBOX, BRAND_BLUE, MARK_PATH)} width={84} height={84} alt="" />
+          <img src={svg(WORDMARK_VIEWBOX, "#ffffff", WORDMARK_PATH)} width={245} height={50} alt="" />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div style={{ fontSize: 72, fontWeight: 600, lineHeight: 1.05, letterSpacing: -2, maxWidth: 980 }}>Technology for companies building what comes next.</div>

@@ -70,6 +70,10 @@ lib/                  SEO metadata, JSON-LD, internal-linking engine, search ind
 scripts/              Content, demo-link and route/SEO checks
 ```
 
+## Brand assets
+
+The official logo lives in [`public/brand`](public/brand): the original files (`shivacha-mark-original.jpg`, `shivacha-logo-original.png`) plus vector versions traced from them — `shivacha-mark.svg`, `shivacha-wordmark.svg` (white, for dark backgrounds), `shivacha-logo.svg` (full lockup, white text) and `shivacha-logo-dark.svg` (dark text, for light backgrounds). Brand blue is `#0195FF`. The header/footer logo (`components/layout/Logo.tsx`), favicon (`app/icon.svg`), Apple touch icon and Open Graph image all use these paths (`lib/brand/*`).
+
 ## Content model
 
 All content types are defined in [`data/types.ts`](data/types.ts). Highlights:

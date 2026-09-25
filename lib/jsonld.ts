@@ -10,7 +10,7 @@ export const organizationSchema = () => ({
   name: siteConfig.name,
   legalName: siteConfig.legalName,
   url: siteConfig.url,
-  logo: abs("/icon.svg"),
+  logo: abs("/brand/shivacha-mark-512.png"),
   description: siteConfig.description,
   foundingDate: siteConfig.founded,
   email: siteConfig.contact.email,
