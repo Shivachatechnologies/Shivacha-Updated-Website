@@ -25,10 +25,13 @@ export function Header({ nav }: { nav: NavItem[] }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => {
+  // Close menus on navigation (React's recommended "adjust state during render" pattern).
+  const [prevPath, setPrevPath] = useState(pathname);
+  if (pathname !== prevPath) {
+    setPrevPath(pathname);
     setOpen(null);
     setMobile(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     document.body.style.overflow = mobile ? "hidden" : "";
@@ -51,17 +54,19 @@ export function Header({ nav }: { nav: NavItem[] }) {
   const active = nav.find((n) => n.label === open);
 
   return (
-    <header
-      className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-colors duration-300",
-        scrolled || open || mobile ? "border-b border-line bg-ink-950/85 backdrop-blur-xl" : "border-b border-transparent",
-      )}
-      onMouseLeave={leave}
-    >
+    <header className="fixed inset-x-0 top-0 z-50" onMouseLeave={leave}>
+      {/* Background lives on a sibling layer: backdrop-filter on <header> itself would trap the fixed mobile drawer. */}
+      <div
+        aria-hidden
+        className={cn(
+          "absolute inset-x-0 top-0 h-16 border-b transition-colors duration-300",
+          scrolled || open || mobile ? "border-line bg-ink-950/85 backdrop-blur-xl" : "border-transparent",
+        )}
+      />
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:rounded-md focus:bg-fg focus:px-3 focus:py-2 focus:text-ink-950">
         Skip to content
       </a>
-      <div className="container-x flex h-16 items-center justify-between gap-6">
+      <div className="container-x relative flex h-16 items-center justify-between gap-6">
         <Link href="/" aria-label="Shivacha Technologies home" className="shrink-0">
           <Logo />
         </Link>
@@ -115,7 +120,7 @@ export function Header({ nav }: { nav: NavItem[] }) {
 
       {/* Desktop mega menu */}
       {active && (
-        <div className="absolute inset-x-0 top-16 hidden border-b border-line bg-ink-950/95 backdrop-blur-xl xl:block" onMouseEnter={() => enter(active.label)}>
+        <div className="absolute inset-x-0 top-16 hidden border-b border-line bg-ink-950 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.7)] xl:block" onMouseEnter={() => enter(active.label)}>
           <div className="container-x py-8">
             {active.tabs ? (
               <div className="grid grid-cols-[220px_1fr] gap-8">

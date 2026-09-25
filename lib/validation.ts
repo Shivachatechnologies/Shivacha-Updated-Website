@@ -44,7 +44,6 @@ const EMAIL = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[a-z]{2,}$/i;
 const URL_RE = /^(https?:\/\/)?[\w.-]+\.[a-z]{2,}(\/[^\s]*)?$/i;
 const PHONE = /^[+()\d\s.-]{6,40}$/;
 
-// eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 
 export const clean = (v: unknown) => (typeof v === "string" ? v.replace(CONTROL, "").trim() : "");

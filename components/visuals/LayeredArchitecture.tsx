@@ -21,7 +21,7 @@ export function LayeredArchitecture({ layers }: { layers: ArchLayer[] }) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.35fr_1fr] lg:items-start">
-      <div className="relative">
+      <div className="relative min-w-0">
         <div className="absolute top-4 bottom-4 left-[19px] w-px bg-gradient-to-b from-white/5 via-white/20 to-white/5" aria-hidden />
         <ul className="space-y-2.5" role="tablist" aria-label="Architecture layers">
           {layers.map((l, i) => {
@@ -58,7 +58,7 @@ export function LayeredArchitecture({ layers }: { layers: ArchLayer[] }) {
                       </span>
                     ))}
                   </span>
-                  <span className="flex-1 truncate text-sm text-muted sm:hidden">{l.items.join(" · ")}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-muted sm:hidden">{l.items.join(" · ")}</span>
                 </button>
               </li>
             );

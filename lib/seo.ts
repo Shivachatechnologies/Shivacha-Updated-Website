@@ -16,7 +16,7 @@ export function buildMetadata({ title, description, path, type = "website", noin
   const url = `${siteConfig.url}${path === "/" ? "" : path}`;
   const desc = description.length > 300 ? description.slice(0, 297) + "…" : description;
   return {
-    title,
+    title: path === "/" ? { absolute: title } : title,
     description: desc,
     keywords,
     alternates: { canonical: url },

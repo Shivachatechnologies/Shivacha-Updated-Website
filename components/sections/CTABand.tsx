@@ -1,8 +1,8 @@
 import { LinkButton } from "@/components/ui/primitives";
 
 export function CTABand({
-  title = "Let's build what's next.",
-  lede = "Tell us what you are building. We will come back with an approach, a team and a plan.",
+  title = "Tell us what you're building.",
+  lede = "Share your goals and constraints. We will come back with an approach, a team and a plan.",
   primary = { label: "Start a Project", href: "/start-a-project" },
   secondary = { label: "Book a Meeting", href: "/book-a-meeting" },
 }: {

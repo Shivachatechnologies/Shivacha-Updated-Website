@@ -85,10 +85,11 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
   const [serverError, setServerError] = useState("");
   const [prefill, setPrefill] = useState<Record<string, string>>({});
   const [fileNames, setFileNames] = useState<string[]>([]);
-  const startedAt = useRef(Date.now());
+  const startedAt = useRef(0);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   useEffect(() => {
+    startedAt.current = Date.now();
     const p = new URLSearchParams(window.location.search);
     const map: Record<string, string> = {};
     const division = p.get("division");
@@ -97,6 +98,8 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
       if (match) map.division = match;
     }
     for (const k of ["product", "team", "job"]) if (p.get(k)) map[k] = p.get(k)!.slice(0, 120);
+    // Prefill is read once from the URL (an external source) after hydration so the static HTML stays identical.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPrefill(map);
   }, []);
 
@@ -105,6 +108,7 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
     const form = e.currentTarget;
     const data = new FormData(form);
     data.set("source", window.location.pathname);
+    data.set("_t", String(startedAt.current));
     const obj = Object.fromEntries([...data.entries()].filter(([, val]) => typeof val === "string")) as Record<string, string>;
     const check = validateLead(type, obj);
     setErrors(check.errors);
@@ -142,9 +146,8 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
     );
 
   return (
-    <form onSubmit={onSubmit} noValidate className={cn("grid gap-4 sm:grid-cols-2", className)} aria-label={`${v.cta} form`}>
+    <form onSubmit={onSubmit} noValidate className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2", className)} aria-label={`${v.cta} form`}>
       <input type="hidden" name="type" value={type} />
-      <input type="hidden" name="_t" value={startedAt.current} />
       {Object.entries(hidden).map(([k, val]) => (
         <input key={k} type="hidden" name={k} value={val} />
       ))}
@@ -178,7 +181,7 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
             ) : f.type === "file" ? (
               <label htmlFor={id} className="field flex cursor-pointer items-center gap-3 text-muted">
                 <Paperclip className="size-4" />
-                <span className="truncate">{fileNames.length ? fileNames.join(", ") : `Up to ${MAX_UPLOAD_FILES} files · PDF, DOC, PPT, XLS, PNG, JPG · 10 MB total`}</span>
+                <span className="min-w-0 truncate">{fileNames.length ? fileNames.join(", ") : `Up to ${MAX_UPLOAD_FILES} files · PDF, DOC, PPT, XLS, PNG, JPG · 10 MB total`}</span>
                 <input
                   id={id}
                   name="documents"

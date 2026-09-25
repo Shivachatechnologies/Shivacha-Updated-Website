@@ -38,44 +38,56 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const load = useCallback(async () => {
-    if (index) return;
+  const loaded = useRef(false);
+  const ensureIndex = useCallback(async () => {
+    if (loaded.current) return;
+    loaded.current = true;
     try {
       const res = await fetch("/search-index.json");
       setIndex(await res.json());
     } catch {
       setIndex([]);
     }
-  }, [index]);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
+        ensureIndex();
         setOpen((o) => !o);
       }
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        setQ("");
+      }
     };
-    const onOpen = () => setOpen(true);
+    const onOpen = () => {
+      ensureIndex();
+      setOpen(true);
+    };
     window.addEventListener("keydown", onKey);
     window.addEventListener("shivacha:search", onOpen);
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("shivacha:search", onOpen);
     };
-  }, []);
+  }, [ensureIndex]);
 
   useEffect(() => {
     if (open) {
-      load();
       setTimeout(() => inputRef.current?.focus(), 10);
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
-      setQ("");
-      setActive(0);
     }
-  }, [open, load]);
+  }, [open]);
+
+  const close = () => {
+    setOpen(false);
+    setQ("");
+    setActive(0);
+  };
 
   const results = useMemo(() => {
     const terms = q.toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -92,14 +104,14 @@ export function CommandPalette() {
 
   const go = (href: string) => {
     if (q) track("search", { query: q, result: href });
-    setOpen(false);
+    close();
     router.push(href);
   };
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 px-4 pt-[12vh] backdrop-blur-sm" onMouseDown={() => setOpen(false)} role="dialog" aria-modal="true" aria-label="Search">
+    <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 px-4 pt-[12vh] backdrop-blur-sm" onMouseDown={close} role="dialog" aria-modal="true" aria-label="Search">
       <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-line-strong bg-ink-900 shadow-2xl shadow-black/60" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 border-b border-line px-4">
           <Search className="size-4 text-dim" aria-hidden />
@@ -122,7 +134,7 @@ export function CommandPalette() {
               }
             }}
             placeholder="Search products, services, technologies, industries…"
-            className="h-14 flex-1 bg-transparent text-[15px] text-fg placeholder:text-dim focus:outline-none"
+            className="h-14 flex-1 bg-transparent text-[15px] text-fg placeholder:text-dim focus:outline-none focus-visible:outline-none"
             aria-label="Search query"
             aria-controls="search-results"
           />

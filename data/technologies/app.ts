@@ -106,7 +106,7 @@ export const backendTech = [
     ["Production-ready defaults", "Rich ecosystem", "Security integration", "Microservice patterns"],
     ["Financial microservices|Payments, ledgers and accounts.", "Enterprise platforms|ERP and portal backends.", "Event-driven services|Kafka-based processing."],
     ["java", "kafka", "postgresql", "keycloak"], ["enterprise-software", "microservices-development"], ["fintech", "digital"]),
-  tech("go", "Go", "backend",
+  tech("go", "Go (Golang)", "backend",
     "Fast, simple compiled language for infrastructure, payments and blockchain services.",
     "Go combines performance, simple concurrency and small deployable binaries. We use it for payment engines, blockchain infrastructure, indexers, gateways and cloud-native services where throughput and operational simplicity matter.",
     ["High performance and low latency", "Simple concurrency", "Small static binaries", "Strong in cloud-native tooling"],
