@@ -12,6 +12,7 @@ import { AutoIcon } from "@/components/graphics/autoIcon";
 import { cn } from "@/lib/cn";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
+import { BookCallButton, openBookCall } from "@/components/leads/BookCall";
 
 export const openSearch = () => window.dispatchEvent(new CustomEvent("shivacha:search"));
 
@@ -116,8 +117,8 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
           <Link href="/contact" className="hidden px-2 text-[14px] font-medium text-muted transition-colors hover:text-fg lg:inline">
             Contact
           </Link>
-          <Link href="/start-a-project" className="btn-primary hidden h-9 px-4 text-[13px] sm:inline-flex" data-track="cta:header-start-project">
-            Start a Project
+          <Link href="/start-a-project" className="btn-primary hidden h-9 px-4 text-[13px] sm:inline-flex" data-track="cta:header-discuss-project">
+            Discuss Your Project
           </Link>
           <button
             type="button"
@@ -145,9 +146,16 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
                       {active.footer.label} →
                     </Link>
                   </p>
-                  <Link href="/book-a-meeting" className="inline-flex items-center gap-1.5 font-medium text-fg hover:text-brand-blue">
-                    Not sure where to start? Talk to an engineer <ArrowRight className="size-3.5" />
-                  </Link>
+                  <a
+                    href="/book-a-meeting"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openBookCall({ source: "mega_menu" });
+                    }}
+                    className="inline-flex items-center gap-1.5 font-medium text-fg hover:text-brand-blue"
+                  >
+                    Not sure where to start? Talk to an Expert <ArrowRight className="size-3.5" />
+                  </a>
                 </div>
               )}
             </div>
@@ -371,11 +379,9 @@ function MobileMenu({ nav, contact }: { nav: NavItem[]; contact: { email: string
         </ul>
         <div className="mt-8 grid gap-3">
           <Link href="/start-a-project" className="btn-primary">
-            Start a Project
+            Discuss Your Project
           </Link>
-          <Link href="/book-a-meeting" className="btn-secondary">
-            Book a Meeting
-          </Link>
+          <BookCallButton label="Book a Call" variant="secondary" source="mobile_menu" />
         </div>
         <div className="mt-8 space-y-1 text-sm text-muted">
           <a href={`mailto:${contact.email}`} className="block py-1 hover:text-fg">

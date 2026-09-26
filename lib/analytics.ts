@@ -16,7 +16,14 @@ export type AnalyticsEvent =
   | "phone_click"
   | "resource_request"
   | "newsletter_signup"
-  | "job_apply";
+  | "job_apply"
+  // Lead funnel (conversion rate = generate_lead / form_start in GA4 explorations)
+  | "form_start"
+  | "form_step_complete"
+  | "form_abandon"
+  | "generate_lead"
+  | "calendly_click"
+  | "calendly_booked";
 
 type Props = Record<string, string | number | boolean | undefined>;
 
@@ -35,10 +42,11 @@ export function track(event: AnalyticsEvent, props: Props = {}) {
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({ event, ...props });
     window.gtag?.("event", event, props);
-    if (event === "contact_submit" || event === "demo_request" || event === "start_project") {
+    if (event === "generate_lead" || event === "contact_submit" || event === "demo_request") {
       window.fbq?.("track", "Lead", props);
       window.lintrk?.("track", { conversion_id: event });
     }
+    if (event === "calendly_booked") window.fbq?.("track", "Schedule", props);
   } catch {
     /* analytics must never break the page */
   }

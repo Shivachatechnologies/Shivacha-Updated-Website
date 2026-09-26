@@ -10,6 +10,7 @@ import { CTABand } from "@/components/sections/CTABand";
 import { DivisionBadge, JsonLd, LinkButton, Section, SectionHeader } from "@/components/ui/primitives";
 import { HybridFintechDiagram } from "@/components/visuals/HybridFintechDiagram";
 import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toServiceItem, toTechItem, toIndustryLink, nonNull } from "./mappers";
+import { BookCallButton } from "@/components/leads/BookCall";
 
 export function SolutionTemplate({ solution }: { solution: Solution }) {
   const services = pick.services(solution.services);
@@ -42,9 +43,7 @@ export function SolutionTemplate({ solution }: { solution: Solution }) {
         <LinkButton href={`/start-a-project?division=${primary.id}`} track={`cta:solution-${solution.slug}`}>
           {cta}
         </LinkButton>
-        <LinkButton href="/book-a-meeting" variant="secondary">
-          Book a Meeting
-        </LinkButton>
+        <BookCallButton label="Talk to an Expert" variant="secondary" source={`solution:${solution.slug}`} />
       </PageHero>
 
       <Section>

@@ -3,6 +3,7 @@ import { Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { siteConfig } from "@/data/siteConfig";
 import { PageHero } from "@/components/sections/PageHero";
 import { Section } from "@/components/ui/primitives";
+import { BookCallButton } from "@/components/leads/BookCall";
 import type { Crumb } from "@/components/ui/Breadcrumbs";
 
 export function ContactLayout({ crumbs, title, lede, eyebrow, children, side }: { crumbs: Crumb[]; title: string; lede: string; eyebrow: string; children: ReactNode; side?: ReactNode }) {
@@ -54,6 +55,11 @@ export function ContactLayout({ crumbs, title, lede, eyebrow, children, side }: 
                   </li>
                 ))}
               </ul>
+            </div>
+            <div data-theme="dark" className="band-brand rounded-2xl p-6 text-fg">
+              <p className="text-lg font-semibold">Book a Free Consultation</p>
+              <p className="mt-1 text-sm text-muted">30 minutes with a solution architect. No commitment.</p>
+              <BookCallButton label="Book a Call" className="mt-5 h-10" source="contact_sidebar" />
             </div>
             <div className="card p-6">
               <p className="eyebrow mb-3">What happens next</p>

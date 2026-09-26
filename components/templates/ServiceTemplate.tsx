@@ -24,6 +24,7 @@ import { CTABand } from "@/components/sections/CTABand";
 import { DivisionBadge, JsonLd, LinkButton, Section, SectionHeader } from "@/components/ui/primitives";
 import { divisionTone } from "@/components/ui/division";
 import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toServiceItem } from "./mappers";
+import { BookCallButton } from "@/components/leads/BookCall";
 
 export function ServiceTemplate({ service }: { service: Service }) {
   const group = getGroup(service.group)!;
@@ -73,9 +74,7 @@ export function ServiceTemplate({ service }: { service: Service }) {
         <LinkButton href={`${division.ctaHref}&service=${service.slug}`} track={`cta:service-${service.slug}`}>
           {division.cta}
         </LinkButton>
-        <LinkButton href="/book-a-meeting" variant="secondary">
-          Talk to an engineer
-        </LinkButton>
+        <BookCallButton label="Talk to an Expert" variant="secondary" source={`service:${service.slug}`} />
       </PageHero>
 
       <Section>

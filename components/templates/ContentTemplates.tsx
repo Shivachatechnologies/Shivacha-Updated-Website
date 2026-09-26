@@ -16,6 +16,7 @@ import { CTABand } from "@/components/sections/CTABand";
 import { DivisionBadge, JsonLd, LinkButton, Section, SectionHeader } from "@/components/ui/primitives";
 import { LeadForm } from "@/components/forms/LeadForm";
 import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toServiceItem, toTechItem, toIndustryLink, nonNull } from "./mappers";
+import { BookCallButton } from "@/components/leads/BookCall";
 
 /* ───────────────────────── Case study ───────────────────────── */
 export function CaseStudyTemplate({ cs }: { cs: CaseStudy }) {
@@ -105,11 +106,9 @@ export function MarketTemplate({ market }: { market: Market }) {
     <>
       <PageHero crumbs={crumbs} eyebrow={<span className="eyebrow">{market.type === "region" ? "Region" : "Market"}</span>} title={market.h1} lede={market.summary}>
         <LinkButton href="/start-a-project" track={`cta:market-${market.slug}`}>
-          Start a Project
+          Discuss Your Project
         </LinkButton>
-        <LinkButton href="/book-a-meeting" variant="secondary">
-          Book a Meeting
-        </LinkButton>
+        <BookCallButton label="Book a Free Consultation" variant="secondary" source={`market:${market.slug}`} />
       </PageHero>
       <Section>
         <div className="grid gap-12 lg:grid-cols-[1fr_320px]">

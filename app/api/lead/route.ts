@@ -1,5 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { createHmac } from "node:crypto";
+import { after, NextResponse, type NextRequest } from "next/server";
 import {
   ALLOWED_UPLOAD_TYPES,
   MAX_UPLOAD_BYTES,
@@ -8,16 +7,22 @@ import {
   leadSchemas,
   validateLead,
 } from "@/lib/validation";
+import { emailDomainAcceptsMail } from "@/lib/leads/emailDomain";
+import { buildLead, processLead } from "@/lib/leads/pipeline";
 
 export const runtime = "nodejs";
 
 /**
  * Lead intake endpoint for all website forms.
  *
+ * Pipeline: validate → save to the lead database → email sales@shivacha.com → confirm to the visitor
+ * (confirmation and webhook run after the response). See lib/leads/pipeline.ts.
+ *
  * Security measures:
- *  - Same-origin check (CSRF mitigation for a cookie-less JSON/multipart endpoint)
+ *  - Same-origin check via Origin / Sec-Fetch-Site / Referer (CSRF mitigation for a cookie-less endpoint)
+ *  - Email syntax + mail-domain (MX) check, phone digit-count check
  *  - Honeypot field and minimum fill-time check (bot mitigation)
- *  - Per-IP rate limiting (in-memory; replace with Redis/Upstash in multi-instance deployments)
+ *  - Per-IP and per-email rate limiting (in-memory; replace with Redis/Upstash in multi-instance deployments)
  *  - Server-side validation and sanitisation of every field
  *  - Upload type/size limits
  *  - Optional Cloudflare Turnstile verification (CAPTCHA readiness)
@@ -28,22 +33,45 @@ const WINDOW_MS = 10 * 60 * 1000;
 const MAX_PER_WINDOW = 8;
 const hits = new Map<string, number[]>();
 
-function rateLimited(ip: string) {
+function limited(key: string, max: number) {
   const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
+  const recent = (hits.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
   recent.push(now);
-  hits.set(ip, recent);
+  hits.set(key, recent);
   if (hits.size > 5000) hits.clear();
-  return recent.length > MAX_PER_WINDOW;
+  return recent.length > max;
 }
 
 function sameOrigin(req: NextRequest) {
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
   const origin = req.headers.get("origin");
-  if (!origin) return true; // non-browser clients; other protections still apply
+  if (origin) {
+    try {
+      return new URL(origin).host === host;
+    } catch {
+      return false;
+    }
+  }
+  if (req.headers.get("sec-fetch-site") === "cross-site") return false;
+  const referer = req.headers.get("referer");
+  if (referer) {
+    try {
+      return new URL(referer).host === host;
+    } catch {
+      return false;
+    }
+  }
+  return true; // non-browser clients; the other protections still apply
+}
+
+const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+function countryFromHeaders(req: NextRequest) {
+  const code = (req.headers.get("x-vercel-ip-country") || req.headers.get("cf-ipcountry") || req.headers.get("cloudfront-viewer-country") || "").toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code) || code === "XX") return "";
   try {
-    return new URL(origin).host === req.headers.get("host");
+    return regionNames.of(code) ?? code;
   } catch {
-    return false;
+    return code;
   }
 }
 
@@ -54,7 +82,9 @@ async function verifyTurnstile(token: string | undefined, ip: string) {
   const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
     method: "POST",
     body: new URLSearchParams({ secret, response: token, remoteip: ip }),
-  });
+    signal: AbortSignal.timeout(8000),
+  }).catch(() => null);
+  if (!res) return false;
   const data = (await res.json().catch(() => ({}))) as { success?: boolean };
   return data.success === true;
 }
@@ -63,7 +93,7 @@ export async function POST(req: NextRequest) {
   const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
 
   if (!sameOrigin(req)) return NextResponse.json({ ok: false, error: "Invalid origin." }, { status: 403 });
-  if (rateLimited(ip)) return NextResponse.json({ ok: false, error: "Too many submissions. Please try again later." }, { status: 429 });
+  if (limited(`ip:${ip}`, MAX_PER_WINDOW)) return NextResponse.json({ ok: false, error: "Too many submissions. Please try again later." }, { status: 429 });
 
   let fields: Record<string, unknown> = {};
   const files: { name: string; type: string; size: number; data: string }[] = [];
@@ -103,33 +133,22 @@ export async function POST(req: NextRequest) {
 
   const { ok, errors, values } = validateLead(type, fields);
   if (!ok) return NextResponse.json({ ok: false, errors }, { status: 422 });
-
-  const payload = {
-    type,
-    submittedAt: new Date().toISOString(),
-    fields: values,
-    files,
-    meta: { userAgent: req.headers.get("user-agent")?.slice(0, 300), referer: req.headers.get("referer")?.slice(0, 300) },
-  };
-
-  const webhook = process.env.CRM_WEBHOOK_URL;
-  if (webhook) {
-    const body = JSON.stringify(payload);
-    const headers: Record<string, string> = { "content-type": "application/json" };
-    if (process.env.CRM_WEBHOOK_SECRET) headers["x-shivacha-signature"] = createHmac("sha256", process.env.CRM_WEBHOOK_SECRET).update(body).digest("hex");
-    try {
-      const res = await fetch(webhook, { method: "POST", headers, body });
-      if (!res.ok) throw new Error(`Webhook responded ${res.status}`);
-    } catch (e) {
-      console.error("[lead] delivery failed", (e as Error).message);
-      return NextResponse.json({ ok: false, error: "We could not submit your request. Please email info@shivacha.com." }, { status: 502 });
-    }
-  } else {
-    // No CRM configured (e.g. local development). Log a redacted summary only.
-    console.info("[lead] received", { type, fields: Object.keys(values), files: files.length });
+  if (values.email && !(await emailDomainAcceptsMail(values.email))) {
+    return NextResponse.json({ ok: false, errors: { email: "This email domain cannot receive mail. Please check the address." } }, { status: 422 });
+  }
+  if (values.email && limited(`email:${values.email.toLowerCase()}`, 4)) {
+    return NextResponse.json({ ok: false, error: "We already received several requests from this email. Our team will be in touch." }, { status: 429 });
   }
 
-  return NextResponse.json({ ok: true });
+  const lead = buildLead(type, values, files, { country: countryFromHeaders(req), referer: req.headers.get("referer")?.slice(0, 300) ?? "" });
+  const result = await processLead(lead);
+  if (!result.accepted) {
+    return NextResponse.json({ ok: false, error: "We could not submit your request right now. Please email sales@shivacha.com or message us on WhatsApp." }, { status: 502 });
+  }
+  // Visitor confirmation and CRM webhook finish after the response is sent.
+  after(result.background);
+  console.info("[lead] accepted", { id: lead.id, type, stored: result.store.driver, notified: result.notified, score: lead.score });
+  return NextResponse.json({ ok: true, id: lead.id });
 }
 
 export function GET() {

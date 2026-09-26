@@ -14,11 +14,11 @@ export default function ContactPage() {
         crumbs={[{ name: "Contact", href: "/contact" }]}
         eyebrow="Contact"
         title="Let's talk about what you're building."
-        lede="Questions, partnerships or general enquiries. For detailed project briefs, use Start a Project."
+        lede="Questions, partnerships or general enquiries. For project briefs, use Discuss Your Project."
         side={
           <div className="grid gap-3">
             <h2 className="sr-only">Other ways to work with us</h2>
-            <LinkCard href="/start-a-project" title="Start a Project" description="Share a detailed brief with documents." />
+            <LinkCard href="/start-a-project" title="Discuss Your Project" description="Two quick steps. We reply within one business day." />
             <LinkCard href="/request-demo" title="Request a Demo" description="See a ready-to-launch product." />
           </div>
         }

@@ -5,6 +5,9 @@ import Script from "next/script";
 import { CheckCircle2, Loader2, Paperclip } from "lucide-react";
 import { formOptions, leadSchemas, type LeadType, validateLead, MAX_UPLOAD_FILES } from "@/lib/validation";
 import { track, type AnalyticsEvent } from "@/lib/analytics";
+import { attributionProps, getAttribution } from "@/lib/attribution";
+import { SERVICE_OPTIONS } from "@/lib/leads/options";
+import { InquirySuccess } from "@/components/leads/InquiryForm";
 import { cn } from "@/lib/cn";
 
 type FieldDef =
@@ -25,7 +28,8 @@ const F = {
   industry: { name: "industry", label: "Industry", type: "select", options: formOptions.industry, half: true },
   requirement: { name: "requirement", label: "Requirement", type: "select", options: formOptions.requirement, half: true },
   division: { name: "division", label: "Division", type: "select", options: formOptions.division, half: true },
-  budget: { name: "budget", label: "Budget", type: "select", options: formOptions.budget, half: true },
+  budget: { name: "budget", label: "Estimated budget", type: "select", options: formOptions.budget, half: true },
+  service: { name: "service", label: "Service required", type: "select", options: [...SERVICE_OPTIONS], half: true },
   timeline: { name: "timeline", label: "Timeline", type: "select", options: formOptions.timeline, half: true },
   teamSize: { name: "teamSize", label: "Team size", type: "select", options: formOptions.teamSize, half: true },
   message: { name: "message", label: "Project description", type: "textarea", placeholder: "What are you building? Where are you today? What does success look like?", rows: 5 },
@@ -34,8 +38,8 @@ const F = {
 
 const variants: Record<LeadType, { fields: FieldDef[]; cta: string; event: AnalyticsEvent; success: string }> = {
   project: {
-    fields: [F.name, F.email, F.company, F.phone, F.country, F.website, F.companySize, F.industry, F.requirement, F.division, F.budget, F.timeline, F.message, F.documents],
-    cta: "Start the Conversation",
+    fields: [F.name, F.email, { ...F.phone, label: "WhatsApp / Phone" }, F.company, F.service, F.budget, F.message],
+    cta: "Submit Project Inquiry",
     event: "start_project",
     success: "Thank you. A Shivacha lead will review your project and reply within two business days.",
   },
@@ -85,6 +89,7 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
   const [serverError, setServerError] = useState("");
   const [prefill, setPrefill] = useState<Record<string, string>>({});
   const [fileNames, setFileNames] = useState<string[]>([]);
+  const [done, setDone] = useState({ name: "", email: "", id: "" });
   const startedAt = useRef(0);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -109,6 +114,7 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
     const data = new FormData(form);
     data.set("source", window.location.pathname);
     data.set("_t", String(startedAt.current));
+    for (const [k, val] of Object.entries(getAttribution())) if (val) data.set(k, val);
     const obj = Object.fromEntries([...data.entries()].filter(([, val]) => typeof val === "string")) as Record<string, string>;
     const check = validateLead(type, obj);
     setErrors(check.errors);
@@ -121,7 +127,7 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
     setServerError("");
     try {
       const res = await fetch("/api/lead", { method: "POST", body: data });
-      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; errors?: Record<string, string> };
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; id?: string; error?: string; errors?: Record<string, string> };
       if (!res.ok || !json.ok) {
         if (json.errors) setErrors(json.errors);
         setServerError(json.error ?? "Something went wrong. Please try again or email info@shivacha.com.");
@@ -129,6 +135,8 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
         return;
       }
       track(v.event, { form: type, division: obj.division, industry: obj.industry, budget: obj.budget, product: obj.product || hidden.product, resource: hidden.resource });
+      if (type !== "newsletter" && type !== "job") track("generate_lead", { form: type, ...attributionProps() });
+      setDone({ name: obj.name ?? "", email: obj.email ?? "", id: (json as { id?: string }).id ?? "" });
       setStatus("done");
     } catch {
       setServerError("Network error. Please try again or email info@shivacha.com.");
@@ -136,6 +144,8 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
     }
   }
 
+  if (status === "done" && type !== "newsletter" && type !== "job" && type !== "resource")
+    return <InquirySuccess name={done.name} email={done.email} leadId={done.id} className={cn("py-4", className)} />;
   if (status === "done")
     return (
       <div className={cn("card flex flex-col items-start gap-3 p-8", className)} role="status">

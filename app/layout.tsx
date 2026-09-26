@@ -7,7 +7,8 @@ import { mainNav } from "@/data/navigation";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CommandPalette } from "@/components/layout/CommandPalette";
-import { MobileCTA } from "@/components/layout/MobileCTA";
+import { TalkToShivacha } from "@/components/leads/TalkToShivacha";
+import { CalendlyModalHost } from "@/components/leads/BookCall";
 import { Analytics } from "@/components/layout/Analytics";
 import { JsonLd } from "@/components/ui/primitives";
 import { organizationSchema, websiteSchema } from "@/lib/jsonld";
@@ -50,7 +51,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Header nav={mainNav} contact={{ email: siteConfig.contact.email, phone: siteConfig.contact.phone, phoneHref: siteConfig.contact.phoneHref }} />
         <main id="main">{children}</main>
         <Footer />
-        <MobileCTA />
+        <TalkToShivacha />
+        <CalendlyModalHost />
         <CommandPalette />
         <Analytics />
       </body>

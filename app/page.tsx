@@ -17,6 +17,7 @@ import { DivisionShowcase, type ShowcaseItem } from "@/components/sections/Divis
 import { HeroScene } from "@/components/graphics/DivisionArt";
 import { TechMarquee } from "@/components/graphics/TechMarquee";
 import { Cover } from "@/components/graphics/Cover";
+import { BookCallButton } from "@/components/leads/BookCall";
 
 export const metadata = buildMetadata({
   title: "Shivacha Technologies — Technology for companies building what comes next",
@@ -87,12 +88,10 @@ export default function HomePage() {
             </h1>
             <p className="lede mt-6 max-w-xl">We design, build and run the software behind banks, fintechs, AI products and digital platforms.</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <LinkButton href="/start-a-project" track="cta:hero-start">
-                Start a Project
+              <LinkButton href="/start-a-project" track="cta:hero-discuss-project">
+                Discuss Your Project
               </LinkButton>
-              <LinkButton href="/products" variant="secondary" track="cta:hero-products">
-                See our products
-              </LinkButton>
+              <BookCallButton label="Book a Call" variant="secondary" source="hero" />
             </div>
             <dl className="mt-12 grid max-w-md grid-cols-3 divide-x divide-line">
               {[

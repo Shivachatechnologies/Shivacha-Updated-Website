@@ -1,10 +1,11 @@
 import { LinkButton } from "@/components/ui/primitives";
+import { BookCallButton } from "@/components/leads/BookCall";
 
 export function CTABand({
   title = "Tell us what you're building.",
   lede = "Share your goals and constraints. We will come back with an approach, a team and a plan.",
-  primary = { label: "Start a Project", href: "/start-a-project" },
-  secondary = { label: "Book a Meeting", href: "/book-a-meeting" },
+  primary = { label: "Discuss Your Project", href: "/start-a-project" },
+  secondary,
 }: {
   title?: string;
   lede?: string;
@@ -24,9 +25,13 @@ export function CTABand({
               <LinkButton href={primary.href} track={`cta:${primary.label}`}>
                 {primary.label}
               </LinkButton>
-              <LinkButton href={secondary.href} variant="secondary" track={`cta:${secondary.label}`}>
-                {secondary.label}
-              </LinkButton>
+              {secondary ? (
+                <LinkButton href={secondary.href} variant="secondary" track={`cta:${secondary.label}`}>
+                  {secondary.label}
+                </LinkButton>
+              ) : (
+                <BookCallButton label="Schedule a Consultation" variant="secondary" source="cta_band" />
+              )}
             </div>
           </div>
         </div>

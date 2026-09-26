@@ -117,22 +117,51 @@ Run `npm run check:content` after any edit — it fails on unknown or duplicate 
 
 `⌘K` / `Ctrl+K` (or the header button) opens a command palette. The index (`/search-index.json`, ~630 entries across products, services, capabilities, technologies, industries, solutions, teams, case studies, insights, resources and markets) is generated at build time and fetched only when the palette first opens, so it adds nothing to page weight.
 
-## Forms, security and lead routing
+## Lead capture system
 
-All forms post to `/api/lead` (`app/api/lead/route.ts`):
+**Flow:** visitor → *Discuss Your Project* / *Book a Call* → two-step form → lead saved → email to **sales@shivacha.com** → confirmation email to the visitor → Calendly booking + WhatsApp → sales follow-up.
 
-- Shared client/server validation (`lib/validation.ts`), sanitisation and length limits
-- Same-origin check (CSRF mitigation), honeypot field and minimum fill-time check
-- Per-IP rate limiting (in-memory — replace with Redis/Upstash for multi-instance hosting)
-- Upload allow-list (PDF, Office, TXT, PNG, JPG; max 5 files / 10 MB)
-- Optional Cloudflare Turnstile (CAPTCHA readiness) — enabled when both Turnstile env vars are set
-- Leads are forwarded as JSON to `CRM_WEBHOOK_URL`, signed with HMAC-SHA256 (`x-shivacha-signature`) when `CRM_WEBHOOK_SECRET` is set. Without a webhook, submissions are only logged (field names, not values).
+| Piece | Where |
+| --- | --- |
+| Two-step inquiry form (name, work email, WhatsApp/phone → company, service, budget, description; only name + email required) | `components/leads/InquiryForm.tsx` — on `/start-a-project` and in the modal |
+| Floating **Talk to Shivacha** button (Book a Call / Send Project Inquiry / WhatsApp) | `components/leads/TalkToShivacha.tsx` |
+| Calendly: `BookCallButton` (labels: Book a Call, Schedule a Consultation, Talk to an Expert, Book a Free Consultation), in-site modal, inline embed on `/book-a-meeting`, booking tracking | `components/leads/BookCall.tsx`, `lib/calendly.ts` |
+| Service / budget options, CRM statuses | `lib/leads/options.ts` |
+| API: validation, CSRF, rate limits, honeypot, Turnstile, email-domain check | `app/api/lead/route.ts`, `lib/validation.ts` |
+| Pipeline: save → notify sales → confirm visitor → webhook; lead ID, score, follow-up date | `lib/leads/pipeline.ts`, `lib/leads/score.ts` |
+| Lead database (Google Sheet / JSONL file) | `lib/leads/store.ts`, `lib/leads/columns.ts` |
+| Emails (Google Workspace SMTP or Gmail OAuth2) and templates | `lib/email/mailer.ts`, `lib/email/templates.ts` |
 
-Security headers (CSP, HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, COOP) are set in `next.config.ts`. No secrets are exposed to the browser; only `NEXT_PUBLIC_*` IDs are public.
+All other forms (contact, demo, meeting, hire, resource) use the same pipeline. Job applications notify **hr@shivacha.com**; newsletter sign-ups are stored without emails.
+
+### Setup (all values are server-side environment variables — see `.env.example`)
+
+1. **Calendly** — set `NEXT_PUBLIC_CALENDLY_URL` to your event link. Until then the placeholder `PASTE_MY_CALENDLY_LINK_HERE` is used and every *Book a Call* opens the on-site meeting request form instead of a broken link.
+2. **Email via Google Workspace** (no new mailbox — everything sends from and to `sales@shivacha.com`):
+   - *Simplest:* in the `sales@` Google account enable 2-Step Verification, create an **App Password**, then set `SMTP_USER=sales@shivacha.com` and `SMTP_PASS=<app password>`.
+   - *No stored password:* create an OAuth client in Google Cloud, authorise `sales@shivacha.com` for scope `https://mail.google.com/`, then set `GMAIL_USER`, `GMAIL_OAUTH_CLIENT_ID`, `GMAIL_OAUTH_CLIENT_SECRET`, `GMAIL_OAUTH_REFRESH_TOKEN`.
+   - Test: `npm run leads:test-email -- you@example.com`.
+3. **Lead database (Google Sheet)** — create a Google Cloud service account (Sheets API enabled), create a Sheet in your Workspace and share it (Editor) with the service-account email. Set `GOOGLE_SHEETS_LEADS_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, then run `npm run leads:setup-sheet` (header row, frozen columns, **Lead Status** dropdown: New, Contacted, Qualified, Proposal Sent, Negotiation, Won, Lost, Follow-up). Sales update *Assigned Sales Person*, *Notes*, *Last Contacted* and *Next Follow-up* directly in the sheet; the *View Lead* button in each notification opens the row.
+   - Self-hosted servers can use `LEAD_STORE=file` (JSON Lines, file mode 600, path `LEADS_FILE`, default `.data/leads.jsonl` — git-ignored). Serverless hosts need the Sheet.
+4. Optional: `CRM_WEBHOOK_URL` / `CRM_WEBHOOK_SECRET` to forward every lead (HMAC-signed) to a CRM; `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` to add a CAPTCHA if spam appears.
+
+**Reliability:** a lead is accepted when it is saved **or** the sales email is sent, so neither a mail outage nor a storage outage loses it; if both fail the visitor is asked to email sales@ or use WhatsApp. The visitor confirmation and webhook run after the response (`after()`).
+
+**Lead score (0–100):** budget (up to 35), service (high-value services 15), work email (15), phone (10), company (10), description length (up to 15). ≥70 Hot, ≥45 Warm, otherwise Cold. Budgets never reject a lead.
+
+**Follow-up:** each lead gets *Next Follow-up* = next business day, 10:00 IST, stored with the lead and attached to the sales email as a calendar reminder (`.ics`).
+
+### Security
+
+- Server-side validation of every field (lengths, options, email syntax + mail-domain check, phone 7–15 digits with country code)
+- Same-origin check using `Origin`, `Sec-Fetch-Site` and `Referer` (CSRF mitigation for this cookie-less endpoint)
+- Honeypot field and minimum fill time; per-IP (8 / 10 min) and per-email (4 / 10 min) rate limits — in-memory, move to Redis/Upstash for multi-instance hosting
+- Optional Cloudflare Turnstile; HTML-escaped email content; CR/LF stripped from subjects; spreadsheet values written as `RAW` and prefixed to prevent formula injection
+- No secrets in the browser: only `NEXT_PUBLIC_CALENDLY_URL`, analytics IDs and the Turnstile site key are public; SMTP, OAuth and service-account credentials are read only on the server. Lead data is never returned by the API (it only returns a reference ID)
 
 ## Analytics
 
-`components/layout/Analytics.tsx` loads GA4, Meta Pixel and LinkedIn Insight **only** when their IDs are configured. `lib/analytics.ts` pushes events to `dataLayer` (for GTM/CRM connectors) and each tool: `product_view`, `demo_click`, `demo_request`, `contact_submit`, `book_meeting`, `start_project`, `search`, `cta_click`, `whatsapp_click`, `email_click`, `phone_click`, `resource_request`, `newsletter_signup`, `job_apply` — with division, industry, budget and product properties where relevant. CTA clicks are tracked through `data-track` attributes via one delegated listener.
+`components/layout/Analytics.tsx` loads GA4, Meta Pixel and LinkedIn Insight **only** when their IDs are configured. `lib/analytics.ts` pushes events to `dataLayer` (for GTM/CRM connectors) and each tool. Lead funnel: `form_start`, `form_step_complete` (step 1 / 2), `form_abandon` (with the step reached), `generate_lead` (successful submission — mark it as a GA4 key event), `calendly_click`, `calendly_booked` (from Calendly's embed messages), `whatsapp_click`, `cta_click`. Every lead event carries `lead_source`, `utm_medium`, `utm_campaign` and `landing_page` (captured first in `lib/attribution.ts`), so **conversion rate** = `generate_lead` ÷ `form_start` (or ÷ sessions) by source in GA4 explorations. Other events: `product_view`, `demo_click`, `demo_request`, `contact_submit`, `book_meeting`, `start_project`, `search`, `cta_click`, `whatsapp_click`, `email_click`, `phone_click`, `resource_request`, `newsletter_signup`, `job_apply` — with division, industry, budget and product properties where relevant. CTA clicks are tracked through `data-track` attributes via one delegated listener.
 
 ## Environment variables
 

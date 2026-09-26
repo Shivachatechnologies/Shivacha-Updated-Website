@@ -10,6 +10,7 @@ import { CTABand } from "@/components/sections/CTABand";
 import { DivisionBadge, JsonLd, LinkButton, LinkCard, Section, SectionHeader } from "@/components/ui/primitives";
 import { Icon, industryIcon } from "@/components/ui/Icon";
 import { toCaseItem, toInsightItem, toProductItem, toServiceItem, toTechItem } from "./mappers";
+import { BookCallButton } from "@/components/leads/BookCall";
 
 export function IndustryTemplate({ industry }: { industry: Industry }) {
   const services = pick.services(industry.services);
@@ -34,11 +35,9 @@ export function IndustryTemplate({ industry }: { industry: Industry }) {
         aside={<DivisionArt division={industry.divisions[0]} label="Illustration" />}
       >
         <LinkButton href="/start-a-project" track={`cta:industry-${industry.slug}`}>
-          Start a Project
+          Discuss Your Project
         </LinkButton>
-        <LinkButton href="/book-a-meeting" variant="secondary">
-          Talk to an expert
-        </LinkButton>
+        <BookCallButton label="Book a Free Consultation" variant="secondary" source="industry" />
       </PageHero>
 
       <Section>

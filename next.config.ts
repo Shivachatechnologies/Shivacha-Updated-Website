@@ -7,7 +7,7 @@ const csp = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.facebook.com https://px.ads.linkedin.com https://challenges.cloudflare.com",
-  "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com",
+  "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://calendly.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

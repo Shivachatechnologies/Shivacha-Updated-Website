@@ -1,13 +1,25 @@
 import { buildMetadata } from "@/lib/seo";
+import { isCalendlyConfigured } from "@/lib/calendly";
 import { ContactLayout } from "@/components/sections/ContactLayout";
 import { LeadForm } from "@/components/forms/LeadForm";
+import { CalendlyFrame } from "@/components/leads/BookCall";
 
-export const metadata = buildMetadata({ title: "Book a Meeting", description: "Book a meeting with a Shivacha solution architect or engineering advisor to discuss your AI, digital, fintech, Web3 or cloud initiative.", path: "/book-a-meeting" });
+export const metadata = buildMetadata({
+  title: "Book a Call",
+  description: "Book a call with a Shivacha solution architect or engineering expert to discuss your Web3, fintech, AI, software or cloud project.",
+  path: "/book-a-meeting",
+});
 
 export default function BookMeetingPage() {
+  const calendly = isCalendlyConfigured();
   return (
-    <ContactLayout crumbs={[{ name: "Book a Meeting", href: "/book-a-meeting" }]} eyebrow="Book a meeting" title="Talk to an architect or engineering advisor." lede="Share your preferred times and topic. We will send calendar options — typically a 30–45 minute video call.">
-      <LeadForm type="meeting" />
+    <ContactLayout
+      crumbs={[{ name: "Book a Call", href: "/book-a-meeting" }]}
+      eyebrow="Book a call"
+      title="Talk to an expert."
+      lede={calendly ? "Pick a time that suits you. Calls are 30 minutes on video, with a solution architect who knows your domain." : "Share your preferred times and topic and we will send calendar options — typically a 30-minute video call."}
+    >
+      {calendly ? <CalendlyFrame source="book_a_meeting_page" className="-m-6 h-[720px] sm:-m-8" /> : <LeadForm type="meeting" />}
     </ContactLayout>
   );
 }
