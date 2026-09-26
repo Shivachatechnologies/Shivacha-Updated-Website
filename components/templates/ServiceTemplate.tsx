@@ -93,7 +93,7 @@ export function ServiceTemplate({ service }: { service: Service }) {
             <p className="eyebrow mb-4">Context · {group.name}</p>
             <p className="text-[15px] leading-relaxed text-muted">{group.intro}</p>
             {service.note && (
-              <div className="mt-6 flex gap-3 rounded-xl border border-line bg-white/[0.02] p-4 text-sm text-muted">
+              <div className="mt-6 flex gap-3 rounded-xl border border-line bg-tint/[0.02] p-4 text-sm text-muted">
                 <Info className="mt-0.5 size-4 shrink-0 text-brand-blue" aria-hidden />
                 <p>{service.note}</p>
               </div>

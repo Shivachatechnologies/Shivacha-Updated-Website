@@ -26,7 +26,7 @@ export function ProcessSteps({ steps }: { steps: Point[] }) {
         <li key={s.title} className="relative">
           <div className="mb-4 flex items-center gap-3">
             <span className="flex size-8 items-center justify-center rounded-full border border-line-strong bg-ink-900 font-mono text-xs text-fg">{i + 1}</span>
-            {i < steps.length - 1 && <span className="hidden h-px flex-1 bg-gradient-to-r from-white/20 to-transparent md:block" aria-hidden />}
+            {i < steps.length - 1 && <span className="hidden h-px flex-1 bg-gradient-to-r from-tint/20 to-transparent md:block" aria-hidden />}
           </div>
           <h3 className="text-[15px] font-semibold text-fg">{s.title}</h3>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">{s.description}</p>
@@ -55,7 +55,7 @@ export function ArchitectureDiagram({ layers, division = "digital", title }: { l
             </div>
             <div className="flex flex-wrap gap-1.5">
               {layer.items.map((it) => (
-                <span key={it} className="rounded-md border border-line bg-white/[0.03] px-2 py-1 text-xs text-muted">
+                <span key={it} className="rounded-md border border-line bg-tint/[0.03] px-2 py-1 text-xs text-muted">
                   {it}
                 </span>
               ))}

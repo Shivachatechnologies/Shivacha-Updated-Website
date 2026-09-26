@@ -77,17 +77,17 @@ export function DashboardPreview({ kind, name, className }: { kind: PreviewKind;
   const c = cfg[kind];
   return (
     <figure className={cn("relative", className)}>
-      <div className="overflow-hidden rounded-2xl border border-line-strong bg-ink-900 shadow-[0_40px_120px_-40px_rgba(0,0,0,0.8)]">
+      <div data-theme="dark" className="overflow-hidden rounded-2xl border border-line-strong bg-ink-900 text-fg shadow-[0_40px_120px_-40px_rgba(0,0,0,0.8)]">
         <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
-          <span className="size-2.5 rounded-full bg-white/15" />
-          <span className="size-2.5 rounded-full bg-white/15" />
-          <span className="size-2.5 rounded-full bg-white/15" />
+          <span className="size-2.5 rounded-full bg-tint/15" />
+          <span className="size-2.5 rounded-full bg-tint/15" />
+          <span className="size-2.5 rounded-full bg-tint/15" />
           <span className="ml-3 truncate font-mono text-[10.5px] text-dim">{name ?? "app"} · {c.title}</span>
         </div>
         <div className="grid grid-cols-[88px_1fr] sm:grid-cols-[120px_1fr]">
           <aside className="border-r border-line p-2.5">
             {c.nav.map((n, i) => (
-              <div key={n} className={cn("mb-1 truncate rounded-md px-2 py-1.5 text-[10.5px]", i === 0 ? "bg-white/[0.06] text-fg" : "text-dim")}>
+              <div key={n} className={cn("mb-1 truncate rounded-md px-2 py-1.5 text-[10.5px]", i === 0 ? "bg-tint/[0.06] text-fg" : "text-dim")}>
                 {n}
               </div>
             ))}
@@ -103,7 +103,7 @@ export function DashboardPreview({ kind, name, className }: { kind: PreviewKind;
             </div>
             {c.chat ? (
               <div className="mt-3 space-y-2">
-                <div className="ml-auto w-3/4 rounded-xl rounded-br-sm bg-white/[0.06] px-3 py-2 text-[10.5px] text-fg">How do I change my card limit?</div>
+                <div className="ml-auto w-3/4 rounded-xl rounded-br-sm bg-tint/[0.06] px-3 py-2 text-[10.5px] text-fg">How do I change my card limit?</div>
                 <div className="w-5/6 rounded-xl rounded-bl-sm border border-line px-3 py-2 text-[10.5px] text-muted">
                   Open <span className="text-fg">Cards → Controls</span> and set a new daily limit. Changes apply immediately.
                   <span className="mt-1.5 block font-mono text-[9px]" style={{ color: c.accent }}>
@@ -118,7 +118,7 @@ export function DashboardPreview({ kind, name, className }: { kind: PreviewKind;
                   <Chart kind={c.chart} color={c.accent} />
                 </div>
                 <div className="mt-3 overflow-hidden rounded-lg border border-line">
-                  <div className="grid grid-cols-3 border-b border-line bg-white/[0.02] px-2 py-1.5">
+                  <div className="grid grid-cols-3 border-b border-line bg-tint/[0.02] px-2 py-1.5">
                     {c.table.cols.map((h) => (
                       <span key={h} className="truncate text-[9.5px] text-dim">
                         {h}

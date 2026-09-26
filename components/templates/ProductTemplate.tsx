@@ -10,6 +10,7 @@ import { ArchitectureDiagram, CheckList, ChipLinks, PointsGrid, RelatedSection }
 import { FAQ } from "@/components/sections/FAQ";
 import { CTABand } from "@/components/sections/CTABand";
 import { DivisionBadge, JsonLd, LinkButton, Section, SectionHeader } from "@/components/ui/primitives";
+import { cn } from "@/lib/cn";
 import { divisionTone } from "@/components/ui/division";
 import { DashboardPreview } from "@/components/visuals/DashboardPreview";
 import { ProductViewTracker } from "@/components/forms/ProductViewTracker";
@@ -83,7 +84,7 @@ export function ProductTemplate({ product }: { product: Product }) {
               <p className="mt-3 text-[15px] leading-relaxed text-muted">{product.problem}</p>
             </div>
             <div className="card p-6" style={{ borderColor: `${tone.hex}40` }}>
-              <p className="font-mono text-[11px] tracking-[0.16em] uppercase" style={{ color: tone.hex }}>
+              <p className={cn("font-mono text-[11px] tracking-[0.16em] uppercase", tone.text)}>
                 The solution
               </p>
               <p className="mt-3 text-[15px] leading-relaxed text-muted">{product.solution}</p>
@@ -104,7 +105,7 @@ export function ProductTemplate({ product }: { product: Product }) {
             <ul className="space-y-3">
               {product.features.map((f) => (
                 <li key={f} className="flex items-start gap-3 text-[15px] text-muted">
-                  <Check className="mt-0.5 size-4 shrink-0" style={{ color: tone.hex }} aria-hidden />
+                  <Check className={cn("mt-0.5 size-4 shrink-0", tone.text)} aria-hidden />
                   {f}
                 </li>
               ))}

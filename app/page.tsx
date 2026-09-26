@@ -65,12 +65,12 @@ const satellites: Record<string, { label: string; href: string }[]> = {
 };
 
 const archLayers: ArchLayer[] = [
-  { id: "user", name: "User", items: ["Customers", "Employees", "Partners"], description: "Every system starts with the people who use it. We design experiences around real users and real workflows — customers, operations teams and partners.", links: [{ label: "Product engineering", href: "/solutions/product-engineering" }], color: "#e9edf5" },
+  { id: "user", name: "User", items: ["Customers", "Employees", "Partners"], description: "Every system starts with the people who use it. We design experiences around real users and real workflows — customers, operations teams and partners.", links: [{ label: "Product engineering", href: "/solutions/product-engineering" }], color: "#7d8fb3" },
   { id: "channels", name: "Web / Mobile", items: ["Next.js", "iOS", "Android", "Portals"], description: "Fast, accessible web applications and native or cross-platform mobile apps, built on design systems and performance budgets.", links: [{ label: "Web development", href: "/services/web-development" }, { label: "Mobile apps", href: "/services/mobile-app-development" }], color: "#0195ff" },
   { id: "application", name: "Application", items: ["SaaS", "Enterprise", "FinTech", "Web3"], description: "Domain platforms — SaaS products, enterprise systems, financial products and digital asset applications — engineered with clear boundaries.", links: [{ label: "SaaS", href: "/services/saas-development" }, { label: "FinTech", href: "/capabilities/fintech" }, { label: "Web3", href: "/capabilities/web3" }], color: "#14c8b0" },
   { id: "intelligence", name: "Intelligence", items: ["AI agents", "RAG", "ML", "Automation"], description: "AI woven into applications: copilots, agents, retrieval, machine learning and automation with evaluation and governance built in.", links: [{ label: "AI capabilities", href: "/capabilities/ai" }, { label: "AI agents", href: "/services/ai-agents" }], color: "#6b7cff" },
   { id: "infrastructure", name: "Infrastructure", items: ["Cloud", "Kubernetes", "DevOps", "Security"], description: "Secure, observable cloud foundations with platform engineering, SRE and cybersecurity — so applications stay up and stay safe.", links: [{ label: "Cloud", href: "/capabilities/cloud" }, { label: "Platform engineering", href: "/services/platform-engineering" }], color: "#5cc8ff" },
-  { id: "data", name: "Data", items: ["PostgreSQL", "MongoDB", "Redis", "Warehouses"], description: "Transactional, analytical and real-time data stores designed for correctness, performance and governance.", links: [{ label: "PostgreSQL", href: "/technologies/postgresql" }, { label: "Data solutions", href: "/services/ai-data-solutions" }], color: "#9aa5b8" },
+  { id: "data", name: "Data", items: ["PostgreSQL", "MongoDB", "Redis", "Warehouses"], description: "Transactional, analytical and real-time data stores designed for correctness, performance and governance.", links: [{ label: "PostgreSQL", href: "/technologies/postgresql" }, { label: "Data solutions", href: "/services/ai-data-solutions" }], color: "#8a97ad" },
   { id: "integration", name: "Integration", items: ["APIs", "Payments", "Banking", "Blockchain"], description: "APIs, events and adapters connecting products to partners, payment networks, banks and blockchains.", links: [{ label: "API & integration", href: "/services/microservices-development" }, { label: "Hybrid fintech", href: "/solutions/web2-web3-fintech" }], color: "#22d3ee" },
 ];
 
@@ -370,7 +370,7 @@ export default function HomePage() {
               <span className="font-mono text-[11px] text-dim">
                 {new Date(a.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · {a.readingTime}
               </span>
-              <h3 className="mt-3 text-lg leading-snug font-semibold text-fg group-hover:underline group-hover:decoration-white/30 group-hover:underline-offset-4">{a.title}</h3>
+              <h3 className="mt-3 text-lg leading-snug font-semibold text-fg group-hover:underline group-hover:decoration-tint/30 group-hover:underline-offset-4">{a.title}</h3>
               <p className="mt-2 text-sm text-muted">{a.excerpt}</p>
             </Link>
           ))}

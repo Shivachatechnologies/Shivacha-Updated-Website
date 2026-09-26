@@ -35,7 +35,7 @@ export function CaseStudyTemplate({ cs }: { cs: CaseStudy }) {
       />
       {cs.kind === "reference-architecture" && (
         <div className="container-x -mt-6 mb-4">
-          <div className="flex gap-3 rounded-xl border border-line bg-white/[0.02] p-4 text-sm text-muted">
+          <div className="flex gap-3 rounded-xl border border-line bg-tint/[0.02] p-4 text-sm text-muted">
             <Info className="mt-0.5 size-4 shrink-0 text-brand-blue" aria-hidden />
             <p>This is a reference architecture describing how Shivacha approaches this class of system. It does not describe a specific client engagement and contains no client names or results.</p>
           </div>
@@ -326,7 +326,7 @@ export function CareerTemplate({ job }: { job: Job }) {
         lede={job.summary}
       />
       <div className="container-x -mt-6 mb-4">
-        <div className="flex gap-3 rounded-xl border border-line bg-white/[0.02] p-4 text-sm text-muted">
+        <div className="flex gap-3 rounded-xl border border-line bg-tint/[0.02] p-4 text-sm text-muted">
           <Info className="mt-0.5 size-4 shrink-0 text-brand-blue" aria-hidden />
           <p>This is an open application track. We hire continuously as client work grows; applications are reviewed for current and upcoming roles.</p>
         </div>

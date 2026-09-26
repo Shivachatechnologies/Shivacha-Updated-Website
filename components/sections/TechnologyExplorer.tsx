@@ -37,7 +37,7 @@ export function TechnologyExplorer({ items, categories }: { items: TechItem[]; c
                 role="tab"
                 aria-selected={active === c.id}
                 onClick={() => setActive(c.id)}
-                className={cn("shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors", active === c.id ? "border-white/25 bg-white/[0.07] text-fg" : "border-line text-muted hover:text-fg")}
+                className={cn("shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors", active === c.id ? "border-tint/25 bg-tint/[0.07] text-fg" : "border-line text-muted hover:text-fg")}
               >
                 {c.name}
               </button>

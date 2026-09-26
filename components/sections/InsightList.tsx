@@ -11,7 +11,7 @@ export function InsightList({ items }: { items: Insight[] }) {
           <span className="font-mono text-[11px] text-dim">
             {insightCategories.find((c) => c.slug === a.category)?.name} · {new Date(a.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · {a.readingTime}
           </span>
-          <h2 className="mt-3 text-lg leading-snug font-semibold text-fg group-hover:underline group-hover:decoration-white/30 group-hover:underline-offset-4">{a.title}</h2>
+          <h2 className="mt-3 text-lg leading-snug font-semibold text-fg group-hover:underline group-hover:decoration-tint/30 group-hover:underline-offset-4">{a.title}</h2>
           <p className="mt-2 text-sm text-muted">{a.excerpt}</p>
         </Link>
       ))}

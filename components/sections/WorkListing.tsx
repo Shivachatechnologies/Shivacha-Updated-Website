@@ -8,14 +8,14 @@ export function WorkListing({ items, active }: { items: CaseStudy[]; active?: Di
   return (
     <>
       <nav aria-label="Filter work" className="mb-10 flex flex-wrap gap-2">
-        <Link href="/work" className={cn("chip", !active && "border-white/25 text-fg")}>
+        <Link href="/work" className={cn("chip", !active && "border-tint/25 text-fg")}>
           All
         </Link>
-        <Link href="/work/case-studies" className={cn("chip", active === "case-studies" && "border-white/25 text-fg")}>
+        <Link href="/work/case-studies" className={cn("chip", active === "case-studies" && "border-tint/25 text-fg")}>
           Case studies
         </Link>
         {divisions.map((d) => (
-          <Link key={d.id} href={`/work/${d.id}`} className={cn("chip", active === d.id && "border-white/25 text-fg")}>
+          <Link key={d.id} href={`/work/${d.id}`} className={cn("chip", active === d.id && "border-tint/25 text-fg")}>
             {d.short}
           </Link>
         ))}

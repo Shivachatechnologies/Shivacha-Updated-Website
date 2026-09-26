@@ -47,7 +47,7 @@ export default function TeamsPage() {
         <SectionHeader eyebrow="Engagement models" title="From one specialist to managed engineering" />
         <div className="overflow-x-auto rounded-2xl border border-line">
           <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="border-b border-line bg-white/[0.02] text-xs text-dim">
+            <thead className="border-b border-line bg-tint/[0.02] text-xs text-dim">
               <tr>
                 <th className="p-4 font-medium">Model</th>
                 <th className="p-4 font-medium">Size</th>

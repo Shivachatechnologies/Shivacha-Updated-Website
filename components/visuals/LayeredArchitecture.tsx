@@ -22,7 +22,7 @@ export function LayeredArchitecture({ layers }: { layers: ArchLayer[] }) {
   return (
     <div className="grid gap-8 lg:grid-cols-[1.35fr_1fr] lg:items-start">
       <div className="relative min-w-0">
-        <div className="absolute top-4 bottom-4 left-[19px] w-px bg-gradient-to-b from-white/5 via-white/20 to-white/5" aria-hidden />
+        <div className="absolute top-4 bottom-4 left-[19px] w-px bg-gradient-to-b from-tint/5 via-tint/20 to-tint/5" aria-hidden />
         <ul className="space-y-2.5" role="tablist" aria-label="Architecture layers">
           {layers.map((l, i) => {
             const on = l.id === active;
@@ -38,22 +38,22 @@ export function LayeredArchitecture({ layers }: { layers: ArchLayer[] }) {
                   onClick={() => setActive(l.id)}
                   className={cn(
                     "group relative flex w-full items-center gap-4 rounded-2xl border px-3 py-3 text-left transition-all duration-300 sm:px-4",
-                    on ? "border-white/20 bg-white/[0.05]" : "border-line bg-white/[0.015] hover:border-line-strong",
+                    on ? "border-tint/20 bg-tint/[0.05]" : "border-line bg-tint/[0.015] hover:border-line-strong",
                   )}
                   style={on ? { boxShadow: `0 0 0 1px ${l.color}33, 0 20px 50px -30px ${l.color}` } : undefined}
                 >
                   <span
                     className="relative z-10 flex size-[18px] shrink-0 items-center justify-center rounded-full border bg-ink-950"
-                    style={{ borderColor: on ? l.color : "rgba(255,255,255,.2)" }}
+                    style={{ borderColor: on ? l.color : "var(--color-line-strong)" }}
                   >
-                    <span className="size-1.5 rounded-full" style={{ background: on ? l.color : "rgba(255,255,255,.3)" }} />
+                    <span className="size-1.5 rounded-full" style={{ background: on ? l.color : "var(--color-dim)" }} />
                   </span>
                   <span className="w-28 shrink-0 font-mono text-[11px] tracking-wider text-dim uppercase sm:w-36">
                     {String(i + 1).padStart(2, "0")} · {l.name}
                   </span>
                   <span className="hidden flex-1 flex-wrap gap-1.5 sm:flex">
                     {l.items.map((it) => (
-                      <span key={it} className={cn("rounded-md border px-2 py-0.5 text-xs transition-colors", on ? "border-white/15 text-fg" : "border-line text-muted")}>
+                      <span key={it} className={cn("rounded-md border px-2 py-0.5 text-xs transition-colors", on ? "border-tint/15 text-fg" : "border-line text-muted")}>
                         {it}
                       </span>
                     ))}

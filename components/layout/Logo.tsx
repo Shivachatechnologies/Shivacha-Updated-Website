@@ -17,15 +17,18 @@ export function Logo({ className, size = "md" }: { className?: string; size?: "m
   return (
     <span className={cn("flex items-center", lg ? "gap-3.5" : "gap-2.5", className)}>
       <LogoMark className={lg ? "size-12" : "size-9"} />
-      <Image
-        src="/brand/shivacha-wordmark.svg"
-        alt="Shivacha — Simplifying Tech Solutions"
-        width={lg ? 147 : 108}
-        height={lg ? 30 : 22}
-        unoptimized
-        priority={!lg}
-        className={lg ? "h-[30px] w-auto" : "h-[22px] w-auto"}
-      />
+      {(["dark", "light"] as const).map((t) => (
+        <Image
+          key={t}
+          src={t === "dark" ? "/brand/shivacha-wordmark.svg" : "/brand/shivacha-wordmark-dark.svg"}
+          alt="Shivacha — Simplifying Tech Solutions"
+          width={lg ? 147 : 108}
+          height={lg ? 30 : 22}
+          unoptimized
+          priority={!lg}
+          className={cn(lg ? "h-[30px] w-auto" : "h-[22px] w-auto", t === "dark" ? "light:hidden" : "hidden light:block")}
+        />
+      ))}
     </span>
   );
 }

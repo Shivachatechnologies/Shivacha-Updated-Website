@@ -58,7 +58,7 @@ export function ProductMarketplace({ items }: { items: ProductCard[] }) {
                 setTab(t.id);
                 setCat(null);
               }}
-              className={cn("shrink-0 rounded-full border px-4 py-2 text-sm transition-colors", tab === t.id ? "border-white/25 bg-white/[0.07] text-fg" : "border-line text-muted hover:text-fg")}
+              className={cn("shrink-0 rounded-full border px-4 py-2 text-sm transition-colors", tab === t.id ? "border-tint/25 bg-tint/[0.07] text-fg" : "border-line text-muted hover:text-fg")}
             >
               {t.label}
               <span className="ml-2 font-mono text-[10px] text-dim">{t.id === "all" ? items.length : items.filter((i) => i.division === t.id).length}</span>
@@ -73,11 +73,11 @@ export function ProductMarketplace({ items }: { items: ProductCard[] }) {
       </div>
       {tab !== "all" && cats.length > 1 && (
         <div className="mb-8 flex flex-wrap gap-2">
-          <button onClick={() => setCat(null)} className={cn("chip", !cat && "border-white/25 text-fg")}>
+          <button onClick={() => setCat(null)} className={cn("chip", !cat && "border-tint/25 text-fg")}>
             All categories
           </button>
           {cats.map((c) => (
-            <button key={c} onClick={() => setCat(c)} className={cn("chip", cat === c && "border-white/25 text-fg")}>
+            <button key={c} onClick={() => setCat(c)} className={cn("chip", cat === c && "border-tint/25 text-fg")}>
               {c}
             </button>
           ))}

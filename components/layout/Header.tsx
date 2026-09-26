@@ -7,6 +7,7 @@ import { ArrowRight, ChevronDown, Menu, Search, X } from "lucide-react";
 import type { NavItem } from "@/data/navigation";
 import { cn } from "@/lib/cn";
 import { Logo } from "./Logo";
+import { ThemeToggle } from "./ThemeToggle";
 
 export const openSearch = () => window.dispatchEvent(new CustomEvent("shivacha:search"));
 
@@ -96,13 +97,14 @@ export function Header({ nav }: { nav: NavItem[] }) {
           <button
             type="button"
             onClick={openSearch}
-            className="flex h-9 items-center gap-2 rounded-full border border-line bg-white/[0.03] px-3 text-sm text-muted transition-colors hover:border-line-strong hover:text-fg"
+            className="flex h-9 items-center gap-2 rounded-full border border-line bg-tint/[0.03] px-3 text-sm text-muted transition-colors hover:border-line-strong hover:text-fg"
             aria-label="Search the site"
           >
             <Search className="size-4" aria-hidden />
-            <span className="hidden sm:inline">Search</span>
-            <kbd className="hidden rounded border border-line px-1.5 font-mono text-[10px] text-dim lg:inline">⌘K</kbd>
+            <span className="hidden sm:inline xl:hidden 2xl:inline">Search</span>
+            <kbd className="hidden rounded border border-line px-1.5 font-mono text-[10px] text-dim lg:inline xl:hidden 2xl:inline">⌘K</kbd>
           </button>
+          <ThemeToggle />
           <Link href="/start-a-project" className="btn-primary hidden h-9 px-4 text-[13px] sm:inline-flex" data-track="cta:header-start-project">
             Start a Project
           </Link>
@@ -120,7 +122,7 @@ export function Header({ nav }: { nav: NavItem[] }) {
 
       {/* Desktop mega menu */}
       {active && (
-        <div className="absolute inset-x-0 top-16 hidden border-b border-line bg-ink-950 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.7)] xl:block" onMouseEnter={() => enter(active.label)}>
+        <div className="absolute inset-x-0 top-16 hidden border-b border-line bg-ink-950 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.7)] light:shadow-[0_24px_48px_-24px_rgba(11,20,36,0.18)] xl:block" onMouseEnter={() => enter(active.label)}>
           <div className="container-x py-8">
             {active.tabs ? (
               <div className="grid grid-cols-[220px_1fr] gap-8">
@@ -133,7 +135,7 @@ export function Header({ nav }: { nav: NavItem[] }) {
                         onFocus={() => setTab(i)}
                         className={cn(
                           "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
-                          tab === i ? "bg-white/[0.05] text-fg" : "text-muted hover:text-fg",
+                          tab === i ? "bg-tint/[0.05] text-fg" : "text-muted hover:text-fg",
                         )}
                       >
                         {t.label}

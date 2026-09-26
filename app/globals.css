@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
@@ -15,6 +17,9 @@
   --color-fg: #e9edf5;
   --color-muted: #9aa5b8;
   --color-dim: #7d889c;
+
+  /* Overlay tint: white on dark, ink on light */
+  --color-tint: #ffffff;
 
   --color-line: rgb(255 255 255 / 0.08);
   --color-line-strong: rgb(255 255 255 / 0.14);
@@ -66,6 +71,60 @@
   color-scheme: dark;
 }
 
+/* Dark is the default theme (tokens above). Repeated here so a subtree can opt back into dark inside light mode. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-ink-950: #03070f;
+  --color-ink-900: #06101c;
+  --color-ink-850: #0a1626;
+  --color-ink-800: #0e1c30;
+  --color-ink-700: #16283f;
+  --color-ink-600: #203551;
+  --color-fg: #e9edf5;
+  --color-muted: #9aa5b8;
+  --color-dim: #7d889c;
+  --color-tint: #ffffff;
+  --color-line: rgb(255 255 255 / 0.08);
+  --color-line-strong: rgb(255 255 255 / 0.14);
+  --color-brand-300: #66bfff;
+  --color-brand-blue: #0195ff;
+  --color-brand-indigo: #6b7cff;
+  --color-brand-cyan: #22d3ee;
+  --color-brand-teal: #14c8b0;
+  --color-brand-sky: #5cc8ff;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --color-ink-950: #f6f8fb;
+  --color-ink-900: #ffffff;
+  --color-ink-850: #eef2f7;
+  --color-ink-800: #e6ecf4;
+  --color-ink-700: #d8e1ec;
+  --color-ink-600: #c5d1e0;
+  --color-fg: #0b1424;
+  --color-muted: #475569;
+  --color-dim: #5b6678;
+  --color-tint: #0b1424;
+  --color-line: rgb(11 20 36 / 0.09);
+  --color-line-strong: rgb(11 20 36 / 0.16);
+  /* Accents darkened for AA text contrast on light surfaces */
+  --color-brand-300: #0068b3;
+  --color-brand-blue: #0068b3;
+  --color-brand-indigo: #4a56d6;
+  --color-brand-cyan: #08708a;
+  --color-brand-teal: #0a7568;
+  --color-brand-sky: #0b6fae;
+}
+
+[data-theme="light"] .card {
+  background: var(--color-ink-900);
+  box-shadow: 0 1px 2px rgb(11 20 36 / 0.04);
+}
+[data-theme="light"] .card-hover:hover {
+  box-shadow: 0 12px 32px -16px rgb(11 20 36 / 0.18);
+}
+
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
@@ -81,7 +140,7 @@ body {
 
 ::selection {
   background: rgb(1 149 255 / 0.35);
-  color: white;
+  color: var(--color-fg);
 }
 
 :focus-visible {
@@ -124,10 +183,10 @@ body {
     @apply text-lg leading-relaxed text-pretty text-muted sm:text-xl;
   }
   .card {
-    @apply rounded-2xl border border-line bg-white/[0.02] transition-colors;
+    @apply rounded-2xl border border-line bg-tint/[0.02] transition-colors;
   }
   .card-hover {
-    @apply hover:border-line-strong hover:bg-white/[0.035];
+    @apply hover:border-line-strong hover:bg-tint/[0.035];
   }
   .btn {
     @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-all duration-200 select-none;
@@ -136,28 +195,28 @@ body {
     @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-all duration-200 select-none bg-brand-600 text-white shadow-[0_8px_24px_-8px_rgb(1_149_255/0.55)] hover:bg-brand-700 hover:shadow-[0_0_0_4px_rgb(1_149_255/0.18)];
   }
   .btn-secondary {
-    @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-all duration-200 select-none border border-line-strong bg-white/[0.03] text-fg hover:border-white/25 hover:bg-white/[0.06];
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-all duration-200 select-none border border-line-strong bg-tint/[0.03] text-fg hover:border-tint/25 hover:bg-tint/[0.06];
   }
   .btn-ghost {
     @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-medium whitespace-nowrap text-muted transition-colors hover:text-fg;
   }
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-white/[0.02] px-3 py-1 text-xs text-muted transition-colors hover:border-line-strong hover:text-fg;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-tint/[0.02] px-3 py-1 text-xs text-muted transition-colors hover:border-line-strong hover:text-fg;
   }
   .grid-bg {
     background-image:
-      linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+      linear-gradient(to right, color-mix(in srgb, var(--color-tint) 3.5%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--color-tint) 3.5%, transparent) 1px, transparent 1px);
     background-size: 56px 56px;
   }
   .grid-fade {
     mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black 30%, transparent 75%);
   }
   .hairline {
-    @apply h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent;
+    @apply h-px w-full bg-gradient-to-r from-transparent via-tint/15 to-transparent;
   }
   .text-gradient {
-    @apply bg-gradient-to-br from-white via-white to-brand-300/70 bg-clip-text text-transparent;
+    @apply bg-gradient-to-br from-fg via-fg to-brand-300/70 bg-clip-text text-transparent;
   }
   .text-spectrum {
     background-image: linear-gradient(90deg, #33aaff, #0195ff 35%, #22d3ee 75%, #66bfff);

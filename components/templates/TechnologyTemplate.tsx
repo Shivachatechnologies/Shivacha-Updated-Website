@@ -46,7 +46,7 @@ export function TechnologyTemplate({ tech }: { tech: Technology }) {
             <p className="eyebrow mb-4">Overview</p>
             <p className="text-xl leading-relaxed text-fg">{tech.overview}</p>
             {tech.considerations && (
-              <div className="mt-8 flex gap-3 rounded-xl border border-line bg-white/[0.02] p-4 text-sm text-muted">
+              <div className="mt-8 flex gap-3 rounded-xl border border-line bg-tint/[0.02] p-4 text-sm text-muted">
                 <Info className="mt-0.5 size-4 shrink-0 text-brand-blue" aria-hidden />
                 <p>{tech.considerations}</p>
               </div>

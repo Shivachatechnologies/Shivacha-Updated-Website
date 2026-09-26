@@ -77,7 +77,7 @@ export function ResourceLibrary({ items, types, divisions, technologies, industr
         <Select label="Difficulty" value={difficulty} onChange={setDifficulty} opts={["Introductory", "Intermediate", "Advanced"].map((d) => ({ id: d, label: d }))} />
         <div className="flex gap-2">
           {(["featured", "latest"] as const).map((s) => (
-            <button key={s} onClick={() => setSort(s)} className={cn("h-10 flex-1 rounded-xl border text-xs capitalize", sort === s ? "border-white/25 bg-white/[0.06] text-fg" : "border-line text-muted")}>
+            <button key={s} onClick={() => setSort(s)} className={cn("h-10 flex-1 rounded-xl border text-xs capitalize", sort === s ? "border-tint/25 bg-tint/[0.06] text-fg" : "border-line text-muted")}>
               {s}
             </button>
           ))}

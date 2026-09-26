@@ -74,6 +74,10 @@ scripts/              Content, demo-link and route/SEO checks
 
 The official logo lives in [`public/brand`](public/brand): the original files (`shivacha-mark-original.jpg`, `shivacha-logo-original.png`) plus vector versions traced from them — `shivacha-mark.svg`, `shivacha-wordmark.svg` (white, for dark backgrounds), `shivacha-logo.svg` (full lockup, white text) and `shivacha-logo-dark.svg` (dark text, for light backgrounds). Brand blue is `#0195FF`; the site theme (`app/globals.css`) derives from it — a `brand-300…700` scale, navy-tinted surfaces and an analogous division palette (AI indigo, Digital blue, FinTech teal, Web3 cyan, Cloud sky). The header/footer logo (`components/layout/Logo.tsx`), favicon (`app/icon.svg`), Apple touch icon and Open Graph image all use these paths (`lib/brand/*`).
 
+## Dark / light theme
+
+A sun/moon button in the header (`components/layout/ThemeToggle.tsx`) switches themes. The choice is saved in `localStorage` (`theme`); first-time visitors get their system preference. A tiny inline script in `app/layout.tsx` sets `<html data-theme>` before first paint, so there is no flash. Theme tokens live in `app/globals.css` (`[data-theme="light"]` / `[data-theme="dark"]`); use token classes (`bg-ink-*`, `text-fg`, `text-muted`, `border-line`, `bg-tint/[…]`) rather than hard-coded white/black, and the `light:` variant for light-only tweaks. Product UI previews stay dark in both themes (`data-theme="dark"` island).
+
 ## Content model
 
 All content types are defined in [`data/types.ts`](data/types.ts). Highlights:

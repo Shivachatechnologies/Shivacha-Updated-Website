@@ -48,13 +48,13 @@ export function EcosystemMap({ nodes }: { nodes: EcosystemNode[] }) {
 
         {/* orbit rings */}
         {[R + 110, R, 110].map((r, i) => (
-          <circle key={r} cx={C} cy={C} r={r} fill="none" stroke="white" strokeOpacity={0.05 + i * 0.02} strokeDasharray={i === 0 ? "2 6" : undefined} />
+          <circle key={r} cx={C} cy={C} r={r} fill="none" className="stroke-fg" strokeOpacity={0.05 + i * 0.02} strokeDasharray={i === 0 ? "2 6" : undefined} />
         ))}
 
         {/* inter-division mesh */}
         {placed.map((p, i) => {
           const q = placed[(i + 1) % placed.length];
-          return <line key={`m${p.id}`} x1={p.x} y1={p.y} x2={q.x} y2={q.y} stroke="white" strokeOpacity={0.06} />;
+          return <line key={`m${p.id}`} x1={p.x} y1={p.y} x2={q.x} y2={q.y} className="stroke-fg" strokeOpacity={0.06} />;
         })}
 
         {/* satellites */}
@@ -74,7 +74,7 @@ export function EcosystemMap({ nodes }: { nodes: EcosystemNode[] }) {
                   y={sy + Math.sin(sa) * 10 + 3}
                   textAnchor={Math.cos(sa) > 0.2 ? "start" : Math.cos(sa) < -0.2 ? "end" : "middle"}
                   className="fill-current font-mono text-[10px]"
-                  style={{ color: on ? "#e9edf5" : "#6b778c" }}
+                  style={{ color: on ? "var(--color-fg)" : "var(--color-dim)" }}
                 >
                   {s.label}
                 </text>
@@ -86,7 +86,7 @@ export function EcosystemMap({ nodes }: { nodes: EcosystemNode[] }) {
         {/* spokes with flowing dashes */}
         {placed.map((p) => (
           <g key={`s${p.id}`}>
-            <line x1={C} y1={C} x2={p.x} y2={p.y} stroke="white" strokeOpacity={0.12} />
+            <line x1={C} y1={C} x2={p.x} y2={p.y} className="stroke-fg" strokeOpacity={0.12} />
             <line
               x1={C}
               y1={C}
@@ -103,7 +103,7 @@ export function EcosystemMap({ nodes }: { nodes: EcosystemNode[] }) {
 
         {/* core */}
         <circle cx={C} cy={C} r={90} fill="url(#core-glow)" />
-        <circle cx={C} cy={C} r={54} fill="#06101c" stroke={BRAND_BLUE} strokeOpacity={0.45} />
+        <circle cx={C} cy={C} r={54} className="fill-ink-900" stroke={BRAND_BLUE} strokeOpacity={0.45} />
         <circle cx={C} cy={C} r={62} fill="none" stroke={BRAND_BLUE} strokeOpacity={0.18} className="animate-pulse-soft" />
         <svg x={C - 26} y={C - 26} width={52} height={52} viewBox={MARK_VIEWBOX} role="img" aria-label="Shivacha">
           <path fill={BRAND_BLUE} fillRule="evenodd" d={MARK_PATH} />
@@ -125,8 +125,8 @@ export function EcosystemMap({ nodes }: { nodes: EcosystemNode[] }) {
               className="cursor-pointer outline-none"
             >
               <circle cx={p.x} cy={p.y} r={56} fill={`url(#g-${p.id})`} opacity={on ? 1 : 0.55} className="transition-opacity" />
-              <circle cx={p.x} cy={p.y} r={34} fill="#06101c" stroke={p.color} strokeOpacity={on ? 1 : 0.55} strokeWidth={on ? 2 : 1.2} />
-              <text x={p.x} y={p.y + 4.5} textAnchor="middle" className="fill-white text-[12.5px] font-semibold">
+              <circle cx={p.x} cy={p.y} r={34} className="fill-ink-900" stroke={p.color} strokeOpacity={on ? 1 : 0.55} strokeWidth={on ? 2 : 1.2} />
+              <text x={p.x} y={p.y + 4.5} textAnchor="middle" className="fill-fg text-[12.5px] font-semibold">
                 {p.short}
               </text>
             </g>
