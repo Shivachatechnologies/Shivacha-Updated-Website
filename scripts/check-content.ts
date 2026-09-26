@@ -15,6 +15,9 @@ import { caseStudies } from "../data/caseStudies";
 import { markets } from "../data/markets";
 import { resources } from "../data/resources";
 import { insights } from "../data/insights";
+import { readFileSync } from "node:fs";
+import { LEAD_COLUMNS } from "../lib/leads/columns";
+import { LEAD_STATUSES } from "../lib/leads/options";
 
 const S = new Set(services.map((s) => s.slug));
 const P = new Set(products.map((p) => p.slug));
@@ -113,6 +116,14 @@ for (const r of resources) {
 for (const i of insights) {
   chk(S, i.services, i.slug, "service");
   chk(T, i.technologies, i.slug, "technology");
+}
+
+// The Apps Script lead sheet must use the same columns and statuses as the website.
+{
+  const gs = readFileSync("docs/google-apps-script/leads.gs", "utf8");
+  const list = (name: string) => [...(gs.match(new RegExp(`const ${name} = \\[([\\s\\S]*?)\\];`))?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  if (list("HEADERS").join("|") !== LEAD_COLUMNS.map((c) => c.header).join("|")) issues.push("docs/google-apps-script/leads.gs HEADERS differ from lib/leads/columns.ts");
+  if (list("STATUSES").join("|") !== LEAD_STATUSES.join("|")) issues.push("docs/google-apps-script/leads.gs STATUSES differ from lib/leads/options.ts");
 }
 
 if (issues.length) {

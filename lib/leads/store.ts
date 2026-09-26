@@ -3,15 +3,18 @@ import { chmod, mkdir, appendFile } from "node:fs/promises";
 import path from "node:path";
 import { createHmac } from "node:crypto";
 import { getAccessToken, serviceAccountConfigured } from "@/lib/google/serviceAccount";
-import { LEAD_COLUMNS, safeCell } from "./columns";
+import { LEAD_COLUMNS, STATUS_COLUMN_INDEX, safeCell } from "./columns";
+import { LEAD_STATUSES } from "./options";
 import type { LeadRecord } from "./types";
 
 /**
  * Lead database adapters. Configure with LEAD_STORE:
- *   "sheets" – Google Sheet in your Google Workspace (recommended; sales edits status/owner/notes there)
+ *   "apps-script" – Google Sheet via a Google Apps Script web app (easiest; no Google Cloud project).
+ *                   Script: docs/google-apps-script/leads.gs. Env: GOOGLE_SHEETS_WEBHOOK_URL + GOOGLE_SHEETS_WEBHOOK_SECRET
+ *   "sheets" – Google Sheet via the Sheets API and a service account
  *   "file"   – append-only JSON Lines file on the server (self-hosted / VPS)
  *   "none"   – do not store (email only)
- * Default: "sheets" when GOOGLE_SHEETS_LEADS_ID is set, otherwise "file".
+ * Default: "apps-script" when GOOGLE_SHEETS_WEBHOOK_URL is set, "sheets" when GOOGLE_SHEETS_LEADS_ID is set, otherwise "file".
  * CRM_WEBHOOK_URL, when set, additionally receives every lead (HMAC-signed).
  */
 
@@ -28,7 +31,8 @@ let sheetGid: number | undefined;
 
 export function storeDriver() {
   const explicit = process.env.LEAD_STORE;
-  if (explicit === "sheets" || explicit === "file" || explicit === "none") return explicit;
+  if (explicit === "apps-script" || explicit === "sheets" || explicit === "file" || explicit === "none") return explicit;
+  if (process.env.GOOGLE_SHEETS_WEBHOOK_URL) return "apps-script";
   return process.env.GOOGLE_SHEETS_LEADS_ID ? "sheets" : "file";
 }
 
@@ -60,6 +64,31 @@ async function saveToSheet(lead: LeadRecord): Promise<StoreResult> {
   return { stored: true, driver: "sheets", viewUrl };
 }
 
+async function saveToAppsScript(lead: LeadRecord): Promise<StoreResult> {
+  const url = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
+  const secret = process.env.GOOGLE_SHEETS_WEBHOOK_SECRET;
+  if (!url || !secret) return { stored: false, driver: "apps-script", error: "Apps Script webhook is not configured" };
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) return { stored: false, driver: "apps-script", error: "GOOGLE_SHEETS_WEBHOOK_URL must be an Apps Script /exec URL" };
+  // Apps Script cannot read request headers, so the shared secret travels in the JSON body (over HTTPS).
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      secret,
+      sheet: SHEET_TAB,
+      headers: LEAD_COLUMNS.map((c) => c.header),
+      statusIndex: STATUS_COLUMN_INDEX,
+      statuses: LEAD_STATUSES,
+      row: LEAD_COLUMNS.map((c) => safeCell(c.value(lead))),
+    }),
+    redirect: "follow", // web apps answer with a redirect to googleusercontent.com
+    signal: AbortSignal.timeout(15_000),
+  });
+  const data = (await res.json().catch(() => ({}))) as { ok?: boolean; url?: string; error?: string };
+  if (!res.ok || !data.ok) throw new Error(`Apps Script ${res.status}: ${data.error ?? "unexpected response"}`);
+  return { stored: true, driver: "apps-script", viewUrl: data.url };
+}
+
 async function saveToFile(lead: LeadRecord): Promise<StoreResult> {
   const file = process.env.LEADS_FILE || path.join(process.cwd(), ".data", "leads.jsonl");
   await mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
@@ -71,6 +100,7 @@ async function saveToFile(lead: LeadRecord): Promise<StoreResult> {
 export async function saveLead(lead: LeadRecord): Promise<StoreResult> {
   const driver = storeDriver();
   try {
+    if (driver === "apps-script") return await saveToAppsScript(lead);
     if (driver === "sheets") return await saveToSheet(lead);
     if (driver === "file") return await saveToFile(lead);
     return { stored: false, driver: "none" };

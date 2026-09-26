@@ -141,8 +141,15 @@ All other forms (contact, demo, meeting, hire, resource) use the same pipeline. 
    - *Simplest:* in the `sales@` Google account enable 2-Step Verification, create an **App Password**, then set `SMTP_USER=sales@shivacha.com` and `SMTP_PASS=<app password>`.
    - *No stored password:* create an OAuth client in Google Cloud, authorise `sales@shivacha.com` for scope `https://mail.google.com/`, then set `GMAIL_USER`, `GMAIL_OAUTH_CLIENT_ID`, `GMAIL_OAUTH_CLIENT_SECRET`, `GMAIL_OAUTH_REFRESH_TOKEN`.
    - Test: `npm run leads:test-email -- you@example.com`.
-3. **Lead database (Google Sheet)** — create a Google Cloud service account (Sheets API enabled), create a Sheet in your Workspace and share it (Editor) with the service-account email. Set `GOOGLE_SHEETS_LEADS_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, then run `npm run leads:setup-sheet` — or import `docs/shivacha-leads-template.xlsx` into Google Sheets — (header row, frozen columns, **Lead Status** dropdown: New, Contacted, Qualified, Proposal Sent, Negotiation, Won, Lost, Follow-up). Sales update *Assigned Sales Person*, *Notes*, *Last Contacted* and *Next Follow-up* directly in the sheet; the *View Lead* button in each notification opens the row.
-   - Self-hosted servers can use `LEAD_STORE=file` (JSON Lines, file mode 600, path `LEADS_FILE`, default `.data/leads.jsonl` — git-ignored). Serverless hosts need the Sheet.
+3. **Lead database (Google Sheet)** — recommended: **Apps Script** (no Google Cloud project):
+   1. Signed in as `sales@shivacha.com`, create a Google Sheet (or import `docs/shivacha-leads-template.xlsx`).
+   2. *Extensions → Apps Script*, replace `Code.gs` with `docs/google-apps-script/leads.gs`, set `SECRET` to a long random string, *Save*, run `setup` once and allow access.
+   3. *Deploy → New deployment → Web app*, *Execute as: Me*, *Who has access: Anyone* → copy the `/exec` URL.
+   4. On the server set `GOOGLE_SHEETS_WEBHOOK_URL` (the URL) and `GOOGLE_SHEETS_WEBHOOK_SECRET` (the same secret). Requests without the secret are rejected.
+
+   The sheet gets the header row, frozen columns and a **Lead Status** dropdown (New, Contacted, Qualified, Proposal Sent, Negotiation, Won, Lost, Follow-up). Sales update *Assigned Sales Person*, *Notes*, *Last Contacted* and *Next Follow-up* directly in the sheet; the *View Lead* button in each notification opens the row. `npm run check:content` fails if the script's columns drift from `lib/leads/columns.ts`.
+   - Alternative: Sheets API with a service account (`GOOGLE_SHEETS_LEADS_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, then `npm run leads:setup-sheet`).
+   - Self-hosted servers can use `LEAD_STORE=file` (JSON Lines, file mode 600, path `LEADS_FILE`, default `.data/leads.jsonl` — git-ignored). Serverless hosts need a Sheet.
 4. Optional: `CRM_WEBHOOK_URL` / `CRM_WEBHOOK_SECRET` to forward every lead (HMAC-signed) to a CRM; `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` to add a CAPTCHA if spam appears.
 
 **Reliability:** a lead is accepted when it is saved **or** the sales email is sent, so neither a mail outage nor a storage outage loses it; if both fail the visitor is asked to email sales@ or use WhatsApp. The visitor confirmation and webhook run after the response (`after()`).
