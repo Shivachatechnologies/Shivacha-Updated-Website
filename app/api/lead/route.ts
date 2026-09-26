@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       if (!res.ok) throw new Error(`Webhook responded ${res.status}`);
     } catch (e) {
       console.error("[lead] delivery failed", (e as Error).message);
-      return NextResponse.json({ ok: false, error: "We could not submit your request. Please email contact@shivacha.com." }, { status: 502 });
+      return NextResponse.json({ ok: false, error: "We could not submit your request. Please email info@shivacha.com." }, { status: 502 });
     }
   } else {
     // No CRM configured (e.g. local development). Log a redacted summary only.

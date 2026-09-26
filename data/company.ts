@@ -181,15 +181,15 @@ export const companyPages: CompanyPage[] = [
     slug: "global-presence",
     title: "Global Presence",
     metaTitle: "Global Delivery",
-    metaDescription: "Shivacha serves companies across North America, Europe, the Middle East, Africa and Asia-Pacific through remote-first global delivery.",
-    h1: "Global delivery, remote by design.",
-    lede: "We work with companies across North America, Europe, the Middle East, Africa and Asia-Pacific — collaborating in your time zone and your tools.",
+    metaDescription: "Shivacha has offices in Gurgaon, Mohali, Dallas and London, and serves companies across North America, Europe, the Middle East, Africa and Asia-Pacific.",
+    h1: "Offices in India, the US and the UK. Delivery worldwide.",
+    lede: "Teams in Gurgaon, Mohali, Dallas and London work with companies across North America, Europe, the Middle East, Africa and Asia-Pacific, in your time zone and your tools.",
     sections: [
       {
         heading: "How global delivery works",
         body: [
           "Teams are structured with agreed working-hour overlap for each client, asynchronous handoffs documented in shared tools and regular synchronous rituals. Security practices — company-managed devices, least-privilege access and confidentiality agreements — apply wherever engineers work.",
-          "Shivacha Technologies Private Limited is registered in India. We do not claim physical offices in other markets; market pages describe how we serve companies there remotely.",
+          "Shivacha Technologies Private Limited is registered in India, with its headquarters in Gurgaon and offices in Mohali, Dallas and London. Market pages describe how we serve companies in each region.",
         ],
       },
     ],

@@ -270,5 +270,4 @@ export const footerNav: NavColumn[] = [
   { title: "Offerings", links: [l("Products", "/products"), l("Services", "/services"), l("Solutions", "/solutions"), l("Dedicated Teams", "/dedicated-teams"), l("Hire Developers", "/hire-developers")] },
   { title: "Explore", links: [l("Industries", "/industries"), l("Technologies", "/technologies"), l("Work", "/work"), l("Markets", "/markets"), l("Resources", "/resources"), l("Insights", "/insights")] },
   { title: "Company", links: [l("About", "/company/about"), l("Leadership", "/company/leadership"), l("Careers", "/careers"), l("Partners", "/company/partners"), l("Contact", "/contact")] },
-  { title: "Legal", links: [l("Privacy", "/privacy-policy"), l("Terms", "/terms"), l("Cookies", "/cookie-policy"), l("Security", "/security"), l("Disclaimer", "/disclaimer"), l("Accessibility", "/accessibility")] },
 ];

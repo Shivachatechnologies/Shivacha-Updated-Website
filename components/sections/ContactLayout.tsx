@@ -16,30 +16,42 @@ export function ContactLayout({ crumbs, title, lede, eyebrow, children, side }: 
             {side}
             <div className="card p-6">
               <p className="eyebrow mb-5">Direct contact</p>
-              <ul className="space-y-4 text-sm">
-                <li>
-                  <a href={`mailto:${siteConfig.contact.email}`} className="flex items-center gap-3 text-muted hover:text-fg">
-                    <Mail className="size-4" /> {siteConfig.contact.email}
-                  </a>
-                </li>
-                <li>
-                  <a href={siteConfig.contact.phoneHref} className="flex items-center gap-3 text-muted hover:text-fg">
-                    <Phone className="size-4" /> {siteConfig.contact.phone}
-                  </a>
-                </li>
-                <li>
-                  <a href={siteConfig.contact.whatsapp} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-muted hover:text-fg">
-                    <MessageCircle className="size-4" /> WhatsApp
-                  </a>
-                </li>
-                <li className="flex items-start gap-3 text-muted">
-                  <MapPin className="mt-0.5 size-4 shrink-0" />
-                  <span>
-                    {siteConfig.legalName}
-                    <br />
-                    Registered office: {siteConfig.registeredOffice.lines.join(", ")}
-                  </span>
-                </li>
+              <ul className="divide-y divide-line">
+                {siteConfig.enquiries.map((e) => (
+                  <li key={e.id} className="py-3.5 first:pt-0 last:pb-0">
+                    <p className="text-sm font-semibold text-fg">{e.label}</p>
+                    <a href={`mailto:${e.email}`} className="mt-1.5 flex items-center gap-2.5 text-sm text-muted hover:text-fg">
+                      <Mail className="size-4 text-brand-blue" /> {e.email}
+                    </a>
+                    <a href={e.phoneHref} className="mt-1 flex items-center gap-2.5 text-sm text-muted hover:text-fg">
+                      <Phone className="size-4 text-brand-blue" /> {e.phone}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <a href={siteConfig.contact.whatsapp} target="_blank" rel="noopener noreferrer" className="mt-5 flex items-center gap-2.5 text-sm font-medium text-brand-blue hover:underline">
+                <MessageCircle className="size-4" /> Chat on WhatsApp
+              </a>
+            </div>
+            <div className="card p-6">
+              <p className="eyebrow mb-5">Offices</p>
+              <ul className="space-y-4">
+                {siteConfig.offices.map((o) => (
+                  <li key={o.city} className="flex gap-3 text-sm">
+                    <MapPin className="mt-0.5 size-4 shrink-0 text-brand-blue" />
+                    <span>
+                      <span className="font-semibold text-fg">
+                        {o.label}, {o.country}
+                      </span>
+                      <span className="block text-muted">{o.lines.join(", ")}</span>
+                      {o.phone && (
+                        <a href={o.phoneHref} className="text-muted hover:text-fg">
+                          {o.phone}
+                        </a>
+                      )}
+                    </span>
+                  </li>
+                ))}
               </ul>
             </div>
             <div className="card p-6">

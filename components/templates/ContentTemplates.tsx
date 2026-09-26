@@ -9,6 +9,7 @@ import { caseStudies } from "@/data/caseStudies";
 import { pick } from "@/lib/relations";
 import { articleSchema } from "@/lib/jsonld";
 import { Cover } from "@/components/graphics/Cover";
+import { siteConfig } from "@/data/siteConfig";
 import { PageHero } from "@/components/sections/PageHero";
 import { ArchitectureDiagram, CheckList, ChipLinks, PointsGrid, ProcessSteps, RelatedSection } from "@/components/sections/blocks";
 import { CTABand } from "@/components/sections/CTABand";
@@ -98,6 +99,7 @@ export function MarketTemplate({ market }: { market: Market }) {
   const services = pick.services(market.services);
   const region = market.region ? markets.find((m) => m.slug === market.region) : undefined;
   const countries = (market.countries ?? []).map((c) => markets.find((m) => m.slug === c)).filter(Boolean) as Market[];
+  const office = siteConfig.offices.find((o) => o.market === market.slug);
   const crumbs = [{ name: "Markets", href: "/markets" }, ...(region ? [{ name: region.name, href: `/markets/${region.slug}` }] : []), { name: market.name, href: `/markets/${market.slug}` }];
   return (
     <>
@@ -119,7 +121,19 @@ export function MarketTemplate({ market }: { market: Market }) {
           <aside className="card h-fit p-6">
             <p className="eyebrow mb-3">Collaboration</p>
             <p className="text-sm leading-relaxed text-muted">{market.collaboration}</p>
-            <p className="mt-4 text-xs text-dim">Shivacha delivers remotely and does not claim a physical office in this market.</p>
+            {office ? (
+              <div className="mt-5 border-t border-line pt-5 text-sm">
+                <p className="font-semibold text-fg">Shivacha {office.label} office</p>
+                <address className="mt-1 text-muted not-italic">{office.lines.join(", ")}</address>
+                {office.phone && (
+                  <a href={office.phoneHref} className="mt-1 block text-muted hover:text-fg">
+                    {office.phone}
+                  </a>
+                )}
+              </div>
+            ) : (
+              <p className="mt-4 text-xs text-dim">Delivery for this market is led from our offices in India, the United States and the United Kingdom.</p>
+            )}
           </aside>
         </div>
       </Section>

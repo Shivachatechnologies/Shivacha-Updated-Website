@@ -124,14 +124,14 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; errors?: Record<string, string> };
       if (!res.ok || !json.ok) {
         if (json.errors) setErrors(json.errors);
-        setServerError(json.error ?? "Something went wrong. Please try again or email contact@shivacha.com.");
+        setServerError(json.error ?? "Something went wrong. Please try again or email info@shivacha.com.");
         setStatus("error");
         return;
       }
       track(v.event, { form: type, division: obj.division, industry: obj.industry, budget: obj.budget, product: obj.product || hidden.product, resource: hidden.resource });
       setStatus("done");
     } catch {
-      setServerError("Network error. Please try again or email contact@shivacha.com.");
+      setServerError("Network error. Please try again or email info@shivacha.com.");
       setStatus("error");
     }
   }

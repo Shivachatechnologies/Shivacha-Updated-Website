@@ -17,7 +17,7 @@ export function LegalPageView({ slug }: { slug: string }) {
               ))}
             </section>
           ))}
-          <p className="mt-12 text-sm text-dim">This page is provided for information and should be reviewed by qualified counsel. Contact contact@shivacha.com with questions.</p>
+          <p className="mt-12 text-sm text-dim">This page is provided for information and should be reviewed by qualified counsel. Contact info@shivacha.com with questions.</p>
         </div>
       </Section>
     </>

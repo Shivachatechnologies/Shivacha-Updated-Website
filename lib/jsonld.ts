@@ -17,7 +17,20 @@ export const organizationSchema = () => ({
   telephone: siteConfig.contact.phone,
   sameAs: [siteConfig.social.linkedin],
   founder: { "@type": "Person", name: "Chandrakant Singh", jobTitle: "CEO & Founder" },
-  address: { "@type": "PostalAddress", addressLocality: "Gurugram", addressRegion: "Haryana", addressCountry: "IN" },
+  address: siteConfig.offices.map((o) => ({
+    "@type": "PostalAddress",
+    streetAddress: o.street,
+    addressLocality: o.city,
+    addressRegion: o.region,
+    postalCode: o.postalCode,
+    addressCountry: o.countryCode,
+  })),
+  contactPoint: siteConfig.enquiries.map((e) => ({
+    "@type": "ContactPoint",
+    contactType: e.label.replace(" enquiry", "").toLowerCase() === "general" ? "customer service" : e.label.replace(" enquiry", "").toLowerCase(),
+    email: e.email,
+    telephone: e.phone,
+  })),
 });
 
 export const websiteSchema = () => ({

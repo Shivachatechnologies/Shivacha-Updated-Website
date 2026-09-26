@@ -2,8 +2,8 @@ import type { Market } from "./types";
 import { pts } from "./_helpers";
 
 /**
- * Market pages describe how Shivacha serves companies in each market through remote delivery.
- * Shivacha does not claim physical offices in these markets. Add office details only when verified.
+ * Market pages describe how Shivacha serves companies in each market.
+ * Offices live in siteConfig.offices; a market page shows its office when one is linked via `market`.
  */
 export const markets: Market[] = [
   // ─────────────── Regions ───────────────

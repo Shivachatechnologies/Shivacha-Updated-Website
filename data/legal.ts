@@ -19,7 +19,7 @@ export const legalPages: LegalPage[] = [
     description: "How Shivacha Technologies collects, uses and protects personal information.",
     updated,
     sections: [
-      { heading: "Who we are", body: ["This website is operated by Shivacha Technologies Private Limited (\"Shivacha\", \"we\"). Questions about this policy can be sent to contact@shivacha.com."] },
+      { heading: "Who we are", body: ["This website is operated by Shivacha Technologies Private Limited (\"Shivacha\", \"we\"). Questions about this policy can be sent to info@shivacha.com."] },
       { heading: "Information we collect", body: ["Information you provide through forms — such as your name, business email, company, country, role and project details — and any documents you choose to upload.", "Technical information such as device, browser and usage data collected through cookies and analytics tools where you have consented to them."] },
       { heading: "How we use information", body: ["To respond to enquiries, provide requested resources, arrange meetings, evaluate job applications, improve our website and — with consent where required — send relevant communications."] },
       { heading: "Legal bases and consent", body: ["We process personal information on the basis of your consent, our legitimate interests in responding to business enquiries, or to take steps before entering a contract. You may withdraw consent at any time."] },
@@ -78,7 +78,7 @@ export const legalPages: LegalPage[] = [
       { heading: "Our approach", body: ["Security is built into our engineering practices: threat modelling, least-privilege access, secrets management, dependency scanning, encryption and code review are defaults on client work."] },
       { heading: "Operational security", body: ["Engineers work on company-managed devices with access granted per project on a least-privilege basis and revoked at project end. Confidentiality agreements apply to all team members."] },
       { heading: "Certifications", body: ["Shivacha does not currently claim formal security certifications. When certifications are obtained, they will be listed here with verification details."] },
-      { heading: "Responsible disclosure", body: ["If you believe you have found a security vulnerability in our website or services, please email contact@shivacha.com with details. Please do not access data that is not yours or disrupt services. We will acknowledge and investigate reports promptly."] },
+      { heading: "Responsible disclosure", body: ["If you believe you have found a security vulnerability in our website or services, please email info@shivacha.com with details. Please do not access data that is not yours or disrupt services. We will acknowledge and investigate reports promptly."] },
     ],
   },
   {
@@ -89,7 +89,7 @@ export const legalPages: LegalPage[] = [
     sections: [
       { heading: "Commitment", body: ["We aim for this website to be usable by everyone and design towards the Web Content Accessibility Guidelines (WCAG) 2.2 Level AA."] },
       { heading: "Measures", body: ["Semantic HTML, keyboard navigation, visible focus states, sufficient colour contrast, reduced-motion support, text alternatives and accessible forms."] },
-      { heading: "Feedback", body: ["If you encounter an accessibility barrier, please contact contact@shivacha.com and we will work to address it."] },
+      { heading: "Feedback", body: ["If you encounter an accessibility barrier, please contact info@shivacha.com and we will work to address it."] },
     ],
   },
 ];
