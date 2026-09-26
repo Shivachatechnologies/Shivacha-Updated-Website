@@ -30,9 +30,21 @@ export function ContactLayout({ crumbs, title, lede, eyebrow, children, side }: 
                   </li>
                 ))}
               </ul>
-              <a href={siteConfig.contact.whatsapp} target="_blank" rel="noopener noreferrer" className="mt-5 flex items-center gap-2.5 text-sm font-medium text-brand-blue hover:underline">
-                <MessageCircle className="size-4" /> Chat on WhatsApp
-              </a>
+              <div className="mt-5 border-t border-line pt-4">
+                <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-fg">
+                  <MessageCircle className="size-4 text-brand-blue" /> WhatsApp
+                </p>
+                <ul className="space-y-1.5 text-sm">
+                  {siteConfig.whatsappLines.map((l) => (
+                    <li key={l.id}>
+                      <a href={`https://wa.me/${l.number}`} target="_blank" rel="noopener noreferrer" data-track={`whatsapp:contact-${l.id}`} className="flex items-center justify-between gap-3 text-muted hover:text-fg">
+                        <span>{l.country}</span>
+                        <span className="font-medium text-fg">{l.display}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
             <div className="card p-6">
               <p className="eyebrow mb-5">Offices</p>

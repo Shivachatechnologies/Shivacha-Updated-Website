@@ -21,6 +21,12 @@ export const siteConfig = {
     phoneHref: "tel:+918171133917",
     whatsapp: "https://wa.me/918171133917",
   },
+  /** WhatsApp lines offered to visitors. `number` is digits only (country code first) for wa.me links. */
+  whatsappLines: [
+    { id: "in", country: "India", countryCode: "IN", number: "918171133917", display: "+91 81711 33917" },
+    { id: "us", country: "USA", countryCode: "US", number: "13348469075", display: "+1 (334) 846-9075" },
+    { id: "uk", country: "UK", countryCode: "GB", number: "447446971836", display: "+44 7446 971836" },
+  ],
   /** Enquiry desks shown in the footer and on the contact page. */
   enquiries: [
     { id: "sales", label: "Sales enquiry", description: "Projects, products and partnerships", email: "sales@shivacha.com", phone: "+91 81711 33917", phoneHref: "tel:+918171133917" },

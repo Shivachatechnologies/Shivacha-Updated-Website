@@ -1,6 +1,7 @@
 /* Server-only module: email templates for the lead pipeline. */
 import { siteConfig } from "@/data/siteConfig";
-import { bookCallHref, whatsappHref } from "@/lib/calendly";
+import { bookCallHref } from "@/lib/calendly";
+import { whatsappHref, whatsappLines } from "@/lib/whatsapp";
 import type { LeadRecord } from "@/lib/leads/types";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -146,7 +147,8 @@ Lead ID: ${lead.id} · Follow up by ${formatDateTime(lead.nextFollowUp)}
 export function visitorConfirmation(lead: LeadRecord) {
   const first = lead.name.split(/\s+/)[0] || lead.name;
   const book = bookCallHref(siteConfig.url);
-  const wa = whatsappHref(`Hi Shivacha, I just sent a project inquiry (ref ${lead.id}).`);
+  const waText = `Hi Shivacha, I just sent a project inquiry (ref ${lead.id}).`;
+  const wa = whatsappLines.map((l) => ({ label: `WhatsApp ${l.country}`, display: l.display, href: whatsappHref(waText, l.id) }));
   const subject = "We Received Your Project Inquiry — Shivacha Technologies";
   const text = `Hi ${first},
 
@@ -157,7 +159,8 @@ We've received your project requirements and our team will review them shortly.
 If you'd like to speak with our team directly, you can schedule a convenient time here:
 Book a Call: ${book}
 
-You can also contact our team on WhatsApp: ${wa}
+You can also contact our team on WhatsApp:
+${wa.map((w) => `${w.label} (${w.display}): ${w.href}`).join("\n")}
 
 Regards,
 Shivacha Technologies
@@ -172,8 +175,9 @@ Reference: ${lead.id}
   <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#334155">Thank you for contacting Shivacha Technologies.</p>
   <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#334155">We've received your project requirements and our team will review them shortly.</p>
   <p style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155">If you'd like to speak with our team directly, you can schedule a convenient time here:</p>
-  ${button(book, "Book a Call", true)}${button(wa, "Chat on WhatsApp")}
-  <p style="margin:18px 0 0;font-size:15px;line-height:1.7;color:#334155">You can also contact our team on WhatsApp.</p>
+  ${button(book, "Book a Call", true)}
+  <p style="margin:18px 0 10px;font-size:15px;line-height:1.7;color:#334155">You can also contact our team on WhatsApp:</p>
+  ${wa.map((w) => button(w.href, w.label)).join("")}
 </td></tr>
 <tr><td style="padding:16px 32px 32px">
   <p style="margin:0;font-size:15px;line-height:1.7;color:#334155">Regards,<br><strong style="color:#0b1424">Shivacha Technologies</strong><br><a href="mailto:${SALES}" style="color:#0068b3;text-decoration:none">${SALES}</a></p>

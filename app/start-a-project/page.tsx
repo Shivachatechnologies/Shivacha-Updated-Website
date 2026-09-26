@@ -1,7 +1,7 @@
-import { CalendarDays, CheckCircle2, MessageCircle, ShieldCheck } from "lucide-react";
+import { CalendarDays, CheckCircle2, ShieldCheck } from "lucide-react";
 import { buildMetadata } from "@/lib/seo";
 import { siteConfig } from "@/data/siteConfig";
-import { whatsappHref } from "@/lib/calendly";
+import { WhatsAppPicker } from "@/components/leads/WhatsAppPicker";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { InquiryForm } from "@/components/leads/InquiryForm";
 import { BookCallButton } from "@/components/leads/BookCall";
@@ -49,9 +49,7 @@ export default function StartProjectPage() {
               <p className="mt-1 text-sm text-muted">Pick a time with our team, or message us on WhatsApp.</p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <BookCallButton label="Book a Free Consultation" variant="secondary" source="start_project" />
-                <a href={whatsappHref("Hi Shivacha, I'd like to discuss a project.")} target="_blank" rel="noopener noreferrer" data-track="whatsapp:start-project" className="btn-ghost">
-                  <MessageCircle className="size-4" /> WhatsApp
-                </a>
+                <WhatsAppPicker text="Hi Shivacha, I'd like to discuss a project." label="WhatsApp" location="start_project" variant="ghost" placement="down" />
               </div>
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">

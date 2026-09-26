@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { siFacebook, siInstagram, siThreads, siX, siYoutube } from "simple-icons";
-import { Briefcase, Mail, MapPin, MessageSquare, Phone, Users } from "lucide-react";
+import { MessageCircle, Briefcase, Mail, MapPin, MessageSquare, Phone, Users } from "lucide-react";
 import { footerNav } from "@/data/navigation";
 import { siteConfig } from "@/data/siteConfig";
 import { NewsletterForm } from "@/components/forms/NewsletterForm";
@@ -149,6 +149,14 @@ export function Footer() {
                       <Phone className="size-3.5 text-brand-blue" aria-hidden /> {o.phone}
                     </a>
                   )}
+                  {(() => {
+                    const wa = siteConfig.whatsappLines.find((l) => l.countryCode === o.countryCode);
+                    return wa ? (
+                      <a href={`https://wa.me/${wa.number}`} target="_blank" rel="noopener noreferrer" data-track={`whatsapp:footer-${wa.id}`} className="inline-flex items-center gap-1.5 text-muted hover:text-fg" aria-label={`WhatsApp our ${o.country} team`}>
+                        <MessageCircle className="size-3.5 text-brand-blue" aria-hidden /> WhatsApp
+                      </a>
+                    ) : null;
+                  })()}
                   <a href={mapsUrl(o)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-muted hover:text-fg" aria-label={`Directions to the ${o.label} office`}>
                     <MapPin className="size-3.5 text-brand-blue" aria-hidden /> Directions
                   </a>

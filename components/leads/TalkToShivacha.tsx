@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, CalendarDays, FileText, MessageCircle, X } from "lucide-react";
 import { track } from "@/lib/analytics";
 import { captureAttribution } from "@/lib/attribution";
-import { whatsappHref } from "@/lib/calendly";
+import { WhatsAppLines } from "./WhatsAppPicker";
 import dynamic from "next/dynamic";
 
 // Loaded only when the modal opens, keeping the form code out of every page's initial bundle.
@@ -73,16 +73,12 @@ export function TalkToShivacha() {
                 }}
               />
               <MenuItem icon={<FileText className="size-5" />} title="Send Project Inquiry" text="Two quick steps, reply in one business day" onClick={() => openInquiry({ source: "floating_button" })} />
-              <a
-                href={whatsappHref("Hi Shivacha, I'd like to discuss a project.")}
-                target="_blank"
-                rel="noopener noreferrer"
-                role="menuitem"
-                onClick={() => track("whatsapp_click", { location: "floating_button" })}
-                className="mt-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-muted hover:bg-ink-850 hover:text-fg"
-              >
-                <MessageCircle className="size-4" /> or chat on WhatsApp
-              </a>
+              <div className="mt-1 border-t border-line px-2 pt-3 pb-1">
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-dim">
+                  <MessageCircle className="size-3.5" /> Or chat on WhatsApp
+                </p>
+                <WhatsAppLines text="Hi Shivacha, I'd like to discuss a project." location="floating_button" onPick={() => setMenu(false)} compact />
+              </div>
             </div>
           )}
           <button

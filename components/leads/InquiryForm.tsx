@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
-import { ArrowLeft, ArrowRight, Building2, Check, Loader2, Lock, Mail, MessageCircle, Phone, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Check, Loader2, Lock, Mail, Phone, User } from "lucide-react";
 import { BUDGET_OPTIONS, SERVICE_OPTIONS } from "@/lib/leads/options";
 import { validateLead } from "@/lib/validation";
 import { track } from "@/lib/analytics";
 import { attributionProps, getAttribution } from "@/lib/attribution";
-import { whatsappHref } from "@/lib/calendly";
+import { WhatsAppPicker } from "./WhatsAppPicker";
 import { cn } from "@/lib/cn";
 import { BookCallButton } from "./BookCall";
 
@@ -273,16 +273,7 @@ export function InquirySuccess({ name, email, leadId, className }: { name: strin
         <p className="font-semibold text-fg">Want to speak with us directly?</p>
         <div className="mt-4 flex flex-col justify-center gap-3 sm:flex-row">
           <BookCallButton label="Book a Call" prefill={{ name, email }} className="h-11" source="inquiry_success" />
-          <a
-            href={whatsappHref(`Hi Shivacha, I just sent a project inquiry${leadId ? ` (ref ${leadId})` : ""}.`)}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-track="whatsapp:inquiry-success"
-            onClick={() => track("whatsapp_click", { location: "inquiry_success" })}
-            className="btn-secondary h-11"
-          >
-            <MessageCircle className="size-4" /> Chat on WhatsApp
-          </a>
+          <WhatsAppPicker text={`Hi Shivacha, I just sent a project inquiry${leadId ? ` (ref ${leadId})` : ""}.`} location="inquiry_success" className="h-11 w-full sm:w-auto" />
         </div>
       </div>
       {leadId && <p className="mt-5 text-xs text-dim">Reference {leadId} · a confirmation is on its way to {email}</p>}

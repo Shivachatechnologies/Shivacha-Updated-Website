@@ -1,5 +1,3 @@
-import { siteConfig } from "@/data/siteConfig";
-
 /**
  * Calendly booking link (public). NEXT_PUBLIC_CALENDLY_URL overrides it per environment.
  * If the value is ever not a calendly.com link, every "Book a Call" action falls back to the
@@ -31,4 +29,3 @@ export function calendlyEmbedUrl(opts: { name?: string; email?: string; theme?: 
   return u.toString();
 }
 
-export const whatsappHref = (text?: string) => `${siteConfig.contact.whatsapp}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
