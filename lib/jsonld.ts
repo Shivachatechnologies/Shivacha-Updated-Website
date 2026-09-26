@@ -15,7 +15,7 @@ export const organizationSchema = () => ({
   foundingDate: siteConfig.founded,
   email: siteConfig.contact.email,
   telephone: siteConfig.contact.phone,
-  sameAs: [siteConfig.social.linkedin],
+  sameAs: Object.values(siteConfig.social),
   founder: { "@type": "Person", name: "Chandrakant Singh", jobTitle: "CEO & Founder" },
   address: siteConfig.offices.map((o) => ({
     "@type": "PostalAddress",

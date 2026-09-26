@@ -1,11 +1,21 @@
 import Link from "next/link";
-import { ArrowUpRight, Briefcase, Mail, MapPin, MessageSquare, Phone, Users } from "lucide-react";
+import { siFacebook, siInstagram, siThreads, siX, siYoutube } from "simple-icons";
+import { Briefcase, Mail, MapPin, MessageSquare, Phone, Users } from "lucide-react";
 import { footerNav } from "@/data/navigation";
 import { siteConfig } from "@/data/siteConfig";
 import { NewsletterForm } from "@/components/forms/NewsletterForm";
 import { Flag } from "@/components/graphics/Flag";
 import { Logo } from "./Logo";
 import { OfficeClock } from "./OfficeClock";
+
+const socials = [
+  { name: "LinkedIn", href: siteConfig.social.linkedin, icon: undefined },
+  { name: "Instagram", href: siteConfig.social.instagram, icon: siInstagram.path },
+  { name: "X", href: siteConfig.social.x, icon: siX.path },
+  { name: "Facebook", href: siteConfig.social.facebook, icon: siFacebook.path },
+  { name: "YouTube", href: siteConfig.social.youtube, icon: siYoutube.path },
+  { name: "Threads", href: siteConfig.social.threads, icon: siThreads.path },
+];
 
 const legalLinks = [
   ["Privacy", "/privacy-policy"],
@@ -43,15 +53,29 @@ export function Footer() {
             <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-muted">{siteConfig.description}</p>
             <div className="mt-7">
               <p className="mb-3 text-sm font-semibold text-fg">Follow us</p>
-              <a
-                href={siteConfig.social.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2.5 rounded-full border border-line bg-white/[0.04] px-4 py-2 text-sm text-muted transition-colors hover:border-line-strong hover:text-fg"
-              >
-                <LinkedInIcon className="size-4" /> LinkedIn
-                <ArrowUpRight className="size-3.5" aria-hidden />
-              </a>
+              <ul className="flex flex-wrap gap-2.5">
+                {socials.map((x) => (
+                  <li key={x.name}>
+                    <a
+                      href={x.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Shivacha on ${x.name}`}
+                      title={x.name}
+                      data-track={`social:${x.name.toLowerCase()}`}
+                      className="flex size-10 items-center justify-center rounded-full border border-line bg-white/[0.04] text-muted transition-all hover:-translate-y-0.5 hover:border-brand-blue/50 hover:bg-brand-blue/15 hover:text-fg"
+                    >
+                      {x.icon ? (
+                        <svg viewBox="0 0 24 24" className="size-[17px]" fill="currentColor" aria-hidden>
+                          <path d={x.icon} />
+                        </svg>
+                      ) : (
+                        <LinkedInIcon className="size-[17px]" />
+                      )}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 

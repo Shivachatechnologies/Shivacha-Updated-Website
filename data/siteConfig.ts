@@ -92,6 +92,11 @@ export const siteConfig = {
   },
   social: {
     linkedin: "https://www.linkedin.com/company/shivachatech",
+    instagram: "https://www.instagram.com/shivachatech",
+    x: "https://x.com/shivachatech",
+    facebook: "https://www.facebook.com/shivachatech",
+    youtube: "https://www.youtube.com/@shivachatech",
+    threads: "https://www.threads.net/@shivachatech",
   },
   delivery: "Remote-first global delivery across North America, Europe, the Middle East, Africa and Asia-Pacific time zones.",
   /**
