@@ -143,7 +143,7 @@ See [`.env.example`](.env.example): `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GA_ID`,
 The site deliberately publishes **no** client names, logos, testimonials, metrics, certifications, awards, partners or offices that are not verified. Trust sections render only when entries exist in `siteConfig.trust`. Specifically:
 
 - Case studies are labelled **reference architectures** and say so on the page; add `kind: "client"` entries only with written client approval.
-- Offices (Gurgaon HQ, Mohali, Dallas, London) and enquiry desks are configured in `data/siteConfig.ts` (`offices`, `enquiries`) and power the footer, contact page, market pages and Organization JSON-LD. Publish an office phone only once confirmed.
+- Offices (Gurgaon HQ, Dallas, London) and enquiry desks are configured in `data/siteConfig.ts` (`offices`, `enquiries`) and power the footer, contact page, market pages and Organization JSON-LD. Publish an office phone only once confirmed.
 - FinTech/Web3 pages position Shivacha as a technology provider; regulated activities are attributed to licensed partners, and card pages use "technology infrastructure for card-program integrations".
 - Smart contract and security work is described as **audit-ready engineering**, never as independent audits or certifications.
 - Product UI previews are rendered in code and captioned "Illustrative interface · sample data".

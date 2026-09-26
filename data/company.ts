@@ -181,15 +181,15 @@ export const companyPages: CompanyPage[] = [
     slug: "global-presence",
     title: "Global Presence",
     metaTitle: "Global Delivery",
-    metaDescription: "Shivacha has offices in Gurgaon, Mohali, Dallas and London, and serves companies across North America, Europe, the Middle East, Africa and Asia-Pacific.",
+    metaDescription: "Shivacha has offices in Gurgaon, Dallas and London, and serves companies across North America, Europe, the Middle East, Africa and Asia-Pacific.",
     h1: "Offices in India, the US and the UK. Delivery worldwide.",
-    lede: "Teams in Gurgaon, Mohali, Dallas and London work with companies across North America, Europe, the Middle East, Africa and Asia-Pacific, in your time zone and your tools.",
+    lede: "Teams in Gurgaon, Dallas and London work with companies across North America, Europe, the Middle East, Africa and Asia-Pacific, in your time zone and your tools.",
     sections: [
       {
         heading: "How global delivery works",
         body: [
           "Teams are structured with agreed working-hour overlap for each client, asynchronous handoffs documented in shared tools and regular synchronous rituals. Security practices — company-managed devices, least-privilege access and confidentiality agreements — apply wherever engineers work.",
-          "Shivacha Technologies operates through Shivacha Technologies Solution Private Limited in India (headquarters in Gurgaon, office in Mohali), Shivacha Technologies LLC in the United States (Dallas) and Shivacha Technologies Limited in the United Kingdom (London). Market pages describe how we serve companies in each region.",
+          "Shivacha Technologies operates through Shivacha Technologies Solution Private Limited in India (headquarters in Gurgaon), Shivacha Technologies LLC in the United States (Dallas) and Shivacha Technologies Limited in the United Kingdom (London). Market pages describe how we serve companies in each region.",
         ],
       },
     ],

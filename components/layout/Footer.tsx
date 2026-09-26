@@ -121,7 +121,7 @@ export function Footer() {
             </div>
             <p className="max-w-sm text-sm text-muted">Delivery teams work across time zones for clients in North America, Europe, the Middle East, Africa and Asia-Pacific.</p>
           </div>
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="grid gap-4 sm:grid-cols-3">
             {siteConfig.offices.map((o) => (
               <li key={o.city} className="group relative flex flex-col rounded-2xl border border-line bg-white/[0.03] p-5 transition-colors hover:border-line-strong">
                 <div className="flex items-center justify-between gap-3">

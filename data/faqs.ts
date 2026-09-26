@@ -2,7 +2,7 @@ import { faqs } from "./_helpers";
 
 export const generalFaqs = faqs([
   ["What does Shivacha do?", "Shivacha Technologies builds AI systems, digital products, financial technology, Web3 infrastructure and cloud platforms. Clients work with us through custom engineering, product engineering, ready-to-launch products, dedicated engineering teams and technology transformation programmes."],
-  ["Where is Shivacha based?", "Shivacha Technologies is headquartered in Gurgaon, India, with offices in Mohali, Dallas and London. We work with companies across North America, Europe, the Middle East, Africa and Asia-Pacific."],
+  ["Where is Shivacha based?", "Shivacha Technologies is headquartered in Gurgaon, India, with offices in Dallas and London. We work with companies across North America, Europe, the Middle East, Africa and Asia-Pacific."],
   ["What engagement models do you offer?", "Fixed-scope projects, time-and-materials delivery, dedicated teams and pods, product squads and managed engineering with service levels. We recommend a model based on how well-defined your requirements are."],
   ["Who owns the intellectual property?", "You do. Code, designs and documentation created for you are assigned to you under the engagement agreement."],
   ["Is Shivacha a licensed financial institution?", "No. Shivacha is a technology company. Regulated financial activities — holding funds, issuing cards, custody, lending — are performed by clients or licensed partners."],
