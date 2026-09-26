@@ -1,13 +1,13 @@
 import { siteConfig } from "@/data/siteConfig";
 
 /**
- * Calendly booking link. Set NEXT_PUBLIC_CALENDLY_URL (e.g. https://calendly.com/your-team/30min).
- * Until it is set, the placeholder below is used and every "Book a Call" action falls back to the
- * on-site meeting request form, so no visitor ever lands on a broken link.
+ * Calendly booking link (public). NEXT_PUBLIC_CALENDLY_URL overrides it per environment.
+ * If the value is ever not a calendly.com link, every "Book a Call" action falls back to the
+ * on-site meeting request form, so no visitor lands on a broken link.
  */
-export const CALENDLY_PLACEHOLDER = "PASTE_MY_CALENDLY_LINK_HERE";
+export const DEFAULT_CALENDLY_URL = "https://calendly.com/shivacha-sales";
 
-export const calendlyUrl = process.env.NEXT_PUBLIC_CALENDLY_URL || CALENDLY_PLACEHOLDER;
+export const calendlyUrl = process.env.NEXT_PUBLIC_CALENDLY_URL || DEFAULT_CALENDLY_URL;
 
 export const isCalendlyConfigured = () => /^https:\/\/calendly\.com\/[\w.-]+/.test(calendlyUrl);
 
