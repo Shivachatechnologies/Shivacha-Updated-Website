@@ -22,7 +22,6 @@ export const siteConfig = {
   ],
   /**
    * Offices confirmed by Shivacha. `market` links an office to its market page.
-   * A phone is published only when confirmed (the Dallas number is pending confirmation).
    */
   offices: [
     {
@@ -65,8 +64,8 @@ export const siteConfig = {
       region: "TX",
       postalCode: "75204",
       street: "3699 McKinney Ave",
-      phone: undefined,
-      phoneHref: undefined,
+      phone: "+1 (334) 846-9075",
+      phoneHref: "tel:+13348469075",
       headquarters: false,
       market: "usa",
     },
