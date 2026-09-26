@@ -25,6 +25,28 @@ const securityHeaders = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 
+const commercialRedirects: [string, string][] = [
+  ...[
+    "blockchain-development",
+    "web3-development",
+    "smart-contract-development",
+    "defi-development",
+    "token-development",
+    "crypto-exchange-development",
+    "crypto-wallet-development",
+    "fintech-development",
+    "neobank-development",
+    "ai-development",
+    "saas-development",
+    "mobile-app-development",
+    "web-development",
+    "mvp-development",
+  ].map((s): [string, string] => [s, s]),
+  ["payment-solutions", "payment-platform-development"],
+  ["ai-agent-development", "ai-agents"],
+  ["enterprise-software-development", "enterprise-software"],
+];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
@@ -50,6 +72,10 @@ const nextConfig: NextConfig = {
       { source: "/linux", destination: "/technologies/linux", permanent: true },
       { source: "/south-africa", destination: "/markets/south-africa", permanent: true },
       { source: "/company/contact", destination: "/contact", permanent: false },
+      // Short commercial URLs → canonical /services/* pages (existing URL architecture).
+      ...commercialRedirects.map(([from, to]) => ({ source: `/${from}`, destination: `/services/${to}`, permanent: true })),
+      { source: "/dedicated-development-team", destination: "/dedicated-teams", permanent: true },
+      { source: "/partners", destination: "/company/partners", permanent: true },
     ];
   },
 };

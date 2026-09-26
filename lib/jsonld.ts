@@ -17,6 +17,8 @@ export const organizationSchema = () => ({
   telephone: siteConfig.contact.phone,
   sameAs: Object.values(siteConfig.social),
   founder: { "@type": "Person", name: "Chandrakant Singh", jobTitle: "CEO & Founder" },
+  knowsAbout: ["Blockchain development", "Web3 development", "Smart contracts", "DeFi", "Tokenization", "Crypto exchange development", "Crypto wallets", "FinTech development", "Payments", "Digital banking", "Artificial intelligence", "AI agents", "SaaS development", "Mobile app development", "Web development", "Cloud engineering", "DevOps", "Cybersecurity"],
+  areaServed: ["Worldwide", "United States", "United Kingdom", "India", "Europe", "Middle East", "Asia-Pacific"],
   address: siteConfig.offices.map((o) => ({
     "@type": "PostalAddress",
     streetAddress: o.street,
@@ -102,4 +104,14 @@ export const articleSchema = (a: { title: string; description: string; path: str
   author: { "@type": "Organization", name: a.author },
   publisher: { "@id": `${siteConfig.url}/#organization` },
   mainEntityOfPage: abs(a.path),
+});
+
+export const webPageSchema = (p: { type?: "WebPage" | "AboutPage" | "ContactPage" | "CollectionPage"; name: string; description: string; path: string }) => ({
+  "@context": "https://schema.org",
+  "@type": p.type ?? "WebPage",
+  name: p.name,
+  description: p.description,
+  url: abs(p.path),
+  isPartOf: { "@id": `${siteConfig.url}/#website` },
+  about: { "@id": `${siteConfig.url}/#organization` },
 });

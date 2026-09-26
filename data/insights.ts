@@ -1,4 +1,5 @@
 import type { Insight, InsightCategory } from "./types";
+import { guideInsights } from "./insights-guides";
 
 export const insightCategories: InsightCategory[] = [
   { slug: "ai", name: "AI", description: "Engineering production AI: LLMs, agents, retrieval, evaluation and governance." },
@@ -495,6 +496,7 @@ export const insights: Insight[] = [
     technologies: ["erc-20", "mpc-cryptography", "double-entry-ledgers"],
     tags: ["Stablecoins", "Treasury", "Enterprise"],
   },
+  ...guideInsights,
 ];
 
 export const getInsight = (slug: string) => insights.find((i) => i.slug === slug);

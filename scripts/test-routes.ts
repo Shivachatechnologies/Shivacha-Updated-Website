@@ -26,7 +26,8 @@ async function check(path: string) {
   if (!title) failures.push(`${path}: missing title`);
   if (!desc) failures.push(`${path}: missing description`);
   if (!/<link rel="canonical"/.test(html)) failures.push(`${path}: missing canonical`);
-  if (path !== "/" && !html.includes('"BreadcrumbList"')) failures.push(`${path}: missing breadcrumb schema`);
+  // Paid landing pages (/lp/*) are noindex and intentionally have no breadcrumb trail.
+  if (path !== "/" && !path.startsWith("/lp/") && !html.includes('"BreadcrumbList"')) failures.push(`${path}: missing breadcrumb schema`);
   titles.set(title, [...(titles.get(title) ?? []), path]);
   descs.set(desc, [...(descs.get(desc) ?? []), path]);
   for (const m of html.matchAll(/href="(\/[^"#?]*)(?:[?#][^"]*)?"/g)) internalLinks.add(m[1]);

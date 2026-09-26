@@ -144,7 +144,7 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
                       {active.footer.label} →
                     </Link>
                   </p>
-                  <a
+                  <Link
                     href="/book-a-meeting"
                     onClick={(e) => {
                       e.preventDefault();
@@ -153,7 +153,7 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
                     className="inline-flex items-center gap-1.5 font-medium text-fg hover:text-brand-blue"
                   >
                     Not sure where to start? Talk to an Expert <ArrowRight className="size-3.5" />
-                  </a>
+                  </Link>
                 </div>
               )}
             </div>

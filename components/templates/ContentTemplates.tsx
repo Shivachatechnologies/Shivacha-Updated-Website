@@ -13,8 +13,10 @@ import { siteConfig } from "@/data/siteConfig";
 import { PageHero } from "@/components/sections/PageHero";
 import { ArchitectureDiagram, CheckList, ChipLinks, PointsGrid, ProcessSteps, RelatedSection } from "@/components/sections/blocks";
 import { CTABand } from "@/components/sections/CTABand";
+import { FAQ } from "@/components/sections/FAQ";
 import { DivisionBadge, JsonLd, LinkButton, Section, SectionHeader } from "@/components/ui/primitives";
 import { LeadForm } from "@/components/forms/LeadForm";
+import { LeadPanel } from "@/components/leads/LeadPanel";
 import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toServiceItem, toTechItem, toIndustryLink, nonNull } from "./mappers";
 import { BookCallButton } from "@/components/leads/BookCall";
 
@@ -319,7 +321,12 @@ export function InsightTemplate({ insight }: { insight: Insight }) {
       </Section>
       <RelatedSection eyebrow="Services" title="Related services" items={pick.services(insight.services).map(toServiceItem)} />
       <RelatedSection eyebrow="Keep reading" title="More insights" items={more.map(toInsightItem)} />
-      <CTABand />
+      {insight.faqs && <FAQ items={insight.faqs} />}
+      {insight.cta ? (
+        <LeadPanel title={`${insight.cta.label}.`} lede="Share a short brief and a senior engineer will reply within one business day with questions and a scoped estimate." service={insight.cta.service} source={`insight:${insight.slug}`} />
+      ) : (
+        <CTABand />
+      )}
     </>
   );
 }

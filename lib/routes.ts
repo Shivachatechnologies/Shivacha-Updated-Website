@@ -14,6 +14,8 @@ import { companyPages } from "@/data/company";
 import { careerDepartments, jobs } from "@/data/careers";
 import { legalPages } from "@/data/legal";
 import { divisions } from "@/data/capabilities";
+import { hireRoles } from "@/data/hire";
+import { landingPages } from "@/data/landing";
 
 export interface RouteEntry {
   path: string;
@@ -29,6 +31,10 @@ export function allRoutes(): RouteEntry[] {
     r("/", 1, "home"),
     ...["/capabilities", "/services", "/products", "/solutions", "/industries", "/technologies", "/dedicated-teams", "/work", "/markets", "/resources", "/insights", "/company", "/careers", "/contact"].map((p) => r(p, 0.9, "index")),
     ...["/start-a-project", "/request-demo", "/book-a-meeting", "/hire-developers"].map((p) => r(p, 0.7, "contact")),
+    ...hireRoles.map((h) => r(`/${h.slug}`, 0.8, "hire")),
+    r("/white-label-development", 0.8, "services"),
+    r("/project-estimator", 0.7, "tools"),
+    r("/glossary", 0.6, "resources"),
     ...capabilities.map((c) => r(`/capabilities/${c.division}`, 0.9, "capabilities")),
     ...services.map((s) => r(`/services/${s.slug}`, 0.8, "services")),
     ...products.map((p) => r(`/products/${p.slug}`, 0.8, "products")),
@@ -53,4 +59,5 @@ export function allRoutes(): RouteEntry[] {
 }
 
 /** Routes that exist but are intentionally excluded from the sitemap (noindex). */
-export const nonIndexedRoutes = () => resourceCategories.filter((c) => !resources.some((x) => x.category === c.slug) && !["faqs", "case-studies"].includes(c.slug)).map((c) => `/resources/${c.slug}`);
+export const nonIndexedRoutes = () => [...landingPages.map((l) => `/lp/${l.slug}`), ...resourceCategoriesNon()];
+const resourceCategoriesNon = () => resourceCategories.filter((c) => !resources.some((x) => x.category === c.slug) && !["faqs", "case-studies"].includes(c.slug)).map((c) => `/resources/${c.slug}`);

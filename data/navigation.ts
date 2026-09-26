@@ -212,6 +212,16 @@ export const mainNav: NavItem[] = [
         title: "Specialist",
         links: [team("ai-team", "AI Team", "Brain"), team("fintech-team", "FinTech Team", "Landmark"), team("blockchain-team", "Blockchain Team", "Blocks"), team("cybersecurity-team", "Cybersecurity Team", "ShieldCheck")],
       },
+      {
+        title: "Hire developers",
+        links: [
+          l("Blockchain Developers", "/hire-blockchain-developers", undefined, "Blocks"),
+          l("Solidity Developers", "/hire-solidity-developers", undefined, "FileText"),
+          l("AI Developers", "/hire-ai-developers", undefined, "Brain"),
+          l("FinTech Developers", "/hire-fintech-developers", undefined, "Landmark"),
+          l("React Developers", "/hire-react-developers", undefined, "CodeXml"),
+        ],
+      },
     ],
     feature: {
       eyebrow: "Dedicated teams",
@@ -252,6 +262,7 @@ export const mainNav: NavItem[] = [
           l("Resources", "/resources", "Guides, checklists and templates", "BookOpen"),
           l("Work", "/work", "Reference architectures", "Layers"),
           l("Markets", "/markets", "Where we deliver", "Globe"),
+          l("Glossary", "/glossary", "Technology terms explained", "BookOpen"),
         ],
       },
     ],
@@ -267,7 +278,7 @@ export const mainNav: NavItem[] = [
 
 export const footerNav: NavColumn[] = [
   { title: "Capabilities", links: [l("AI", "/capabilities/ai"), l("Digital", "/capabilities/digital"), l("FinTech", "/capabilities/fintech"), l("Web3", "/capabilities/web3"), l("Cloud", "/capabilities/cloud")] },
-  { title: "Offerings", links: [l("Products", "/products"), l("Services", "/services"), l("Solutions", "/solutions"), l("Dedicated Teams", "/dedicated-teams"), l("Hire Developers", "/hire-developers")] },
-  { title: "Explore", links: [l("Industries", "/industries"), l("Technologies", "/technologies"), l("Work", "/work"), l("Markets", "/markets"), l("Resources", "/resources"), l("Insights", "/insights")] },
+  { title: "Offerings", links: [l("Products", "/products"), l("Services", "/services"), l("Solutions", "/solutions"), l("Dedicated Teams", "/dedicated-teams"), l("Hire Developers", "/hire-developers"), l("White-Label Development", "/white-label-development"), l("Project Estimator", "/project-estimator")] },
+  { title: "Explore", links: [l("Industries", "/industries"), l("Technologies", "/technologies"), l("Work", "/work"), l("Markets", "/markets"), l("Resources", "/resources"), l("Insights", "/insights"), l("Glossary", "/glossary")] },
   { title: "Company", links: [l("About", "/company/about"), l("Leadership", "/company/leadership"), l("Careers", "/careers"), l("Partners", "/company/partners"), l("Contact", "/contact")] },
 ];

@@ -20,11 +20,13 @@ import { DivisionArt } from "@/components/graphics/DivisionArt";
 import { AutoIcon } from "@/components/graphics/autoIcon";
 import { Icon } from "@/components/ui/Icon";
 import { FAQ } from "@/components/sections/FAQ";
-import { CTABand } from "@/components/sections/CTABand";
 import { DivisionBadge, JsonLd, LinkButton, Section, SectionHeader } from "@/components/ui/primitives";
 import { divisionTone } from "@/components/ui/division";
 import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toServiceItem } from "./mappers";
 import { BookCallButton } from "@/components/leads/BookCall";
+import { LeadPanel } from "@/components/leads/LeadPanel";
+import { QuickAnswers } from "@/components/sections/QuickAnswers";
+import { ctaFor, divisionAnswers, serviceOption } from "@/data/serviceAnswers";
 
 export function ServiceTemplate({ service }: { service: Service }) {
   const group = getGroup(service.group)!;
@@ -40,6 +42,18 @@ export function ServiceTemplate({ service }: { service: Service }) {
   const insights = relatedInsights({ division: division.id, services: svcSlugs, technologies: techs.map((t) => t.slug) }, 3);
   const resources = relatedResources({ division: division.id, services: svcSlugs }, 3);
   const faqs = [...service.faqs, ...group.faqs];
+  const answers = divisionAnswers[division.id];
+  const cta = ctaFor(service.name, group.name, division.id, division.cta);
+  const quick = [
+    { q: `What is ${service.name.toLowerCase()}?`, a: service.summary },
+    { q: "Who is it for?", a: `Typically ${answers.whoFor}.` },
+    { q: "What does Shivacha provide?", a: service.capabilities.map((c) => c.title) },
+    { q: "Which technologies are used?", a: techs.length ? `${techs.slice(0, 6).map((t) => t.name).join(", ")} — chosen to fit your stack and constraints.` : "Chosen to fit your existing stack, team and constraints." },
+    { q: "How does the process work?", a: group.process.map((p) => p.title).join(" → ") + "." },
+    { q: "What affects the cost?", a: answers.costFactors },
+    { q: "How long does it take?", a: answers.timeline },
+    { q: "How do I get started?", a: "Share a short brief in the form below, book a 30-minute call or message us on WhatsApp. A senior engineer replies within one business day; NDA on request." },
+  ];
 
   return (
     <>
@@ -71,8 +85,8 @@ export function ServiceTemplate({ service }: { service: Service }) {
           />
         }
       >
-        <LinkButton href={`${division.ctaHref}&service=${service.slug}`} track={`cta:service-${service.slug}`}>
-          {division.cta}
+        <LinkButton href="#enquire" track={`cta:service-${service.slug}`}>
+          {cta}
         </LinkButton>
         <BookCallButton label="Talk to an Expert" variant="secondary" source={`service:${service.slug}`} />
       </PageHero>
@@ -108,6 +122,8 @@ export function ServiceTemplate({ service }: { service: Service }) {
         </div>
       </Section>
 
+      <QuickAnswers title={`${service.name} at a glance`} items={quick} />
+
       <Section>
         <SectionHeader eyebrow="Capabilities" title="What we deliver" />
         <PointsGrid points={service.capabilities} />
@@ -126,6 +142,11 @@ export function ServiceTemplate({ service }: { service: Service }) {
       <Section>
         <SectionHeader eyebrow="Delivery" title="How an engagement runs" />
         <ProcessSteps steps={group.process} />
+      </Section>
+
+      <Section>
+        <SectionHeader eyebrow="Security" title="Security built into delivery" lede="Controls we apply by default on this kind of work — not a separate phase at the end." />
+        <PointsGrid points={answers.security} columns={4} />
       </Section>
 
       <Section>
@@ -165,7 +186,13 @@ export function ServiceTemplate({ service }: { service: Service }) {
       )}
       <RelatedSection eyebrow="Work & insights" title="Related thinking" items={[...cases.map(toCaseItem), ...insights.map(toInsightItem), ...resources.map(toResourceItem)].slice(0, 3)} />
       <FAQ items={faqs} />
-      <CTABand title={`${division.cta}.`} lede={`Tell us about your ${service.name.toLowerCase()} requirements. We will propose an approach, team and plan.`} primary={{ label: division.cta, href: division.ctaHref }} />
+      <LeadPanel
+        title={`${cta}.`}
+        lede={`Tell us about your ${service.name.toLowerCase()} requirements — goals, timeline and constraints. We will reply with questions, an approach and next steps.`}
+        service={serviceOption(service.name, division.id)}
+        source={`service:${service.slug}`}
+        whatsappText={`Hi Shivacha, I'd like to discuss ${service.name.toLowerCase()}.`}
+      />
     </>
   );
 }

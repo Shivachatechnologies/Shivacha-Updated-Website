@@ -181,6 +181,33 @@ export const web3StrategyServices = [
 
 export const protocolServices = [
   svc(
+    "blockchain-development",
+    "Blockchain Development",
+    "protocol",
+    "End-to-end blockchain development — architecture, smart contracts, nodes, indexers, wallets and the application layer, built for production.",
+    "Blockchain development is rarely just a smart contract. A production system also needs reliable node access, an indexer that turns chain events into queryable data, wallet and key management, back-office tooling, monitoring and a clear plan for upgrades and incidents. We build the whole stack: we choose between public chains, Layer 2s, appchains and permissioned networks based on cost, finality and compliance needs; write specified and tested contracts; and deliver the off-chain services and interfaces that users and operators actually touch.",
+    [
+      "Enterprise blockchain application|Shared records, provenance or settlement between several organisations.",
+      "Blockchain-backed product|A consumer or B2B product where on-chain ownership or transparency is a real feature.",
+      "Tokenized asset platform|Issuance, transfer restrictions, investor registry and reporting.",
+      "Migration to a new chain|Moving contracts and data to a cheaper or faster network, or to a Layer 2.",
+    ],
+    [
+      "Chain & architecture selection|Public, L2, appchain or permissioned — compared by cost, finality, tooling and compliance.",
+      "Smart contracts|Specification-first contracts with fuzz and invariant tests.",
+      "Node & RPC infrastructure|Managed providers, self-hosted nodes or both, with failover.",
+      "Indexing & data|Event indexers and APIs that make on-chain data usable in apps and reports.",
+      "Wallets & key management|Custodial, MPC or smart-account models with policy controls.",
+      "Operations|Monitoring, alerting, upgrade procedures and incident runbooks.",
+    ],
+    [
+      ["How long does a blockchain development project take?", "A focused pilot or MVP typically takes 8–14 weeks. Production platforms with custody, compliance integrations and several chains usually take four to nine months. We give a scoped estimate after discovery."],
+      ["Which blockchain should we build on?", "It depends on transaction cost, finality, ecosystem, the wallets your users already have and regulatory constraints. We compare two or three realistic options in writing before any code is written."],
+      ["Do we actually need a blockchain?", "Not always. If a single organisation controls the data and nobody needs independent verification, a conventional database is usually cheaper and simpler — and we will tell you so."],
+    ],
+    { technologies: ["ethereum", "polygon", "solana", "arbitrum", "base", "solidity", "rust", "the-graph"], related: ["smart-contract-development", "web3-development", "blockchain-infrastructure", "crypto-wallet-development", "blockchain-strategy"], keywords: ["blockchain development company", "blockchain app development", "enterprise blockchain development"] },
+  ),
+  svc(
     "protocol-development",
     "Protocol Development",
     "protocol",
@@ -537,6 +564,60 @@ export const protocolServices = [
 ];
 
 export const smartContractServices = [
+  svc(
+    "web3-development",
+    "Web3 Development",
+    "smart-contracts",
+    "Web3 application development — dApps, wallet onboarding, smart contracts and the off-chain backend that makes them fast and usable.",
+    "Most Web3 products fail on usability, not on cryptography. Users bounce at wallet connection, gas prompts and confusing transaction states. We build Web3 applications that feel like good software: embedded or smart-account wallets where appropriate, sponsored gas, clear transaction status, fast reads from an indexer instead of slow RPC calls, and a conventional backend for the things that should not live on-chain. Under that sits audit-ready contract code and the monitoring needed to run it.",
+    [
+      "dApp for an existing protocol|A fast, well-designed interface over contracts that already exist.",
+      "Consumer Web3 product|Collectibles, loyalty, gaming or community products with simple onboarding.",
+      "On-chain finance app|Staking, vaults, lending or payments with clear risk disclosure.",
+      "Web2 to Web3 extension|Adding wallets, tokens or on-chain settlement to an existing product.",
+    ],
+    [
+      "dApp frontend|Next.js, wagmi and viem with robust transaction and error states.",
+      "Wallet onboarding|Browser wallets, embedded wallets, passkeys and account abstraction.",
+      "Smart contracts|Specified, tested and documented for independent audit.",
+      "Indexer & API|Subgraphs or custom indexers for fast, queryable on-chain data.",
+      "Off-chain backend|Auth, notifications, admin tools and integrations.",
+      "Launch & monitoring|Deployment scripts, contract monitoring and alerting.",
+    ],
+    [
+      ["What does Web3 development include?", "Contracts, the dApp interface, wallet onboarding, an indexer or API for on-chain data, and the off-chain backend and admin tools. We scope only the layers your product needs."],
+      ["Can users sign in without a crypto wallet?", "Yes. Embedded wallets, passkeys and smart accounts let users start with an email or device login and move to self-custody later if they want to."],
+      ["Which chains do you support?", "Ethereum and EVM networks such as Polygon, Arbitrum, Optimism and Base, plus Solana."],
+    ],
+    { technologies: ["nextjs", "wagmi", "viem", "solidity", "the-graph", "ethereum", "base", "solana"], related: ["blockchain-development", "smart-contract-development", "account-abstraction-development", "crypto-wallet-development", "subgraph-development"], keywords: ["web3 development company", "dapp development", "web3 app development"] },
+  ),
+  svc(
+    "token-development",
+    "Token Development",
+    "smart-contracts",
+    "Token development for utility, governance, payment, NFT and permissioned tokens — contracts, vesting, distribution and launch tooling.",
+    "A token is simple to deploy and hard to get right. Supply rules, minting permissions, vesting schedules, transfer restrictions, upgradeability and cross-chain deployment all create risk if they are improvised. We build token systems on established standards (ERC-20, ERC-721, ERC-1155, ERC-3643 and SPL), with explicit roles, tested vesting and distribution contracts, claim and airdrop tooling, and admin controls held in multisig. Token economics and legal classification are your decisions with your advisors; we make sure the code does exactly what was agreed.",
+    [
+      "Utility or governance token|Fungible token with vesting, treasury and voting.",
+      "Payment or reward token|Loyalty points or in-app currency with controlled minting.",
+      "NFT collection or membership|ERC-721 / ERC-1155 with minting, royalties and metadata.",
+      "Permissioned token|Transfer rules and allowlists for regulated or private assets.",
+    ],
+    [
+      "Token contracts|ERC-20, ERC-721, ERC-1155, ERC-3643 or SPL, built on reviewed libraries.",
+      "Vesting & distribution|Cliffs, linear release, claims and airdrops with Merkle proofs.",
+      "Roles & admin controls|Mint, pause and upgrade permissions behind multisig and timelocks.",
+      "Multi-chain deployment|Consistent deployments and bridging where genuinely required.",
+      "Dashboards|Holder, supply and vesting views for your team and your community.",
+      "Audit preparation|Specification, tests and known-issues list for independent auditors.",
+    ],
+    [
+      ["How much does token development cost?", "A standard token with vesting is a small project; permissioned tokens, cross-chain deployment and custom distribution add scope. We quote after a short discovery call — cost depends on features, chains and audit requirements."],
+      ["Do you design tokenomics?", "We help model supply, emissions and vesting as engineering inputs. Economic design and legal classification must be decided with your own economic and legal advisors."],
+      ["Do you list tokens on exchanges?", "No. We do not arrange listings or market making. We build and document the contracts and tooling."],
+    ],
+    { technologies: ["solidity", "openzeppelin", "foundry", "ethereum", "polygon", "solana", "rust"], related: ["smart-contract-development", "token-economics-consulting", "security-token-development", "smart-contract-audit-preparation", "blockchain-development"], keywords: ["token development company", "crypto token development", "ERC-20 token development"] },
+  ),
   svc(
     "smart-contract-development",
     "Smart Contract Development",

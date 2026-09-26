@@ -8,7 +8,13 @@ export const generalFaqs = faqs([
   ["Is Shivacha a licensed financial institution?", "No. Shivacha is a technology company. Regulated financial activities — holding funds, issuing cards, custody, lending — are performed by clients or licensed partners."],
   ["Do you provide legal, regulatory or investment advice?", "No. We provide technology and engineering services and work alongside your legal, compliance and financial advisors."],
   ["Do you sign NDAs?", "Yes. We are happy to sign a mutual NDA before detailed discussions."],
-  ["How do we start?", "Start a project or book a meeting. We begin with a discovery conversation, then propose scope, team and approach."],
+  ["Does Shivacha build blockchain and Web3 products?", "Yes. Shivacha Web3 builds smart contracts, dApps, wallets, token systems, DeFi protocols, crypto exchanges, tokenization and stablecoin platforms on Ethereum, Layer 2 networks, Polygon and Solana, and prepares contracts for independent audit."],
+  ["Which technologies does Shivacha use?", "Common choices include TypeScript, React and Next.js, Node.js, Python, Go, Rust, Solidity, PostgreSQL, Kubernetes and the major clouds (AWS, Azure, Google Cloud). The stack is chosen per project to fit your team and constraints."],
+  ["How much does a project cost?", "Shivacha does not publish fixed prices, because cost depends on scope, integrations, compliance and team. You can get an indicative timeline and team shape from the project estimator, and a written estimate after a short discovery call."],
+  ["How long does a typical project take?", "MVPs commonly take 8–14 weeks; regulated FinTech or institutional Web3 platforms usually take four to nine months. Timelines are confirmed after discovery."],
+  ["Can we hire dedicated developers?", "Yes. You can hire dedicated blockchain, Web3, Solidity, AI, FinTech, React, Node.js and Python developers or a full squad. You interview every engineer before they join."],
+  ["Do you work with agencies?", "Yes. Shivacha offers white-label development for agencies and consultancies, under NDA and without contacting your clients."],
+  ["How do we start?", "Start a project, book a call or message the sales team on WhatsApp. We begin with a discovery conversation, then propose scope, team and approach."],
 ]);
 
 export const contactFaqs = faqs([

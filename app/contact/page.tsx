@@ -3,13 +3,15 @@ import { contactFaqs } from "@/data/faqs";
 import { ContactLayout } from "@/components/sections/ContactLayout";
 import { LeadForm } from "@/components/forms/LeadForm";
 import { FAQ } from "@/components/sections/FAQ";
-import { LinkCard } from "@/components/ui/primitives";
+import { JsonLd, LinkCard } from "@/components/ui/primitives";
+import { webPageSchema } from "@/lib/jsonld";
 
 export const metadata = buildMetadata({ title: "Contact Shivacha", description: "Contact Shivacha Technologies about AI, digital, fintech, Web3 or cloud projects, product demos, dedicated teams or partnerships.", path: "/contact" });
 
 export default function ContactPage() {
   return (
     <>
+      <JsonLd data={webPageSchema({ type: "ContactPage", name: "Contact Shivacha Technologies", description: "Contact Shivacha Technologies — sales, HR and general enquiries, offices in Gurgaon, Dallas and London.", path: "/contact" })} />
       <ContactLayout
         crumbs={[{ name: "Contact", href: "/contact" }]}
         eyebrow="Contact"

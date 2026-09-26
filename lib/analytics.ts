@@ -23,7 +23,18 @@ export type AnalyticsEvent =
   | "form_abandon"
   | "generate_lead"
   | "calendly_click"
-  | "calendly_booked";
+  | "calendly_booked"
+  // Engagement & intent
+  | "scroll_depth"
+  | "estimator_start"
+  | "estimator_complete"
+  | "estimator_cta"
+  | "lead_magnet_view"
+  | "lead_magnet_download"
+  | "exit_intent_shown"
+  | "exit_intent_action"
+  | "case_study_cta"
+  | "service_page_view";
 
 type Props = Record<string, string | number | boolean | undefined>;
 

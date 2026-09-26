@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { CheckCircle2, Loader2, Paperclip } from "lucide-react";
@@ -235,9 +236,9 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
       <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-dim">
           We use your details only to respond to this request. See our{" "}
-          <a href="/privacy-policy" className="underline hover:text-fg">
+          <Link href="/privacy-policy" className="underline hover:text-fg">
             privacy policy
-          </a>
+          </Link>
           .
         </p>
         <button type="submit" className="btn-primary" disabled={status === "sending"}>

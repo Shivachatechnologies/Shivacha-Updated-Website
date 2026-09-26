@@ -7,6 +7,9 @@ import { CTABand } from "@/components/sections/CTABand";
 import { PointsGrid } from "@/components/sections/blocks";
 import { JsonLd, LinkButton, Section } from "@/components/ui/primitives";
 import { siteConfig } from "@/data/siteConfig";
+import { generalFaqs } from "@/data/faqs";
+import { FAQ } from "@/components/sections/FAQ";
+import { webPageSchema } from "@/lib/jsonld";
 import { GlobeHero } from "@/components/graphics/DivisionArt";
 
 type P = { params: Promise<{ slug: string }> };
@@ -78,8 +81,16 @@ export default async function Page({ params }: P) {
   return (
     <>
       <PageHero crumbs={[{ name: "Company", href: "/company" }, { name: page.title, href: `/company/${slug}` }]} eyebrow={<span className="eyebrow">{page.title}</span>} title={page.h1} lede={page.lede} aside={<GlobeHero priority />}>
-        {slug === "partners" && <LinkButton href="/contact">Discuss a partnership</LinkButton>}
+        {slug === "partners" && (
+          <>
+            <LinkButton href="/contact">Discuss a partnership</LinkButton>
+            <LinkButton href="/white-label-development" variant="secondary">
+              White-label development
+            </LinkButton>
+          </>
+        )}
       </PageHero>
+      {slug === "about" && <JsonLd data={webPageSchema({ type: "AboutPage", name: page.metaTitle, description: page.metaDescription, path: "/company/about" })} />}
       {page.sections.map((s) => (
         <Section key={s.heading}>
           <div className="grid gap-10 lg:grid-cols-[1fr_2fr]">
@@ -99,6 +110,7 @@ export default async function Page({ params }: P) {
           </div>
         </Section>
       ))}
+      {slug === "about" && <FAQ items={generalFaqs} title="Questions about Shivacha" eyebrow="Company FAQ" />}
       <CTABand />
     </>
   );

@@ -328,6 +328,9 @@ export interface Insight {
   services: string[];
   technologies: string[];
   tags: string[];
+  /** Optional page-specific conversion block (label + inquiry-form service option). */
+  cta?: { label: string; service: string };
+  faqs?: FAQ[];
 }
 
 export interface InsightCategory {

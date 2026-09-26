@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { ArrowLeft, ArrowRight, Building2, Check, Loader2, Lock, Mail, Phone, User } from "lucide-react";
@@ -38,6 +39,24 @@ export function InquiryForm({ source, className, variant = "page", defaultServic
   useEffect(() => {
     startedAt.current = Date.now();
     if (variant === "modal") firstField.current?.focus();
+  }, [variant]);
+
+  // Prefill from the URL (e.g. the project estimator links here with ?service=…&brief=…&budget=…).
+  useEffect(() => {
+    if (variant !== "page") return;
+    const q = new URLSearchParams(window.location.search);
+    const division: Record<string, string> = { web3: "Blockchain Development", fintech: "FinTech Development", ai: "AI Development", digital: "Web Development" };
+    const service = q.get("service") ?? division[q.get("division") ?? ""] ?? "";
+    const budget = q.get("budget") ?? "";
+    const brief = (q.get("brief") ?? "").slice(0, 1500);
+    if (!service && !brief && !budget) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-off sync from the URL after hydration
+    setV((cur) => ({
+      ...cur,
+      service: cur.service || ((SERVICE_OPTIONS as readonly string[]).includes(service) ? service : ""),
+      budget: cur.budget || ((BUDGET_OPTIONS as readonly string[]).includes(budget) ? budget : ""),
+      message: cur.message || brief,
+    }));
   }, [variant]);
 
   // Abandonment: the visitor started but left (tab hidden, page closed or modal closed) before submitting.
@@ -255,7 +274,7 @@ function Field({ id, label, required, hint, icon, error, children }: { id: strin
 function Assurance() {
   return (
     <p className="flex items-center justify-center gap-1.5 text-center text-xs text-dim">
-      <Lock className="size-3" aria-hidden /> Confidential. We reply within one business day. <a href="/privacy-policy" className="underline hover:text-fg">Privacy</a>
+      <Lock className="size-3" aria-hidden /> Confidential. We reply within one business day. <Link href="/privacy-policy" className="underline hover:text-fg">Privacy</Link>
     </p>
   );
 }

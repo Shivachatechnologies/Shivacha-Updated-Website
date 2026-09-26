@@ -12,6 +12,8 @@ import { Section, SectionHeader, LinkButton, DivisionBadge } from "@/components/
 import { Icon, industryIcon } from "@/components/ui/Icon";
 import { HybridFintechDiagram } from "@/components/visuals/HybridFintechDiagram";
 import { DashboardPreview } from "@/components/visuals/DashboardPreview";
+import { FAQ } from "@/components/sections/FAQ";
+import { generalFaqs } from "@/data/faqs";
 import { CTABand } from "@/components/sections/CTABand";
 import { DivisionShowcase, type ShowcaseItem } from "@/components/sections/DivisionShowcase";
 import { GlobeHero, RenderStage } from "@/components/graphics/DivisionArt";
@@ -274,6 +276,7 @@ export default function HomePage() {
         </div>
       </Section>
 
+      <FAQ items={generalFaqs} title="Questions about Shivacha" eyebrow="Company FAQ" />
       <CTABand />
     </>
   );
