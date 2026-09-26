@@ -47,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen font-sans">
         <JsonLd data={[organizationSchema(), websiteSchema()]} />
-        <Header nav={mainNav} />
+        <Header nav={mainNav} contact={{ email: siteConfig.contact.email, phone: siteConfig.contact.phone, phoneHref: siteConfig.contact.phoneHref }} />
         <main id="main">{children}</main>
         <Footer />
         <MobileCTA />

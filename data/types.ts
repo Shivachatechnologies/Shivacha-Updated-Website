@@ -368,6 +368,10 @@ export interface NavLink {
   label: string;
   href: string;
   description?: string;
+  /** Brand logo (technology links), resolved server-side so the menu ships no icon library. */
+  logo?: { path: string; hex: string };
+  /** Optional icon name from components/ui/Icon; otherwise one is picked from the label. */
+  icon?: string;
 }
 
 export interface NavColumn {

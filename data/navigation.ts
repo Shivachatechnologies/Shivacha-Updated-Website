@@ -1,9 +1,18 @@
-import type { NavColumn, NavLink } from "./types";
+import type { DivisionId, NavColumn, NavLink } from "./types";
+import { products } from "./products";
+import { teams } from "./teams";
+import { solutions } from "./solutions";
+import { industries } from "./industries";
+import { technologies } from "./technologies";
+import { techLogo } from "@/lib/brand/techLogos";
 
 export interface NavTab {
   label: string;
   href: string;
   description: string;
+  /** Icon name from components/ui/Icon and division colour for the tab. */
+  icon: string;
+  tone: DivisionId;
   columns: NavColumn[];
 }
 
@@ -15,99 +24,34 @@ export interface NavItem {
   /** Tabbed mega menu (Services). */
   tabs?: NavTab[];
   feature?: { eyebrow: string; title: string; description: string; href: string; cta: string };
+  /** Small print under the panel, e.g. a link to the full index. */
+  footer?: { text: string; label: string; href: string };
 }
 
-const l = (label: string, href: string, description?: string): NavLink => ({ label, href, description });
+const l = (label: string, href: string, description?: string, icon?: string): NavLink => ({ label, href, description, icon });
 const s = (slug: string, label: string) => l(label, `/services/${slug}`);
+const product = (slug: string, label: string, icon?: string) => l(label, `/products/${slug}`, products.find((p) => p.slug === slug)?.tagline, icon);
+const team = (slug: string, label: string, icon?: string) => l(label, `/dedicated-teams/${slug}`, teams.find((t) => t.slug === slug)?.summary, icon);
+const solution = (slug: string, label: string, icon?: string) => l(label, `/solutions/${slug}`, solutions.find((x) => x.slug === slug)?.summary, icon);
+const industry = (slug: string, label: string, icon?: string) => l(label, `/industries/${slug}`, industries.find((x) => x.slug === slug)?.summary, icon);
+const tech = (slug: string, label: string): NavLink => {
+  const icon = techLogo[slug];
+  const t = technologies.find((x) => x.slug === slug);
+  return { label, href: `/technologies/${slug}`, description: t?.summary, logo: icon ? { path: icon.path, hex: icon.hex } : undefined };
+};
 
 export const mainNav: NavItem[] = [
   {
-    label: "Capabilities",
-    href: "/capabilities",
-    columns: [
-      {
-        title: "Divisions",
-        links: [
-          l("Shivacha AI", "/capabilities/ai", "Generative AI, agents, ML and automation"),
-          l("Shivacha Digital", "/capabilities/digital", "Software, SaaS, web and mobile"),
-          l("Shivacha FinTech", "/capabilities/fintech", "Web2, Web3 and hybrid finance"),
-          l("Shivacha Web3", "/capabilities/web3", "Protocols, tokenization, DeFi, custody"),
-          l("Shivacha Cloud", "/capabilities/cloud", "Cloud, DevOps and cybersecurity"),
-        ],
-      },
-      {
-        title: "Ways to work with us",
-        links: [
-          l("Custom Engineering", "/services"),
-          l("Product Engineering", "/solutions/product-engineering"),
-          l("Ready-to-Launch Products", "/products"),
-          l("Dedicated Teams", "/dedicated-teams"),
-          l("Technology Transformation", "/solutions/digital-transformation"),
-        ],
-      },
-    ],
-    feature: {
-      eyebrow: "Differentiator",
-      title: "Web2 + Web3 FinTech",
-      description: "Connect traditional financial infrastructure with programmable digital assets.",
-      href: "/solutions/web2-web3-fintech",
-      cta: "Explore hybrid fintech",
-    },
-  },
-  {
-    label: "Products",
-    href: "/products",
-    columns: [
-      {
-        title: "FinTech",
-        links: [
-          l("Digital Bank", "/products/digital-bank"),
-          l("Neobank", "/products/neobank"),
-          l("Payment Gateway", "/products/payment-gateway"),
-          l("Payment Orchestration", "/products/payment-orchestration"),
-          l("Hybrid Wallet", "/products/hybrid-wallet"),
-          l("Lending Platform", "/products/lending-platform"),
-        ],
-      },
-      {
-        title: "Web3",
-        links: [
-          l("Crypto Exchange", "/products/crypto-exchange"),
-          l("RWA Platform", "/products/rwa-platform"),
-          l("Tokenization Platform", "/products/tokenization-platform"),
-          l("Digital Asset Platform", "/products/digital-asset-platform"),
-          l("Web3 Wallet", "/products/web3-wallet"),
-          l("DeFi Platform", "/products/defi-platform"),
-        ],
-      },
-      {
-        title: "AI & Digital",
-        links: [
-          l("AI Agent Platform", "/products/ai-agent-platform"),
-          l("AI Customer Support", "/products/ai-customer-support"),
-          l("AI Copilot Kit", "/products/ai-copilot"),
-          l("Document AI", "/products/ai-document-processing"),
-          l("CRM Platform", "/products/crm-platform"),
-          l("Marketplace Platform", "/products/marketplace-platform"),
-        ],
-      },
-    ],
-    feature: {
-      eyebrow: "Ready to launch",
-      title: "All products",
-      description: "Configurable platforms across AI, Digital, FinTech, Web3 and Cloud.",
-      href: "/products",
-      cta: "Browse the marketplace",
-    },
-  },
-  {
     label: "Services",
     href: "/services",
+    footer: { text: "311+ services across five divisions.", label: "Browse all services", href: "/services" },
     tabs: [
       {
         label: "AI",
+        icon: "Brain",
+        tone: "ai",
         href: "/capabilities/ai",
-        description: "Intelligent systems built for real-world workflows.",
+        description: "Generative AI, agents, machine learning and automation.",
         columns: [
           { title: "Generative AI", links: [s("generative-ai", "Generative AI"), s("llm-development", "LLM Development"), s("rag-development", "RAG Development"), s("ai-copilot-development", "AI Copilots"), s("voice-ai-development", "Voice AI")] },
           { title: "Agents & Automation", links: [s("ai-agents", "AI Agents"), s("agentic-ai-development", "Agentic AI"), s("ai-workflow-automation", "Workflow Automation"), s("ai-document-processing", "Document Processing")] },
@@ -116,6 +60,8 @@ export const mainNav: NavItem[] = [
       },
       {
         label: "Software",
+        icon: "CodeXml",
+        tone: "digital",
         href: "/capabilities/digital",
         description: "Digital products designed to launch and scale.",
         columns: [
@@ -126,6 +72,8 @@ export const mainNav: NavItem[] = [
       },
       {
         label: "FinTech",
+        icon: "Landmark",
+        tone: "fintech",
         href: "/capabilities/fintech",
         description: "Infrastructure for the next generation of financial products.",
         columns: [
@@ -137,6 +85,8 @@ export const mainNav: NavItem[] = [
       },
       {
         label: "Web3",
+        icon: "Blocks",
+        tone: "web3",
         href: "/capabilities/web3",
         description: "Institutional-grade blockchain and digital asset engineering.",
         columns: [
@@ -149,6 +99,8 @@ export const mainNav: NavItem[] = [
       },
       {
         label: "Cloud",
+        icon: "Cloud",
+        tone: "cloud",
         href: "/capabilities/cloud",
         description: "Infrastructure engineered for reliability and security.",
         columns: [
@@ -159,6 +111,8 @@ export const mainNav: NavItem[] = [
       },
       {
         label: "Cybersecurity",
+        icon: "ShieldCheck",
+        tone: "cloud",
         href: "/services#cybersecurity",
         description: "Security engineering across cloud, applications and identity.",
         columns: [
@@ -170,69 +124,144 @@ export const mainNav: NavItem[] = [
     ],
   },
   {
+    label: "Products",
+    href: "/products",
+    columns: [
+      {
+        title: "FinTech",
+        links: [
+          product("neobank", "Neobank", "Smartphone"),
+          product("digital-bank", "Digital Bank", "Landmark"),
+          product("payment-gateway", "Payment Gateway", "CreditCard"),
+          product("payment-orchestration", "Payment Orchestration", "Workflow"),
+          product("hybrid-wallet", "Hybrid Wallet", "Wallet"),
+        ],
+      },
+      {
+        title: "Web3",
+        links: [
+          product("crypto-exchange", "Crypto Exchange", "LineChart"),
+          product("rwa-platform", "RWA Platform", "House"),
+          product("tokenization-platform", "Tokenization Platform", "Coins"),
+          product("web3-wallet", "Web3 Wallet", "Wallet"),
+          product("defi-platform", "DeFi Platform", "Layers"),
+        ],
+      },
+      {
+        title: "AI & Digital",
+        links: [
+          product("ai-agent-platform", "AI Agent Platform", "Bot"),
+          product("ai-customer-support", "AI Customer Support", "Headphones"),
+          product("ai-document-processing", "Document AI", "FileText"),
+          product("crm-platform", "CRM Platform", "Users"),
+          product("marketplace-platform", "Marketplace Platform", "Store"),
+        ],
+      },
+    ],
+    feature: {
+      eyebrow: "48 ready-to-launch products",
+      title: "Launch in weeks, not years",
+      description: "Deploy in your own cloud, customise to your model and keep full control.",
+      href: "/products",
+      cta: "Browse all products",
+    },
+  },
+  {
     label: "Solutions",
     href: "/solutions",
     columns: [
-      { title: "By stage", links: [l("Enterprise", "/solutions/enterprise"), l("Startups", "/solutions/startups"), l("Scaleups", "/solutions/scaleups"), l("MVP to Scale", "/solutions/mvp-to-scale")] },
-      { title: "Transformation", links: [l("Digital Transformation", "/solutions/digital-transformation"), l("AI Transformation", "/solutions/ai-transformation"), l("Cloud Transformation", "/solutions/cloud-transformation"), l("FinTech Transformation", "/solutions/fintech-transformation"), l("Web3 Transformation", "/solutions/web3-transformation")] },
-      { title: "Engineering", links: [l("Product Engineering", "/solutions/product-engineering"), l("Legacy Modernization", "/solutions/legacy-modernization"), l("Platform Modernization", "/solutions/platform-modernization"), l("Managed Engineering", "/solutions/managed-engineering")] },
+      {
+        title: "By goal",
+        links: [
+          solution("digital-transformation", "Digital Transformation", "Workflow"),
+          solution("ai-transformation", "AI Transformation"),
+          solution("product-engineering", "Product Engineering", "Rocket"),
+          solution("legacy-modernization", "Legacy Modernization"),
+          solution("mvp-to-scale", "MVP to Scale"),
+        ],
+      },
+      {
+        title: "By industry",
+        links: [
+          industry("banking", "Banking", "Landmark"),
+          industry("payments", "Payments", "CreditCard"),
+          industry("insurance", "Insurance", "ShieldCheck"),
+          industry("healthcare", "Healthcare", "HeartPulse"),
+          industry("ecommerce", "E-commerce", "ShoppingCart"),
+        ],
+      },
     ],
     feature: {
-      eyebrow: "Web2 + Web3",
-      title: "Hybrid FinTech",
+      eyebrow: "Our specialism",
+      title: "Web2 + Web3 FinTech",
       description: "One ledger and one set of controls across bank rails, cards, stablecoins and tokenized assets.",
       href: "/solutions/web2-web3-fintech",
       cta: "See the architecture",
     },
+    footer: { text: "15 solutions and 19 industries.", label: "All industries", href: "/industries" },
   },
   {
     label: "Teams",
     href: "/dedicated-teams",
     columns: [
-      { title: "Software", links: [l("Full-Stack Team", "/dedicated-teams/full-stack-team"), l("Frontend Team", "/dedicated-teams/frontend-team"), l("Backend Team", "/dedicated-teams/backend-team"), l("Mobile Team", "/dedicated-teams/mobile-team"), l("QA Team", "/dedicated-teams/qa-team")] },
-      { title: "AI, FinTech & Web3", links: [l("AI Team", "/dedicated-teams/ai-team"), l("AI Agent Team", "/dedicated-teams/ai-agent-team"), l("FinTech Team", "/dedicated-teams/fintech-team"), l("Payments Team", "/dedicated-teams/payments-team"), l("Blockchain Team", "/dedicated-teams/blockchain-team"), l("Smart Contract Team", "/dedicated-teams/smart-contract-team")] },
-      { title: "Cloud & Product", links: [l("DevOps Team", "/dedicated-teams/devops-team"), l("Cloud Team", "/dedicated-teams/cloud-team"), l("Cybersecurity Team", "/dedicated-teams/cybersecurity-team"), l("Product Design Team", "/dedicated-teams/product-design-team"), l("Product Management", "/dedicated-teams/product-management-team")] },
+      {
+        title: "Engineering",
+        links: [team("full-stack-team", "Full-Stack Team", "CodeXml"), team("mobile-team", "Mobile Team", "Smartphone"), team("devops-team", "DevOps Team", "GitMerge"), team("qa-team", "QA Team", "BadgeCheck")],
+      },
+      {
+        title: "Specialist",
+        links: [team("ai-team", "AI Team", "Brain"), team("fintech-team", "FinTech Team", "Landmark"), team("blockchain-team", "Blockchain Team", "Blocks"), team("cybersecurity-team", "Cybersecurity Team", "ShieldCheck")],
+      },
     ],
     feature: {
       eyebrow: "Dedicated teams",
       title: "Build your engineering organisation",
-      description: "Specialists, pods and full teams working inside your roadmap.",
+      description: "Specialists, pods and full teams that work inside your roadmap and tools.",
       href: "/hire-developers",
-      cta: "Build this team",
+      cta: "Hire developers",
     },
-  },
-  {
-    label: "Industries",
-    href: "/industries",
-    columns: [
-      { title: "Financial", links: [l("FinTech", "/industries/fintech"), l("Banking", "/industries/banking"), l("Payments", "/industries/payments"), l("Insurance", "/industries/insurance"), l("Real Estate", "/industries/real-estate")] },
-      { title: "Digital", links: [l("SaaS", "/industries/saas"), l("E-commerce", "/industries/ecommerce"), l("Media", "/industries/media"), l("Gaming", "/industries/gaming"), l("Education", "/industries/education")] },
-      { title: "Real economy", links: [l("Healthcare", "/industries/healthcare"), l("Logistics", "/industries/logistics"), l("Energy", "/industries/energy"), l("Government", "/industries/government"), l("All industries", "/industries")] },
-    ],
+    footer: { text: "24 team types, from one specialist to a full squad.", label: "All teams", href: "/dedicated-teams" },
   },
   {
     label: "Technologies",
     href: "/technologies",
     columns: [
-      { title: "Build", links: [l("React", "/technologies/react"), l("Next.js", "/technologies/nextjs"), l("Node.js", "/technologies/nodejs"), l("Python", "/technologies/python"), l("Flutter", "/technologies/flutter")] },
-      { title: "AI & Web3", links: [l("LLMs", "/technologies/llm"), l("RAG", "/technologies/rag"), l("Ethereum", "/technologies/ethereum"), l("Solidity", "/technologies/solidity"), l("ERC-3643", "/technologies/erc-3643")] },
-      { title: "Cloud & Data", links: [l("Kubernetes", "/technologies/kubernetes"), l("AWS", "/technologies/aws"), l("Terraform", "/technologies/terraform"), l("PostgreSQL", "/technologies/postgresql"), l("Kafka", "/technologies/kafka")] },
+      { title: "Build", links: [tech("react", "React"), tech("nextjs", "Next.js"), tech("nodejs", "Node.js"), tech("python", "Python"), tech("flutter", "Flutter")] },
+      { title: "Data & Cloud", links: [tech("postgresql", "PostgreSQL"), tech("kafka", "Apache Kafka"), tech("kubernetes", "Kubernetes"), tech("terraform", "Terraform"), tech("google-cloud", "Google Cloud")] },
+      { title: "AI & Web3", links: [tech("llm", "LLMs"), tech("rag", "RAG"), tech("ethereum", "Ethereum"), tech("solidity", "Solidity"), tech("solana", "Solana")] },
     ],
-    feature: {
-      eyebrow: "Directory",
-      title: "Technology directory",
-      description: "130+ technologies across 14 categories — and how we use each one.",
-      href: "/technologies",
-      cta: "Browse technologies",
-    },
+    footer: { text: "134 technologies in 14 categories.", label: "Technology directory", href: "/technologies" },
   },
   {
     label: "Company",
     href: "/company",
     columns: [
-      { title: "Company", links: [l("About", "/company/about"), l("Leadership", "/company/leadership"), l("Engineering", "/company/engineering"), l("Global Presence", "/company/global-presence"), l("Careers", "/careers")] },
-      { title: "Learn", links: [l("Insights", "/insights"), l("Resources", "/resources"), l("Work", "/work"), l("Markets", "/markets"), l("Contact", "/contact")] },
+      {
+        title: "Company",
+        links: [
+          l("About", "/company/about", "Who we are and how we work", "Building2"),
+          l("Leadership", "/company/leadership", "The people who lead Shivacha", "Users"),
+          l("Careers", "/careers", "Open application tracks", "Briefcase"),
+          l("Contact", "/contact", "Talk to our team", "Mail"),
+        ],
+      },
+      {
+        title: "Learn",
+        links: [
+          l("Insights", "/insights", "Notes from our engineers", "Newspaper"),
+          l("Resources", "/resources", "Guides, checklists and templates", "BookOpen"),
+          l("Work", "/work", "Reference architectures", "Layers"),
+          l("Markets", "/markets", "Where we deliver", "Globe"),
+        ],
+      },
     ],
+    feature: {
+      eyebrow: "Capabilities",
+      title: "Five divisions, one partner",
+      description: "AI, Digital, FinTech, Web3 and Cloud, engineered together.",
+      href: "/capabilities",
+      cta: "Explore capabilities",
+    },
   },
 ];
 

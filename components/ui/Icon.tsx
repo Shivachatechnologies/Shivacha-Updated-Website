@@ -2,14 +2,14 @@ import {
   Activity, ArrowRight, Banknote, Blocks, Bot, Brain, Briefcase, Building2, Cloud, CodeXml, Coins, Compass, Cpu,
   CreditCard, Database, FileText, Gamepad2, Globe, GraduationCap, HeartPulse, Hotel, House, Landmark, Layers,
   LineChart, Lock, Network, Plane, Rocket, Scale, Server, ShieldCheck, ShoppingCart, Sparkles, Sprout, Store,
-  Truck, Users, Wallet, Workflow, Zap, Clapperboard, Factory, type LucideIcon,
+  Truck, Users, Wallet, Workflow, Zap, Clapperboard, Factory, Mail, Newspaper, BookOpen, Smartphone, Headphones, BadgeCheck, GitMerge, type LucideIcon,
 } from "lucide-react";
 
 const icons: Record<string, LucideIcon> = {
   Activity, ArrowRight, Banknote, Blocks, Bot, Brain, Briefcase, Building2, Cloud, CodeXml, Coins, Compass, Cpu,
   CreditCard, Database, FileText, Gamepad2, Globe, GraduationCap, HeartPulse, Hotel, House, Landmark, Layers,
   LineChart, Lock, Network, Plane, Rocket, Scale, Server, ShieldCheck, ShoppingCart, Sparkles, Sprout, Store,
-  Truck, Users, Wallet, Workflow, Zap, Clapperboard, Factory,
+  Truck, Users, Wallet, Workflow, Zap, Clapperboard, Factory, Mail, Newspaper, BookOpen, Smartphone, Headphones, BadgeCheck, GitMerge,
 };
 
 export function Icon({ name, className }: { name: string; className?: string }) {
