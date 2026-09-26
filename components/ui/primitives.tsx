@@ -4,11 +4,31 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import type { DivisionId } from "@/data/types";
 import { divisionLabel, divisionTone } from "./division";
+import { AutoIcon } from "@/components/graphics/autoIcon";
 
-export function Section({ children, className, id, bordered = true }: { children: ReactNode; className?: string; id?: string; bordered?: boolean }) {
+export type SectionTone = "plain" | "muted" | "brand";
+
+/** Page section. `tone` alternates the background band so long pages read as distinct blocks. */
+export function Section({
+  children,
+  className,
+  id,
+  tone,
+}: {
+  children: ReactNode;
+  className?: string;
+  id?: string;
+  /** Omit to let bands alternate automatically down the page. */
+  tone?: SectionTone;
+}) {
   return (
-    <section id={id} className={cn("relative py-20 sm:py-24 lg:py-28", bordered && "border-t border-line", className)}>
-      <div className="container-x">{children}</div>
+    <section
+      id={id}
+      data-tone={tone}
+      data-theme={tone === "brand" ? "dark" : undefined}
+      className={cn("relative py-16 sm:py-20 lg:py-24", tone === "muted" && "band-muted", tone === "brand" && "band-brand text-fg", className)}
+    >
+      <div className="container-x relative">{children}</div>
     </section>
   );
 }
@@ -29,11 +49,11 @@ export function SectionHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("mb-12 flex flex-col gap-6 lg:mb-14", align === "center" ? "items-center text-center" : "md:flex-row md:items-end md:justify-between", className)}>
-      <div className={cn("max-w-3xl", align === "center" && "mx-auto")}>
-        {eyebrow && <p className="eyebrow mb-4">{eyebrow}</p>}
-        <h2 className="h-section text-gradient">{title}</h2>
-        {lede && <p className="lede mt-5">{lede}</p>}
+    <div className={cn("mb-10 flex flex-col gap-6 lg:mb-12", align === "center" ? "items-center text-center" : "md:flex-row md:items-end md:justify-between", className)}>
+      <div className={cn("max-w-2xl", align === "center" && "mx-auto")}>
+        {eyebrow && <p className={cn("eyebrow mb-4", align === "center" && "justify-center")}>{eyebrow}</p>}
+        <h2 className="h-section text-fg">{title}</h2>
+        {lede && <p className="lede mt-4">{lede}</p>}
       </div>
       {action && (
         <Link href={action.href} className="btn-secondary shrink-0">
@@ -108,14 +128,16 @@ export function LinkCard({
 }) {
   return (
     <Link href={href} className={cn("card card-hover group flex h-full flex-col p-6", className)}>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        {eyebrow ? <span className="font-mono text-[10.5px] tracking-[0.16em] text-dim uppercase">{eyebrow}</span> : <span />}
-        {division && <span className={cn("size-1.5 rounded-full", divisionTone[division].dot)} aria-hidden />}
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <span className={cn("flex size-10 items-center justify-center rounded-lg", division ? cn(divisionTone[division].bg, divisionTone[division].text) : "bg-brand-blue/10 text-brand-blue")}>
+          <AutoIcon title={title} hint={`${eyebrow ?? ""} ${description ?? ""}`} className="size-5" />
+        </span>
+        {eyebrow && <span className="rounded-full border border-line px-2.5 py-1 text-[11px] font-medium text-muted">{eyebrow}</span>}
       </div>
       <h3 className="h-card text-fg">{title}</h3>
       {description && <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted">{description}</p>}
       {children}
-      <span className="mt-auto flex items-center gap-1.5 pt-5 text-sm text-muted transition-colors group-hover:text-fg">
+      <span className="mt-auto flex items-center gap-1.5 pt-5 text-sm font-medium text-brand-blue">
         Learn more <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
       </span>
     </Link>

@@ -7,7 +7,7 @@ export function LegalPageView({ slug }: { slug: string }) {
   return (
     <>
       <PageHero crumbs={[{ name: p.title, href: `/${slug}` }]} eyebrow={<span className="eyebrow">Last updated {p.updated}</span>} title={p.title} lede={p.description} />
-      <Section bordered={false} className="pt-0">
+      <Section className="pt-0">
         <div className="prose-sh max-w-3xl">
           {p.sections.map((s) => (
             <section key={s.heading}>

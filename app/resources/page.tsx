@@ -22,7 +22,7 @@ export default function ResourcesPage() {
   return (
     <>
       <PageHero crumbs={[{ name: "Resources", href: "/resources" }]} eyebrow={<span className="eyebrow">{resources.length} resources</span>} title="Technical material from our engineers." lede="Guides, reference architectures, checklists and templates you can use — whether or not you work with us." />
-      <Section bordered={false} className="pt-0">
+      <Section className="pt-0">
         <nav aria-label="Resource categories" className="mb-10 flex flex-wrap gap-2">
           {resourceCategories.map((c) => (
             <Link key={c.slug} href={`/resources/${c.slug}`} className="chip">

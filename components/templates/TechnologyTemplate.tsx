@@ -1,13 +1,13 @@
-import Link from "next/link";
 import { Info } from "lucide-react";
 import type { Technology } from "@/data/types";
 import { techCategories } from "@/data/technologies";
 import { pick, productsForTechnology, relatedInsights, servicesForTechnology, teamsForTechnology } from "@/lib/relations";
 import { PageHero } from "@/components/sections/PageHero";
-import { CheckList, ChipLinks, PointsGrid, RelatedSection } from "@/components/sections/blocks";
+import { CheckList, PointsGrid, RelatedSection, TechGrid } from "@/components/sections/blocks";
+import { TechOrbit } from "@/components/graphics/TechOrbit";
 import { CTABand } from "@/components/sections/CTABand";
 import { DivisionBadge, LinkButton, Section, SectionHeader } from "@/components/ui/primitives";
-import { toInsightItem, toProductItem, toServiceItem, toTeamItem, toTechItem } from "./mappers";
+import { toInsightItem, toProductItem, toServiceItem, toTeamItem } from "./mappers";
 
 export function TechnologyTemplate({ tech }: { tech: Technology }) {
   const cat = techCategories.find((c) => c.id === tech.category)!;
@@ -31,6 +31,7 @@ export function TechnologyTemplate({ tech }: { tech: Technology }) {
         }
         title={`${tech.name} at Shivacha`}
         lede={tech.summary}
+        aside={<TechOrbit tech={tech} pairs={pairs} />}
       >
         <LinkButton href={`/start-a-project?technology=${tech.slug}`} track={`cta:tech-${tech.slug}`}>
           Start a {tech.name} project
@@ -46,14 +47,14 @@ export function TechnologyTemplate({ tech }: { tech: Technology }) {
             <p className="eyebrow mb-4">Overview</p>
             <p className="text-xl leading-relaxed text-fg">{tech.overview}</p>
             {tech.considerations && (
-              <div className="mt-8 flex gap-3 rounded-xl border border-line bg-tint/[0.02] p-4 text-sm text-muted">
+              <div className="mt-8 flex gap-3 rounded-xl border border-brand-blue/20 bg-brand-blue/5 p-4 text-sm text-muted">
                 <Info className="mt-0.5 size-4 shrink-0 text-brand-blue" aria-hidden />
                 <p>{tech.considerations}</p>
               </div>
             )}
           </div>
-          <div className="card p-6">
-            <p className="eyebrow mb-5">Why we use it</p>
+          <div className="card p-6 sm:p-7">
+            <h2 className="mb-5 text-lg font-semibold text-fg">Why we use it</h2>
             <CheckList items={tech.strengths} className="sm:grid-cols-1" />
           </div>
         </div>
@@ -64,25 +65,16 @@ export function TechnologyTemplate({ tech }: { tech: Technology }) {
         <PointsGrid points={tech.howWeUse} />
       </Section>
 
-      <RelatedSection eyebrow="Services" title={`Services that use ${tech.name}`} items={services.map(toServiceItem)} />
-      <RelatedSection eyebrow="Products" title={`Products built with ${tech.name}`} items={products.map(toProductItem)} />
+      <RelatedSection eyebrow="Services" title={`Services that use ${tech.name}`} items={services.slice(0, 6).map(toServiceItem)} />
+      <RelatedSection eyebrow="Products" title={`Products built with ${tech.name}`} items={products.slice(0, 3).map(toProductItem)} />
       <RelatedSection eyebrow="Teams" title="Engineering teams" items={teams.map(toTeamItem)} />
 
-      <Section>
-        <div className="grid gap-10 md:grid-cols-2">
-          <div>
-            <p className="eyebrow mb-5">Pairs well with</p>
-            <ChipLinks items={pairs.map(toTechItem)} />
-          </div>
-          <div>
-            <p className="eyebrow mb-5">More in {cat.name}</p>
-            <p className="text-sm text-muted">{cat.description}</p>
-            <Link href={`/technologies#${cat.id}`} className="mt-3 inline-block text-sm text-fg hover:underline">
-              Browse {cat.name.toLowerCase()} →
-            </Link>
-          </div>
-        </div>
-      </Section>
+      {pairs.length > 0 && (
+        <Section>
+          <SectionHeader eyebrow="Pairs well with" title={`What we combine with ${tech.name}`} lede={cat.description} action={{ label: `Browse ${cat.name.toLowerCase()}`, href: `/technologies#${cat.id}` }} />
+          <TechGrid items={pairs} />
+        </Section>
+      )}
 
       <RelatedSection eyebrow="Insights" title="Related insights" items={insights.map(toInsightItem)} />
       <CTABand title={`Build with ${tech.name}.`} lede="Tell us about your project, or the engineers you need, and we will propose an approach." />

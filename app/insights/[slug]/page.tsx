@@ -28,7 +28,7 @@ export default async function Page({ params }: P) {
     return (
       <>
         <PageHero crumbs={[{ name: "Insights", href: "/insights" }, { name: cat.name, href: `/insights/${cat.slug}` }]} eyebrow={<span className="eyebrow">Insights</span>} title={`${cat.name} insights`} lede={cat.description} />
-        <Section bordered={false} className="pt-0">
+        <Section className="pt-0">
           <InsightList items={items} />
         </Section>
         <CTABand />

@@ -41,7 +41,7 @@ export default async function Page({ params }: P) {
           title={division ? `${division.short} work: ${division.tagline.toLowerCase()}` : "Case studies and reference implementations."}
           lede={division ? division.description : "Verified client case studies will be published here with client approval. Until then, our reference architectures show how we design and build."}
         />
-        <Section bordered={false} className="pt-0">
+        <Section className="pt-0">
           <WorkListing items={items} active={slug as DivisionId | "case-studies"} />
         </Section>
         <CTABand />

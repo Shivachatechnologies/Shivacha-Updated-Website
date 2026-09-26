@@ -87,7 +87,7 @@ export function ResourceLibrary({ items, types, divisions, technologies, industr
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {list.map((r) => (
           <Link key={r.slug} href={r.href} className="card card-hover group flex flex-col p-6">
-            <div className="flex items-center justify-between gap-2 font-mono text-[10.5px] tracking-[0.14em] text-dim uppercase">
+            <div className="flex items-center justify-between gap-2 text-xs text-dim font-semibold">
               <span>{r.typeLabel}</span>
               <span>{r.readingTime}</span>
             </div>

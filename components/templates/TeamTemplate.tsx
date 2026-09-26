@@ -3,7 +3,8 @@ import { engagementModels, teamPrinciples, teams } from "@/data/teams";
 import { pick } from "@/lib/relations";
 import { serviceSchema } from "@/lib/jsonld";
 import { PageHero } from "@/components/sections/PageHero";
-import { CheckList, ChipLinks, RelatedSection } from "@/components/sections/blocks";
+import { DivisionArt } from "@/components/graphics/DivisionArt";
+import { CheckList, ChipLinks, RelatedSection, PointsGrid } from "@/components/sections/blocks";
 import { FAQ } from "@/components/sections/FAQ";
 import { CTABand } from "@/components/sections/CTABand";
 import { DivisionBadge, JsonLd, LinkButton, Section, SectionHeader } from "@/components/ui/primitives";
@@ -23,6 +24,7 @@ export function TeamTemplate({ team }: { team: Team }) {
         eyebrow={<DivisionBadge division={team.division} />}
         title={`Dedicated ${team.name}`}
         lede={team.summary}
+        aside={<DivisionArt division={team.division} label="Illustration" />}
       >
         <LinkButton href={hireHref} track={`cta:team-build-${team.slug}`}>
           Build This Team
@@ -82,14 +84,7 @@ export function TeamTemplate({ team }: { team: Team }) {
 
       <Section>
         <SectionHeader eyebrow="How it works" title="Communication, delivery, security and scaling" />
-        <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
-          {teamPrinciples.map((p) => (
-            <div key={p.title} className="bg-ink-950 p-6">
-              <h3 className="font-semibold text-fg">{p.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{p.description}</p>
-            </div>
-          ))}
-        </div>
+        <PointsGrid points={teamPrinciples} columns={4} />
       </Section>
 
       <Section>

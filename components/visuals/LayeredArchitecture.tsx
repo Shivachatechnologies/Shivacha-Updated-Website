@@ -48,7 +48,7 @@ export function LayeredArchitecture({ layers }: { layers: ArchLayer[] }) {
                   >
                     <span className="size-1.5 rounded-full" style={{ background: on ? l.color : "var(--color-dim)" }} />
                   </span>
-                  <span className="w-28 shrink-0 font-mono text-[11px] tracking-wider text-dim uppercase sm:w-36">
+                  <span className="w-28 shrink-0 text-xs text-dim sm:w-36 font-semibold">
                     {String(i + 1).padStart(2, "0")} · {l.name}
                   </span>
                   <span className="hidden flex-1 flex-wrap gap-1.5 sm:flex">

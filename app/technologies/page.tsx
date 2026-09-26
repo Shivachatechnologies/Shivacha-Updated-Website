@@ -15,7 +15,7 @@ export default function TechnologiesPage() {
   return (
     <>
       <PageHero crumbs={[{ name: "Technologies", href: "/technologies" }]} eyebrow={<span className="eyebrow">{technologies.length} technologies · {techCategories.length} categories</span>} title="The technology directory." lede="Every technology we build with, why we use it and where it fits — linked to the services, products and teams that use it." />
-      <Section bordered={false} className="pt-0">
+      <Section className="pt-0">
         <TechnologyExplorer items={technologies.map((t) => ({ slug: t.slug, name: t.name, category: t.category, summary: t.summary }))} categories={techCategories} />
       </Section>
       <CTABand />

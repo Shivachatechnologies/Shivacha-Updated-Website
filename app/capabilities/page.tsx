@@ -10,6 +10,7 @@ import { Section, SectionHeader } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { divisionTone } from "@/components/ui/division";
 import { cn } from "@/lib/cn";
+import { BrandOrbit } from "@/components/graphics/BrandOrbit";
 
 export const metadata = buildMetadata({
   title: "Capabilities: AI, Digital, FinTech, Web3 & Cloud",
@@ -25,8 +26,9 @@ export default function CapabilitiesPage() {
         eyebrow={<span className="eyebrow">Capabilities</span>}
         title="Five divisions. One engineering organisation."
         lede="Shivacha AI, Digital, FinTech, Web3 and Cloud are deep practices on their own — and designed to work together on the problems that cross them."
+        aside={<BrandOrbit />}
       />
-      <Section bordered={false} className="pt-0">
+      <Section className="pt-0">
         <div className="space-y-4">
           {divisions.map((d) => {
             const cap = capabilities.find((c) => c.division === d.id)!;
@@ -37,7 +39,7 @@ export default function CapabilitiesPage() {
                   <Icon name={d.icon} className={cn("size-6", t.text)} />
                 </div>
                 <div>
-                  <p className={cn("font-mono text-[11px] tracking-[0.16em] uppercase", t.text)}>{d.name}</p>
+                  <p className={cn("text-xs font-semibold", t.text)}>{d.name}</p>
                   <h2 className="mt-2 text-2xl font-semibold tracking-tight text-fg">{d.tagline}</h2>
                   <p className="mt-2 text-sm text-muted">{cap.lede}</p>
                 </div>

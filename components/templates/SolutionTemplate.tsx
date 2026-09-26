@@ -3,6 +3,7 @@ import { divisions } from "@/data/capabilities";
 import { pick, relatedCaseStudies, relatedInsights, relatedResources } from "@/lib/relations";
 import { serviceSchema } from "@/lib/jsonld";
 import { PageHero } from "@/components/sections/PageHero";
+import { DivisionArt } from "@/components/graphics/DivisionArt";
 import { CheckList, ChipLinks, PointsGrid, ProcessSteps, RelatedSection } from "@/components/sections/blocks";
 import { FAQ } from "@/components/sections/FAQ";
 import { CTABand } from "@/components/sections/CTABand";
@@ -35,6 +36,7 @@ export function SolutionTemplate({ solution }: { solution: Solution }) {
         }
         title={solution.h1}
         lede={solution.summary}
+        aside={<DivisionArt division={primary.id} label="Illustration" />}
         accent={isHybrid ? "#14c8b0" : "#0195ff"}
       >
         <LinkButton href={`/start-a-project?division=${primary.id}`} track={`cta:solution-${solution.slug}`}>

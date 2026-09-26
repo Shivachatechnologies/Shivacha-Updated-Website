@@ -203,7 +203,7 @@ export function Header({ nav }: { nav: NavItem[] }) {
                   </Link>
                   {(item.tabs ?? [{ label: "", href: item.href, description: "", columns: item.columns ?? [] }]).map((t) => (
                     <div key={t.label || item.label}>
-                      {t.label && <p className="mb-2 font-mono text-[11px] tracking-widest text-dim uppercase">{t.label}</p>}
+                      {t.label && <p className="mb-2 text-xs text-dim font-semibold">{t.label}</p>}
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                         {t.columns.flatMap((c) => c.links).slice(0, 10).map((lnk) => (
                           <Link key={lnk.href + lnk.label} href={lnk.href} className="py-1 text-sm text-muted">
@@ -234,7 +234,7 @@ export function Header({ nav }: { nav: NavItem[] }) {
 function MenuColumn({ title, links, withDesc }: { title: string; links: { label: string; href: string; description?: string }[]; withDesc?: boolean }) {
   return (
     <div>
-      <p className="mb-3 font-mono text-[10.5px] tracking-[0.16em] text-dim uppercase">{title}</p>
+      <p className="mb-3 text-xs text-dim font-semibold">{title}</p>
       <ul className="space-y-1.5">
         {links.map((l) => (
           <li key={l.href + l.label}>

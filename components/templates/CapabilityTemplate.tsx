@@ -5,7 +5,9 @@ import { getGroup } from "@/data/serviceGroups";
 import { caseStudiesByDivision } from "@/data/caseStudies";
 import { pick, servicesForGroup, servicesForDivision, productsForDivision, relatedInsights, relatedResources } from "@/lib/relations";
 import { PageHero } from "@/components/sections/PageHero";
-import { ArchitectureDiagram, ChipLinks, PointsGrid, ProcessSteps, RelatedSection } from "@/components/sections/blocks";
+import { ArchitectureDiagram, ChipLinks, PointsGrid, PointsList, ProcessSteps, RelatedSection, TechGrid } from "@/components/sections/blocks";
+import { DivisionArt } from "@/components/graphics/DivisionArt";
+import { AutoIcon } from "@/components/graphics/autoIcon";
 import { FAQ } from "@/components/sections/FAQ";
 import { CTABand } from "@/components/sections/CTABand";
 import { DivisionBadge, LinkButton, Section, SectionHeader, JsonLd } from "@/components/ui/primitives";
@@ -13,7 +15,7 @@ import { divisionTone } from "@/components/ui/division";
 import { HybridFintechDiagram } from "@/components/visuals/HybridFintechDiagram";
 import { serviceSchema } from "@/lib/jsonld";
 import { cn } from "@/lib/cn";
-import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toTechItem, toIndustryLink, nonNull } from "./mappers";
+import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toIndustryLink, nonNull } from "./mappers";
 
 export function CapabilityTemplate({ cap, division }: { cap: Capability; division: Division }) {
   const tone = divisionTone[division.id];
@@ -34,7 +36,7 @@ export function CapabilityTemplate({ cap, division }: { cap: Capability; divisio
         title={cap.h1}
         lede={cap.lede}
         accent={tone.hex}
-        aside={<ArchitectureDiagram layers={cap.architecture} division={division.id} title={`${division.name} · reference stack`} />}
+        aside={<DivisionArt division={division.id} label={`${division.name} illustration`} />}
       >
         <LinkButton href={division.ctaHref} track={`cta:capability-${division.id}`}>
           {division.cta}
@@ -46,31 +48,25 @@ export function CapabilityTemplate({ cap, division }: { cap: Capability; divisio
 
       {/* Overview */}
       <Section>
-        <div className="grid gap-12 lg:grid-cols-[1fr_320px]">
+        <div className="grid gap-12 lg:grid-cols-[1.2fr_1fr] lg:items-center">
           <div>
             <p className="eyebrow mb-4">Overview</p>
-            <div className="prose-sh">
-              {cap.overview.map((p) => (
-                <p key={p.slice(0, 32)}>{p}</p>
-              ))}
-            </div>
+            <p className="text-xl leading-relaxed text-fg sm:text-[1.35rem]">{cap.overview[0]}</p>
+            {cap.overview[1] && <p className="mt-5 text-[15px] leading-relaxed text-muted">{cap.overview[1]}</p>}
           </div>
-          <aside className="card h-fit p-6">
-            <p className="eyebrow">At a glance</p>
-            <dl className="mt-5 space-y-4 text-sm">
-              {[
-                ["Services", allServices.length],
-                ["Service areas", cap.pillars.flatMap((p) => p.groups).length],
-                ["Ready-to-launch products", productsForDivision(division.id).length],
-                ["Reference architectures", cases.length],
-              ].map(([k, v]) => (
-                <div key={String(k)} className="flex items-baseline justify-between border-b border-line pb-3 last:border-0 last:pb-0">
-                  <dt className="text-muted">{k}</dt>
-                  <dd className="text-lg font-semibold text-fg">{v}</dd>
-                </div>
-              ))}
-            </dl>
-          </aside>
+          <dl className="grid grid-cols-2 gap-4">
+            {[
+              [allServices.length, "Services"],
+              [cap.pillars.flatMap((p) => p.groups).length, "Service areas"],
+              [productsForDivision(division.id).length, "Ready products"],
+              [cases.length, "Reference architectures"],
+            ].map(([v, k], i) => (
+              <div key={String(k)} className={cn("card flex flex-col-reverse p-6", i === 0 && "band-brand")} data-theme={i === 0 ? "dark" : undefined}>
+                <dt className="mt-1.5 text-sm text-muted">{k}</dt>
+                <dd className="text-4xl font-semibold tracking-tight text-fg">{v}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </Section>
 
@@ -86,29 +82,35 @@ export function CapabilityTemplate({ cap, division }: { cap: Capability; divisio
         <div className="space-y-6">
           {cap.pillars.map((pillar) => (
             <div key={pillar.title} className="card overflow-hidden">
-              <div className="grid gap-6 border-b border-line p-6 lg:grid-cols-[1fr_2fr] lg:p-8">
+              <div className="flex items-start gap-4 border-b border-line p-6 lg:p-7">
+                <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", tone.bg, tone.text)}>
+                  <AutoIcon title={pillar.title} hint={pillar.description} className="size-5" />
+                </span>
                 <div>
                   <h3 className="text-xl font-semibold text-fg">{pillar.title}</h3>
+                  <p className="mt-1 max-w-3xl text-[15px] leading-relaxed text-muted">{pillar.description}</p>
                 </div>
-                <p className="text-[15px] leading-relaxed text-muted">{pillar.description}</p>
               </div>
-              <div className="grid gap-px bg-line sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-3">
                 {pillar.groups.map((gid) => {
                   const g = getGroup(gid)!;
+                  const list = servicesForGroup(gid);
                   return (
-                    <div key={gid} className="bg-ink-950 p-6">
-                      <p className={cn("mb-1 font-mono text-[10.5px] tracking-[0.16em] uppercase", tone.text)}>{g.track ?? "Service area"}</p>
-                      <p className="mb-4 font-semibold text-fg">{g.name}</p>
-                      <ul className="space-y-2">
-                        {servicesForGroup(gid).map((s) => (
-                          <li key={s.slug}>
-                            <Link href={`/services/${s.slug}`} className="group inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg">
-                              {s.name}
-                              <ArrowRight className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
+                    <div key={gid} className="rounded-xl border border-line bg-ink-850 p-5">
+                      <div className="mb-3 flex items-baseline justify-between gap-3">
+                        <p className="font-semibold text-fg">{g.name}</p>
+                        <span className="shrink-0 text-xs text-dim">{list.length}</span>
+                      </div>
+                      <ServiceLinks items={list.slice(0, 5)} />
+                      {list.length > 5 && (
+                        <details className="group/more">
+                          <summary className="mt-2 cursor-pointer list-none text-sm font-medium text-brand-blue [&::-webkit-details-marker]:hidden">
+                            <span className="group-open/more:hidden">+ {list.length - 5} more</span>
+                            <span className="hidden group-open/more:inline">Show less</span>
+                          </summary>
+                          <ServiceLinks items={list.slice(5)} className="mt-2" />
+                        </details>
+                      )}
                     </div>
                   );
                 })}
@@ -119,7 +121,7 @@ export function CapabilityTemplate({ cap, division }: { cap: Capability; divisio
       </Section>
 
       {division.id === "fintech" && (
-        <Section>
+        <Section tone="brand">
           <SectionHeader
             eyebrow="Hybrid FinTech"
             title="Web2, Web3 and the layer that connects them."
@@ -132,9 +134,12 @@ export function CapabilityTemplate({ cap, division }: { cap: Capability; divisio
 
       {/* Architecture */}
       <Section>
-        <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-start">
-          <SectionHeader eyebrow="Architecture" title="A reference architecture, adapted to you." lede={`How we typically structure ${division.short} systems. Every engagement adapts the layers to your existing landscape, constraints and partners.`} className="mb-0" />
-          <ArchitectureDiagram layers={cap.architecture} division={division.id} />
+        <div className="grid gap-12 lg:grid-cols-[1fr_1.15fr] lg:items-start">
+          <div>
+            <SectionHeader eyebrow="Architecture" title="A reference architecture, adapted to you." lede={`How we typically structure ${division.short} systems, adapted to your landscape and partners.`} className="mb-8" />
+            <PointsList points={cap.outcomes.slice(0, 4)} />
+          </div>
+          <ArchitectureDiagram layers={cap.architecture} division={division.id} title={`${division.name} · reference stack`} />
         </div>
       </Section>
 
@@ -144,34 +149,35 @@ export function CapabilityTemplate({ cap, division }: { cap: Capability; divisio
         <ProcessSteps steps={cap.approach} />
       </Section>
 
-      {/* Outcomes */}
-      <Section>
-        <SectionHeader eyebrow="Outcomes" title="What good looks like." />
-        <PointsGrid points={cap.outcomes} columns={4} />
-      </Section>
-
-      <RelatedSection eyebrow="Products" title={`Ready-to-launch ${division.short} platforms`} items={[...products, ...moreProducts].slice(0, 6).map(toProductItem)} action={{ label: "All products", href: "/products" }} />
+      <RelatedSection eyebrow="Products" title={`Ready-to-launch ${division.short} platforms`} items={[...products, ...moreProducts].slice(0, 3).map(toProductItem)} action={{ label: "All products", href: "/products" }} />
 
       <Section>
-        <div className="grid gap-12 md:grid-cols-2">
-          <div>
-            <p className="eyebrow mb-5">Technologies</p>
-            <ChipLinks items={technologies.map(toTechItem)} />
-            <Link href="/technologies" className="mt-5 inline-flex items-center gap-1 text-sm text-dim hover:text-fg">
-              Technology directory <ArrowRight className="size-3" />
-            </Link>
-          </div>
-          <div>
-            <p className="eyebrow mb-5">Industries</p>
-            <ChipLinks items={nonNull(cap.industries.map(toIndustryLink))} />
-          </div>
+        <SectionHeader eyebrow="Technology" title="Our stack for this practice" action={{ label: "Technology directory", href: "/technologies" }} />
+        <TechGrid items={technologies.slice(0, 12)} />
+        <div className="mt-8 flex flex-wrap items-center gap-2">
+          <span className="mr-2 text-sm font-medium text-muted">Industries:</span>
+          <ChipLinks items={nonNull(cap.industries.map(toIndustryLink))} />
         </div>
       </Section>
 
-      <RelatedSection eyebrow="Work" title="Reference architectures" items={cases.map(toCaseItem)} action={{ label: "All work", href: `/work/${division.id}` }} />
-      <RelatedSection eyebrow="Resources" title="Go deeper" items={[...resources.map(toResourceItem), ...insights.map(toInsightItem)].slice(0, 6)} />
+      <RelatedSection eyebrow="Work & insights" title="Go deeper" items={[...cases.map(toCaseItem), ...insights.map(toInsightItem), ...resources.map(toResourceItem)].slice(0, 3)} action={{ label: "All work", href: `/work/${division.id}` }} />
       <FAQ items={cap.faqs} />
       <CTABand title={`${division.cta}.`} lede={division.tagline} primary={{ label: division.cta, href: division.ctaHref }} />
     </>
+  );
+}
+
+function ServiceLinks({ items, className }: { items: { slug: string; name: string }[]; className?: string }) {
+  return (
+    <ul className={cn("space-y-1.5", className)}>
+      {items.map((s) => (
+        <li key={s.slug}>
+          <Link href={`/services/${s.slug}`} className="group inline-flex items-center gap-1.5 text-sm text-muted hover:text-brand-blue">
+            {s.name}
+            <ArrowRight className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

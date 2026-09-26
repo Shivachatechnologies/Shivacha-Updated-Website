@@ -16,7 +16,7 @@ export default function InsightsPage() {
   return (
     <>
       <PageHero crumbs={[{ name: "Insights", href: "/insights" }]} eyebrow={<span className="eyebrow">Insights</span>} title="Engineering perspectives." lede="What we have learned building AI, financial, digital asset and cloud systems — written by Shivacha engineers." />
-      <Section bordered={false} className="pt-0">
+      <Section className="pt-0">
         <nav aria-label="Insight categories" className="mb-12 flex flex-wrap gap-2">
           {insightCategories.map((c) => (
             <Link key={c.slug} href={`/insights/${c.slug}`} className="chip">

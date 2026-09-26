@@ -7,6 +7,7 @@ import { CTABand } from "@/components/sections/CTABand";
 import { PointsGrid } from "@/components/sections/blocks";
 import { JsonLd, LinkButton, Section } from "@/components/ui/primitives";
 import { siteConfig } from "@/data/siteConfig";
+import { BrandOrbit } from "@/components/graphics/BrandOrbit";
 
 type P = { params: Promise<{ slug: string }> };
 export const dynamicParams = false;
@@ -61,7 +62,7 @@ export default async function Page({ params }: P) {
           title={isFounder ? founder.name : "Leadership"}
           lede={isFounder ? `${founder.role}, Shivacha Technologies.` : "Shivacha is led by people who build. We publish team members here as their profiles are confirmed."}
         />
-        <Section bordered={false} className="pt-0">
+        <Section className="pt-0">
           <div className="grid max-w-3xl gap-6">
             {(isFounder ? [founder] : leadership).map((p) => (
               <PersonCard key={p.slug} person={p} />
@@ -76,7 +77,7 @@ export default async function Page({ params }: P) {
   if (!page) notFound();
   return (
     <>
-      <PageHero crumbs={[{ name: "Company", href: "/company" }, { name: page.title, href: `/company/${slug}` }]} eyebrow={<span className="eyebrow">{page.title}</span>} title={page.h1} lede={page.lede}>
+      <PageHero crumbs={[{ name: "Company", href: "/company" }, { name: page.title, href: `/company/${slug}` }]} eyebrow={<span className="eyebrow">{page.title}</span>} title={page.h1} lede={page.lede} aside={<BrandOrbit />}>
         {slug === "partners" && <LinkButton href="/contact">Discuss a partnership</LinkButton>}
       </PageHero>
       {page.sections.map((s) => (

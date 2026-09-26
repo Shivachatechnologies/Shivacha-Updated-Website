@@ -2,6 +2,7 @@ import Link from "next/link";
 import { teams, engagementModels, teamPrinciples } from "@/data/teams";
 import { buildMetadata } from "@/lib/seo";
 import { PageHero } from "@/components/sections/PageHero";
+import { PointsGrid } from "@/components/sections/blocks";
 import { CTABand } from "@/components/sections/CTABand";
 import { LinkButton, Section, SectionHeader } from "@/components/ui/primitives";
 import { divisionLabel, divisionTone } from "@/components/ui/division";
@@ -30,7 +31,7 @@ export default function TeamsPage() {
         const list = teams.filter((t) => t.division === d);
         return (
           <Section key={d}>
-            <p className={cn("mb-6 font-mono text-[11px] tracking-[0.16em] uppercase", divisionTone[d].text)}>{divisionLabel[d]}</p>
+            <p className={cn("mb-6 text-xs font-semibold", divisionTone[d].text)}>{divisionLabel[d]}</p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {list.map((t) => (
                 <Link key={t.slug} href={`/dedicated-teams/${t.slug}`} className="card card-hover group flex flex-col p-6">
@@ -70,14 +71,7 @@ export default function TeamsPage() {
       </Section>
       <Section>
         <SectionHeader eyebrow="How it works" title="Clear responsibilities, secure delivery" />
-        <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
-          {teamPrinciples.map((p) => (
-            <div key={p.title} className="bg-ink-950 p-6">
-              <h3 className="font-semibold text-fg">{p.title}</h3>
-              <p className="mt-2 text-sm text-muted">{p.description}</p>
-            </div>
-          ))}
-        </div>
+        <PointsGrid points={teamPrinciples} columns={4} />
       </Section>
       <CTABand title="Build your engineering team." primary={{ label: "Build Your Engineering Team", href: "/hire-developers" }} secondary={{ label: "Talk to an Engineering Advisor", href: "/book-a-meeting?topic=engineering-advisor" }} />
     </>

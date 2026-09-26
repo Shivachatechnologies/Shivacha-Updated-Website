@@ -12,19 +12,15 @@ export function CTABand({
   secondary?: { label: string; href: string };
 }) {
   return (
-    <section className="border-t border-line py-20 sm:py-24">
+    <section className="py-16 sm:py-20">
       <div className="container-x">
-        <div className="relative overflow-hidden rounded-3xl border border-line bg-ink-900 px-6 py-14 sm:px-12 sm:py-16">
-          <div className="grid-bg pointer-events-none absolute inset-0 opacity-60" aria-hidden />
-          <div
-            className="pointer-events-none absolute -right-24 -bottom-40 size-[480px] rounded-full opacity-25 blur-[100px]"
-            style={{ background: "conic-gradient(from 180deg, #0195ff, #33aaff, #22d3ee, #0073cc, #0195ff)" }}
-            aria-hidden
-          />
+        <div data-theme="dark" className="band-brand relative overflow-hidden rounded-[28px] px-6 py-14 text-fg sm:px-12 sm:py-16 lg:px-16">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/shivacha-mark.svg" alt="" aria-hidden className="pointer-events-none absolute -right-16 -bottom-24 size-[420px] opacity-[0.12] sm:-right-8" />
           <div className="relative max-w-2xl">
-            <h2 className="h-section text-gradient">{title}</h2>
-            <p className="lede mt-5">{lede}</p>
-            <div className="mt-9 flex flex-wrap gap-3">
+            <h2 className="h-section text-fg">{title}</h2>
+            <p className="lede mt-4">{lede}</p>
+            <div className="mt-8 flex flex-wrap gap-3">
               <LinkButton href={primary.href} track={`cta:${primary.label}`}>
                 {primary.label}
               </LinkButton>

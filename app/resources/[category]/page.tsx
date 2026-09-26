@@ -31,7 +31,7 @@ export default async function Page({ params }: P) {
   return (
     <>
       <PageHero crumbs={[{ name: "Resources", href: "/resources" }, { name: c.name, href: `/resources/${c.slug}` }]} eyebrow={<span className="eyebrow">Resources</span>} title={c.name} lede={c.description} />
-      <Section bordered={false} className="pt-0">
+      <Section className="pt-0">
         {category === "case-studies" ? (
           <div className="grid gap-4 md:grid-cols-2">
             {caseStudies.map((cs) => (

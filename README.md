@@ -74,9 +74,16 @@ scripts/              Content, demo-link and route/SEO checks
 
 The official logo lives in [`public/brand`](public/brand): the original files (`shivacha-mark-original.jpg`, `shivacha-logo-original.png`) plus vector versions traced from them — `shivacha-mark.svg`, `shivacha-wordmark.svg` (white, for dark backgrounds), `shivacha-logo.svg` (full lockup, white text) and `shivacha-logo-dark.svg` (dark text, for light backgrounds). Brand blue is `#0195FF`; the site theme (`app/globals.css`) derives from it — a `brand-300…700` scale, navy-tinted surfaces and an analogous division palette (AI indigo, Digital blue, FinTech teal, Web3 cyan, Cloud sky). The header/footer logo (`components/layout/Logo.tsx`), favicon (`app/icon.svg`), Apple touch icon and Open Graph image all use these paths (`lib/brand/*`).
 
+## Visual system
+
+- **Illustrations** are composed in code, not image files: `components/graphics/DivisionArt.tsx` (one scene per division, plus the homepage `HeroScene`), `TechOrbit` (technology pages), `BrandOrbit` (company pages) and `Cover` (generated covers for insights and work). They render as dark "stages" in both themes.
+- **Technology logos** come from [simple-icons](https://simpleicons.org) (CC0) via `lib/brand/techLogos.ts`; `TechLogo` falls back to a lettermark when a brand has no icon. Logos identify the technologies we build with and imply no partnership.
+- **Icons on cards** are picked automatically from the card title by `components/graphics/autoIcon.tsx` (keyword → Lucide icon), so new data gets sensible icons without extra fields.
+- **Section bands** alternate automatically (`main > section:nth-of-type(even)`); pass `tone="brand"` to `Section` for a dark navy band.
+
 ## Dark / light theme
 
-A sun/moon button in the header (`components/layout/ThemeToggle.tsx`) switches themes. The choice is saved in `localStorage` (`theme`); first-time visitors get their system preference. A tiny inline script in `app/layout.tsx` sets `<html data-theme>` before first paint, so there is no flash. Theme tokens live in `app/globals.css` (`[data-theme="light"]` / `[data-theme="dark"]`); use token classes (`bg-ink-*`, `text-fg`, `text-muted`, `border-line`, `bg-tint/[…]`) rather than hard-coded white/black, and the `light:` variant for light-only tweaks. Product UI previews stay dark in both themes (`data-theme="dark"` island).
+A sun/moon button in the header (`components/layout/ThemeToggle.tsx`) switches themes. The choice is saved in `localStorage` (`theme`); first-time visitors get the light theme. A tiny inline script in `app/layout.tsx` sets `<html data-theme>` before first paint, so there is no flash. Theme tokens live in `app/globals.css` (`[data-theme="light"]` / `[data-theme="dark"]`); use token classes (`bg-ink-*`, `text-fg`, `text-muted`, `border-line`, `bg-tint/[…]`) rather than hard-coded white/black, and the `light:` variant for light-only tweaks. Product UI previews stay dark in both themes (`data-theme="dark"` island).
 
 ## Content model
 

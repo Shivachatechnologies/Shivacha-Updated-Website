@@ -17,7 +17,7 @@ export default function MarketsPage() {
   return (
     <>
       <PageHero crumbs={[{ name: "Markets", href: "/markets" }]} eyebrow={<span className="eyebrow">Global delivery</span>} title="Technology services for companies worldwide." lede={`${siteConfig.delivery} We do not claim physical offices outside our registered location.`} />
-      <Section bordered={false} className="pt-0">
+      <Section className="pt-0">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {regions.map((r) => (
             <div key={r.slug} className="card flex flex-col p-6">

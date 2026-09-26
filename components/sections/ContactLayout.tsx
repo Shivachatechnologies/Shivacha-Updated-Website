@@ -9,7 +9,7 @@ export function ContactLayout({ crumbs, title, lede, eyebrow, children, side }: 
   return (
     <>
       <PageHero crumbs={crumbs} eyebrow={<span className="eyebrow">{eyebrow}</span>} title={title} lede={lede} />
-      <Section bordered={false} className="pt-0">
+      <Section className="pt-0">
         <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr]">
           <div className="card min-w-0 p-6 sm:p-8">{children}</div>
           <aside className="space-y-6">

@@ -1,20 +1,21 @@
 import Image from "next/image";
-import { Check, Play } from "lucide-react";
+import { AlertTriangle, Check, Lightbulb, Play, Plug, Server, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import type { Product } from "@/data/types";
 import { getDivision } from "@/data/capabilities";
 import { hasLiveDemo } from "@/data/products";
 import { pick, relatedCaseStudies, relatedInsights, relatedResources } from "@/lib/relations";
 import { productSchema } from "@/lib/jsonld";
 import { PageHero } from "@/components/sections/PageHero";
-import { ArchitectureDiagram, CheckList, ChipLinks, PointsGrid, RelatedSection } from "@/components/sections/blocks";
+import { ArchitectureDiagram, ChipLinks, PointsGrid, PointsList, RelatedSection, TechGrid } from "@/components/sections/blocks";
 import { FAQ } from "@/components/sections/FAQ";
 import { CTABand } from "@/components/sections/CTABand";
 import { DivisionBadge, JsonLd, LinkButton, Section, SectionHeader } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
+import { DivisionArt } from "@/components/graphics/DivisionArt";
 import { divisionTone } from "@/components/ui/division";
 import { DashboardPreview } from "@/components/visuals/DashboardPreview";
 import { ProductViewTracker } from "@/components/forms/ProductViewTracker";
-import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toServiceItem, toTechItem, toIndustryLink, nonNull } from "./mappers";
+import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toServiceItem, toIndustryLink, nonNull } from "./mappers";
 
 export function DemoButtons({ product, compact }: { product: Product; compact?: boolean }) {
   const live = hasLiveDemo(product);
@@ -67,7 +68,7 @@ export function ProductTemplate({ product }: { product: Product }) {
         title={product.name}
         lede={product.tagline}
         accent={tone.hex}
-        aside={product.heroImage ? <Image src={product.heroImage} alt={`${product.name} interface`} width={1200} height={800} className="rounded-2xl border border-line" priority /> : <DashboardPreview kind={product.preview} name={product.name} />}
+        aside={product.heroImage ? <Image src={product.heroImage} alt={`${product.name} interface`} width={1200} height={800} className="rounded-2xl border border-line" priority /> : <Stage><DashboardPreview kind={product.preview} name={product.name} /></Stage>}
       >
         <DemoButtons product={product} />
       </PageHero>
@@ -79,15 +80,23 @@ export function ProductTemplate({ product }: { product: Product }) {
             <p className="text-xl leading-relaxed text-fg">{product.description}</p>
           </div>
           <div className="grid gap-4">
-            <div className="card p-6">
-              <p className="font-mono text-[11px] tracking-[0.16em] text-dim uppercase">The problem</p>
-              <p className="mt-3 text-[15px] leading-relaxed text-muted">{product.problem}</p>
+            <div className="card flex gap-4 p-6">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 light:text-amber-700">
+                <AlertTriangle className="size-5" aria-hidden />
+              </span>
+              <div>
+                <p className="font-semibold text-fg">The problem</p>
+                <p className="mt-1.5 text-[15px] leading-relaxed text-muted">{product.problem}</p>
+              </div>
             </div>
-            <div className="card p-6" style={{ borderColor: `${tone.hex}40` }}>
-              <p className={cn("font-mono text-[11px] tracking-[0.16em] uppercase", tone.text)}>
-                The solution
-              </p>
-              <p className="mt-3 text-[15px] leading-relaxed text-muted">{product.solution}</p>
+            <div className="card flex gap-4 p-6" style={{ borderColor: `${tone.hex}55` }}>
+              <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", tone.bg, tone.text)}>
+                <Lightbulb className="size-5" aria-hidden />
+              </span>
+              <div>
+                <p className="font-semibold text-fg">The solution</p>
+                <p className="mt-1.5 text-[15px] leading-relaxed text-muted">{product.solution}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -95,7 +104,7 @@ export function ProductTemplate({ product }: { product: Product }) {
 
       <Section>
         <SectionHeader eyebrow="Feature modules" title="What's inside" />
-        <PointsGrid points={product.modules} numbered />
+        <PointsGrid points={product.modules} />
       </Section>
 
       <Section>
@@ -123,38 +132,38 @@ export function ProductTemplate({ product }: { product: Product }) {
               ))}
             </div>
           ) : (
-            <DashboardPreview kind={product.preview} name={product.name} />
+            <DivisionArt division={division.id} label={`${product.name} illustration`} />
           )}
         </div>
       </Section>
 
       <Section>
         <div className="grid gap-12 lg:grid-cols-[1fr_1.25fr] lg:items-start">
-          <SectionHeader eyebrow="Architecture" title="Built to integrate and extend." lede="Modular services behind stable APIs, deployed into your environment and connected to your partners through adapters." className="mb-0" />
+          <div>
+            <SectionHeader eyebrow="Architecture" title="Built to integrate and extend." lede="Modular services behind stable APIs, deployed into your environment." className="mb-8" />
+            <TechGrid items={techs.slice(0, 6)} compact />
+          </div>
           <ArchitectureDiagram layers={product.architecture} division={division.id} title={`${product.name} architecture`} />
         </div>
       </Section>
 
       <Section>
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
-          <InfoList title="Integrations" items={product.integrations} />
-          <InfoList title="Security" items={product.security} />
-          <div>
-            <p className="eyebrow mb-5">Technology</p>
-            <ChipLinks items={techs.map(toTechItem)} />
-          </div>
-          <InfoList title="Deployment" items={product.deploymentOptions} />
-          <InfoList title="Customization" items={product.customizationOptions} />
-          <div>
-            <p className="eyebrow mb-5">Industries</p>
-            <ChipLinks items={nonNull(product.industries.map(toIndustryLink))} />
-          </div>
+        <SectionHeader eyebrow="Specifications" title="Deployment, security and integration" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <SpecCard icon={<Plug className="size-5" />} title="Integrations" items={product.integrations} />
+          <SpecCard icon={<ShieldCheck className="size-5" />} title="Security" items={product.security} />
+          <SpecCard icon={<Server className="size-5" />} title="Deployment" items={product.deploymentOptions} />
+          <SpecCard icon={<SlidersHorizontal className="size-5" />} title="Customisation" items={product.customizationOptions} />
+        </div>
+        <div className="mt-8 flex flex-wrap items-center gap-2">
+          <span className="mr-2 text-sm font-medium text-muted">Industries:</span>
+          <ChipLinks items={nonNull(product.industries.map(toIndustryLink))} />
         </div>
       </Section>
 
       <Section>
         <SectionHeader eyebrow="Use cases" title="Who launches with it" />
-        <PointsGrid points={product.useCases} columns={4} />
+        <PointsList points={product.useCases} />
       </Section>
 
       <Section>
@@ -170,21 +179,36 @@ export function ProductTemplate({ product }: { product: Product }) {
         </div>
       </Section>
 
-      <RelatedSection eyebrow="Custom engineering" title="Extend it with our services" items={services.map(toServiceItem)} />
-      <RelatedSection eyebrow="Related products" title="Works well with" items={related.map(toProductItem)} action={{ label: "All products", href: "/products" }} />
-      <RelatedSection eyebrow="Learn more" title="Related thinking" items={[...cases.map(toCaseItem), ...insights.map(toInsightItem), ...resources.map(toResourceItem)].slice(0, 6)} />
+      <RelatedSection eyebrow="Custom engineering" title="Extend it with our services" items={services.slice(0, 3).map(toServiceItem)} />
+      <RelatedSection eyebrow="Related products" title="Works well with" items={related.slice(0, 3).map(toProductItem)} action={{ label: "All products", href: "/products" }} />
+      <RelatedSection eyebrow="Learn more" title="Related thinking" items={[...cases.map(toCaseItem), ...insights.map(toInsightItem), ...resources.map(toResourceItem)].slice(0, 3)} />
       <FAQ items={product.faqs} />
       <CTABand title="Request a product demo." lede={`See how ${product.name} fits your business, and how we would customise and deploy it.`} primary={{ label: "Request Product Demo", href: `/request-demo?product=${encodeURIComponent(product.name)}` }} secondary={{ label: "Talk to sales", href: "/contact" }} />
     </>
   );
 }
 
-function InfoList({ title, items }: { title: string; items: string[] }) {
+function SpecCard({ icon, title, items }: { icon: React.ReactNode; title: string; items: string[] }) {
   return (
-    <div>
-      <p className="eyebrow mb-5">{title}</p>
-      <CheckList items={items} className="sm:grid-cols-1" />
+    <div className="card p-6">
+      <span className="icon-tile">{icon}</span>
+      <p className="mt-5 mb-3 font-semibold text-fg">{title}</p>
+      <ul className="space-y-2">
+        {items.map((it) => (
+          <li key={it} className="flex items-start gap-2 text-sm text-muted">
+            <Check className="mt-0.5 size-3.5 shrink-0 text-brand-teal" aria-hidden />
+            {it}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
+function Stage({ children }: { children: React.ReactNode }) {
+  return (
+    <div data-theme="dark" className="scene rounded-3xl border border-white/10 p-5 sm:p-8">
+      {children}
+    </div>
+  );
+}

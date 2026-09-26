@@ -15,7 +15,7 @@ export default function WorkPage() {
   return (
     <>
       <PageHero crumbs={[{ name: "Work", href: "/work" }]} eyebrow={<span className="eyebrow">Work</span>} title="How we approach complex systems." lede="Engineering write-ups from our divisions. Reference architectures describe our approach to a class of system; client case studies are published only with verified client approval." />
-      <Section bordered={false} className="pt-0">
+      <Section className="pt-0">
         <WorkListing items={caseStudies} />
       </Section>
       <CTABand />

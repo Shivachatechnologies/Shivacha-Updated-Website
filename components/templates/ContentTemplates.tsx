@@ -8,6 +8,7 @@ import { getDepartment, jobs } from "@/data/careers";
 import { caseStudies } from "@/data/caseStudies";
 import { pick } from "@/lib/relations";
 import { articleSchema } from "@/lib/jsonld";
+import { Cover } from "@/components/graphics/Cover";
 import { PageHero } from "@/components/sections/PageHero";
 import { ArchitectureDiagram, CheckList, ChipLinks, PointsGrid, ProcessSteps, RelatedSection } from "@/components/sections/blocks";
 import { CTABand } from "@/components/sections/CTABand";
@@ -31,6 +32,7 @@ export function CaseStudyTemplate({ cs }: { cs: CaseStudy }) {
           </div>
         }
         title={cs.title}
+        aside={<Cover kind={cs.division} label={cs.kind === "client" ? "Client case study" : "Reference architecture"} className="aspect-[4/3] rounded-3xl" />}
         lede={cs.summary}
       />
       {cs.kind === "reference-architecture" && (
@@ -239,6 +241,7 @@ export function InsightTemplate({ insight }: { insight: Insight }) {
         }
         title={insight.title}
         lede={insight.excerpt}
+        aside={<Cover kind={insight.category} label={cat.name} className="aspect-[4/3] rounded-3xl" />}
       />
       <Section>
         <div className="grid gap-12 lg:grid-cols-[220px_1fr_220px]">

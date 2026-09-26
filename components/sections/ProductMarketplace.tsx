@@ -91,7 +91,7 @@ export function ProductMarketplace({ items }: { items: ProductCard[] }) {
                 <span className={cn("size-1.5 rounded-full", divisionTone[p.division].dot)} />
                 {divisionLabel[p.division]}
               </span>
-              <span className="font-mono text-[10px] tracking-wider text-dim uppercase">{p.category}</span>
+              <span className="text-xs text-dim font-semibold">{p.category}</span>
             </div>
             <h3 className="mt-5 text-lg font-semibold text-fg">{p.name}</h3>
             <p className="mt-2 text-sm leading-relaxed text-muted">{p.tagline}</p>

@@ -9,7 +9,7 @@ function Column({ title, items, color, sub, center }: { title: string; items: st
     <div className={cn("relative rounded-2xl border p-4 sm:p-5", center ? "border-tint/20 bg-tint/[0.04]" : "border-line bg-ink-900/60")}>
       {center && <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-20 blur-2xl" style={{ background: `radial-gradient(closest-side, ${color}, transparent)` }} aria-hidden />}
       <div className="relative mb-4">
-        <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase" style={{ color }}>
+        <p className="text-xs font-semibold" style={{ color }}>
           {sub}
         </p>
         <p className="mt-1 text-sm font-semibold text-fg">{title}</p>

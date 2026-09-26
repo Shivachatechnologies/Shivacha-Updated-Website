@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *):not(:where([data-theme="dark"], [data-theme="dark"] *)));
 
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
@@ -165,28 +165,28 @@ body {
     @apply mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-8;
   }
   .eyebrow {
-    @apply inline-flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.18em] text-muted uppercase;
+    @apply inline-flex items-center gap-2.5 text-[13px] font-semibold tracking-[0.01em] text-brand-blue;
   }
   .h-display {
-    @apply text-[2.6rem] leading-[1.02] font-semibold tracking-[-0.035em] text-balance sm:text-6xl lg:text-[5.25rem];
+    @apply text-[2.5rem] leading-[1.04] font-semibold tracking-[-0.035em] text-balance sm:text-6xl lg:text-[4.25rem];
   }
   .h-page {
-    @apply text-[2.25rem] leading-[1.05] font-semibold tracking-[-0.03em] text-balance sm:text-5xl lg:text-6xl;
+    @apply text-[2.15rem] leading-[1.08] font-semibold tracking-[-0.03em] text-balance sm:text-5xl lg:text-[3.4rem];
   }
   .h-section {
-    @apply text-3xl leading-[1.1] font-semibold tracking-[-0.025em] text-balance sm:text-4xl lg:text-[2.75rem];
+    @apply text-[1.85rem] leading-[1.12] font-semibold tracking-[-0.025em] text-balance sm:text-4xl lg:text-[2.6rem];
   }
   .h-card {
     @apply text-lg leading-snug font-semibold tracking-[-0.01em];
   }
   .lede {
-    @apply text-lg leading-relaxed text-pretty text-muted sm:text-xl;
+    @apply text-[1.075rem] leading-relaxed text-pretty text-muted sm:text-lg;
   }
   .card {
-    @apply rounded-2xl border border-line bg-tint/[0.02] transition-colors;
+    @apply rounded-2xl border border-line bg-ink-900 transition-all duration-200;
   }
   .card-hover {
-    @apply hover:border-line-strong hover:bg-tint/[0.035];
+    @apply hover:-translate-y-0.5 hover:border-line-strong hover:shadow-[0_18px_40px_-24px_rgb(0_0_0/0.45)];
   }
   .btn {
     @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-all duration-200 select-none;
@@ -216,7 +216,60 @@ body {
     @apply h-px w-full bg-gradient-to-r from-transparent via-tint/15 to-transparent;
   }
   .text-gradient {
-    @apply bg-gradient-to-br from-fg via-fg to-brand-300/70 bg-clip-text text-transparent;
+    color: var(--color-fg);
+  }
+  .accent-word {
+    @apply text-brand-blue;
+  }
+  .eyebrow::before {
+    content: "";
+    @apply h-[2px] w-5 rounded-full bg-brand-blue;
+  }
+  .icon-tile {
+    @apply inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-brand-blue/20 bg-brand-blue/10 text-brand-blue;
+  }
+  .band-muted,
+  main > section:nth-of-type(even):not([data-tone]) {
+    background: var(--color-ink-850);
+  }
+  .band-brand {
+    background:
+      radial-gradient(60% 80% at 85% 0%, rgb(1 149 255 / 0.28), transparent 60%),
+      radial-gradient(50% 60% at 0% 100%, rgb(34 211 238 / 0.12), transparent 60%),
+      #04101f;
+  }
+  .scene {
+    background:
+      radial-gradient(70% 60% at 80% 10%, var(--scene-a, rgb(1 149 255 / 0.45)), transparent 60%),
+      radial-gradient(60% 60% at 10% 90%, var(--scene-b, rgb(34 211 238 / 0.25)), transparent 60%),
+      linear-gradient(160deg, #0a1a33, #050c18);
+  }
+  .float-card {
+    @apply rounded-xl border border-white/10 bg-[#0d1b2e]/95 shadow-[0_24px_60px_-20px_rgb(0_0_0/0.7)];
+  }
+  @keyframes drift {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .drift {
+    animation: drift 7s ease-in-out infinite;
+  }
+  .drift-slow {
+    animation: drift 9s ease-in-out infinite;
+    animation-delay: -3s;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes marquee {
+    to { transform: translateX(-50%); }
+  }
+  .marquee {
+    animation: marquee 50s linear infinite;
+  }
+  .marquee:hover {
+    animation-play-state: paused;
   }
   .text-spectrum {
     background-image: linear-gradient(90deg, #33aaff, #0195ff 35%, #22d3ee 75%, #66bfff);

@@ -3,6 +3,7 @@ import { getSolution } from "@/data/solutions";
 import { pick, productsForIndustry, relatedCaseStudies, relatedInsights } from "@/lib/relations";
 import { serviceSchema } from "@/lib/jsonld";
 import { PageHero } from "@/components/sections/PageHero";
+import { DivisionArt } from "@/components/graphics/DivisionArt";
 import { ChipLinks, PointsGrid, RelatedSection } from "@/components/sections/blocks";
 import { FAQ } from "@/components/sections/FAQ";
 import { CTABand } from "@/components/sections/CTABand";
@@ -30,6 +31,7 @@ export function IndustryTemplate({ industry }: { industry: Industry }) {
         }
         title={industry.h1}
         lede={industry.summary}
+        aside={<DivisionArt division={industry.divisions[0]} label="Illustration" />}
       >
         <LinkButton href="/start-a-project" track={`cta:industry-${industry.slug}`}>
           Start a Project

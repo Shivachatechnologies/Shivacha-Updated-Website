@@ -21,7 +21,7 @@ export default function SolutionsPage() {
   return (
     <>
       <PageHero crumbs={[{ name: "Solutions", href: "/solutions" }]} eyebrow={<span className="eyebrow">Solutions</span>} title="Solutions shaped around where you are — and where you're going." lede="Whether you are launching a first product, scaling a platform or transforming an enterprise, each solution combines the right divisions, services and platforms." />
-      <Section bordered={false} className="pt-0">
+      <Section className="pt-0">
         <LinkCard href={`/solutions/${hybrid.slug}`} title={hybrid.h1} description={hybrid.summary} eyebrow="Shivacha differentiator · Web2 + Web3 FinTech" division="fintech" className="p-8" />
       </Section>
       {groups.map((g) => (

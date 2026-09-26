@@ -28,7 +28,7 @@ export default async function Page({ params }: P) {
     return (
       <>
         <PageHero crumbs={[{ name: "Careers", href: "/careers" }, { name: d.name, href: `/careers/${d.slug}` }]} eyebrow={<span className="eyebrow">Careers</span>} title={`${d.name} at Shivacha`} lede={d.description} />
-        <Section bordered={false} className="pt-0">
+        <Section className="pt-0">
           <p className="eyebrow mb-5">Disciplines</p>
           <CheckList items={d.disciplines} />
         </Section>

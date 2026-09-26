@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Info } from "lucide-react";
+import { Handshake, Info, Layers, Users } from "lucide-react";
 import type { Service } from "@/data/types";
 import { getGroup } from "@/data/serviceGroups";
 import { getDivision } from "@/data/capabilities";
@@ -14,13 +14,16 @@ import {
   serviceTechnologies,
 } from "@/lib/relations";
 import { serviceSchema } from "@/lib/jsonld";
-import { PageHero } from "@/components/sections/PageHero";
-import { ArchitectureDiagram, ChipLinks, PointsGrid, ProcessSteps, RelatedSection } from "@/components/sections/blocks";
+import { FactStrip, PageHero } from "@/components/sections/PageHero";
+import { ArchitectureDiagram, ChipLinks, PointsGrid, PointsList, ProcessSteps, RelatedSection, TechGrid } from "@/components/sections/blocks";
+import { DivisionArt } from "@/components/graphics/DivisionArt";
+import { AutoIcon } from "@/components/graphics/autoIcon";
+import { Icon } from "@/components/ui/Icon";
 import { FAQ } from "@/components/sections/FAQ";
 import { CTABand } from "@/components/sections/CTABand";
 import { DivisionBadge, JsonLd, LinkButton, Section, SectionHeader } from "@/components/ui/primitives";
 import { divisionTone } from "@/components/ui/division";
-import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toServiceItem, toTechItem } from "./mappers";
+import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toServiceItem } from "./mappers";
 
 export function ServiceTemplate({ service }: { service: Service }) {
   const group = getGroup(service.group)!;
@@ -55,24 +58,16 @@ export function ServiceTemplate({ service }: { service: Service }) {
         title={service.name}
         lede={service.summary}
         accent={tone.hex}
-        aside={
-          <div className="card p-6">
-            <p className="eyebrow">Engagement snapshot</p>
-            <dl className="mt-5 space-y-3.5 text-sm">
-              <Row k="Division" v={<Link href={`/capabilities/${division.id}`} className="hover:underline">{division.name}</Link>} />
-              <Row k="Service area" v={group.name} />
-              {group.track && <Row k="Track" v={group.track} />}
-              {team && <Row k="Team" v={<Link href={`/dedicated-teams/${team.slug}`} className="hover:underline">{team.name}</Link>} />}
-              <Row k="Engagement" v="Project · Dedicated team · Managed" />
-            </dl>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {techs.slice(0, 5).map((t) => (
-                <Link key={t.slug} href={`/technologies/${t.slug}`} className="chip">
-                  {t.name}
-                </Link>
-              ))}
-            </div>
-          </div>
+        aside={<DivisionArt division={division.id} label={`${division.name} illustration`} />}
+        footer={
+          <FactStrip
+            items={[
+              { icon: <Icon name={division.icon} className="size-5" />, label: "Division", value: <Link href={`/capabilities/${division.id}`} className="hover:underline">{division.name}</Link> },
+              { icon: <Layers className="size-5" />, label: "Service area", value: group.name },
+              { icon: <Users className="size-5" />, label: "Team", value: team ? <Link href={`/dedicated-teams/${team.slug}`} className="hover:underline">{team.name}</Link> : "Cross-functional squad" },
+              { icon: <Handshake className="size-5" />, label: "Engagement", value: "Project · Team · Managed" },
+            ]}
+          />
         }
       >
         <LinkButton href={`${division.ctaHref}&service=${service.slug}`} track={`cta:service-${service.slug}`}>
@@ -84,38 +79,48 @@ export function ServiceTemplate({ service }: { service: Service }) {
       </PageHero>
 
       <Section>
-        <div className="grid gap-12 lg:grid-cols-[1fr_1fr]">
+        <div className="grid gap-12 lg:grid-cols-[1.1fr_1fr] lg:items-start">
           <div>
             <p className="eyebrow mb-4">Overview</p>
-            <p className="text-xl leading-relaxed text-fg">{service.overview}</p>
-          </div>
-          <div>
-            <p className="eyebrow mb-4">Context · {group.name}</p>
-            <p className="text-[15px] leading-relaxed text-muted">{group.intro}</p>
+            <p className="text-xl leading-relaxed text-fg sm:text-[1.35rem]">{service.overview}</p>
             {service.note && (
-              <div className="mt-6 flex gap-3 rounded-xl border border-line bg-tint/[0.02] p-4 text-sm text-muted">
+              <div className="mt-6 flex gap-3 rounded-xl border border-brand-blue/20 bg-brand-blue/5 p-4 text-sm text-muted">
                 <Info className="mt-0.5 size-4 shrink-0 text-brand-blue" aria-hidden />
                 <p>{service.note}</p>
               </div>
             )}
           </div>
+          <div className="card p-6 sm:p-7">
+            <h2 className="mb-5 text-lg font-semibold text-fg">Common use cases</h2>
+            <ul className="space-y-4">
+              {service.useCases.map((u) => (
+                <li key={u.title} className="flex gap-3.5">
+                  <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-blue/10 text-brand-blue">
+                    <AutoIcon title={u.title} hint={u.description} className="size-[18px]" />
+                  </span>
+                  <span>
+                    <span className="block font-medium text-fg">{u.title}</span>
+                    <span className="block text-sm text-muted">{u.description}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="Use cases" title={`${service.name}: common use cases`} />
-        <PointsGrid points={service.useCases} columns={4} />
-      </Section>
-
-      <Section>
         <SectionHeader eyebrow="Capabilities" title="What we deliver" />
-        <PointsGrid points={service.capabilities} numbered />
+        <PointsGrid points={service.capabilities} />
       </Section>
 
       <Section>
-        <div className="grid gap-12 lg:grid-cols-[1fr_1.25fr] lg:items-start">
-          <SectionHeader eyebrow="Architecture" title="Reference architecture" lede={`The layers we typically design for ${group.name.toLowerCase()} systems, adapted to your stack and partners.`} className="mb-0" />
-          <ArchitectureDiagram layers={group.architecture} division={division.id} title={group.name} />
+        <div className="grid gap-12 lg:grid-cols-[1fr_1.15fr] lg:items-start">
+          <div>
+            <SectionHeader eyebrow="Architecture" title="Engineered right from day one" lede={`The layers we typically design for ${group.name.toLowerCase()}, adapted to your stack and partners.`} className="mb-8" />
+            <PointsList points={group.considerations.slice(0, 4)} />
+          </div>
+          <ArchitectureDiagram layers={group.architecture} division={division.id} title={`${group.name} · reference architecture`} />
         </div>
       </Section>
 
@@ -125,32 +130,30 @@ export function ServiceTemplate({ service }: { service: Service }) {
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="Engineering considerations" title="What we get right from day one" />
-        <PointsGrid points={group.considerations} columns={4} />
-      </Section>
-
-      <Section>
-        <div className="grid gap-12 md:grid-cols-2">
-          <div>
-            <p className="eyebrow mb-5">Technologies</p>
-            <ChipLinks items={techs.map(toTechItem)} />
-          </div>
-          <div>
-            <p className="eyebrow mb-5">Industries</p>
+        <SectionHeader eyebrow="Technology" title="Tools we use for this" />
+        <TechGrid items={techs} />
+        {inds.length > 0 && (
+          <div className="mt-8 flex flex-wrap items-center gap-2">
+            <span className="mr-2 text-sm font-medium text-muted">Industries:</span>
             <ChipLinks items={inds.map((i) => ({ label: i.name, href: `/industries/${i.slug}` }))} />
           </div>
-        </div>
+        )}
       </Section>
 
-      <RelatedSection eyebrow="Products" title="Start from a platform" items={products.map(toProductItem)} action={{ label: "All products", href: "/products" }} />
-      <RelatedSection eyebrow="Related services" title="Often combined with" items={related.map(toServiceItem)} />
+      <RelatedSection eyebrow="Products" title="Start from a platform" items={products.slice(0, 3).map(toProductItem)} action={{ label: "All products", href: "/products" }} />
+      <RelatedSection eyebrow="Related services" title="Often combined with" items={related.slice(0, 3).map(toServiceItem)} />
       {team && (
         <Section>
           <div className="card flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
-            <div>
+            <div className="flex gap-5">
+              <span className="icon-tile hidden size-14 sm:inline-flex">
+                <Users className="size-6" />
+              </span>
+              <div>
               <p className="eyebrow mb-3">Dedicated team</p>
               <p className="text-2xl font-semibold text-fg">{team.name}</p>
               <p className="mt-2 max-w-2xl text-muted">{team.summary}</p>
+              </div>
             </div>
             <div className="flex flex-wrap gap-3">
               <LinkButton href={`/dedicated-teams/${team.slug}`} variant="secondary">
@@ -161,18 +164,9 @@ export function ServiceTemplate({ service }: { service: Service }) {
           </div>
         </Section>
       )}
-      <RelatedSection eyebrow="Work & insights" title="Related thinking" items={[...cases.map(toCaseItem), ...insights.map(toInsightItem), ...resources.map(toResourceItem)].slice(0, 6)} />
+      <RelatedSection eyebrow="Work & insights" title="Related thinking" items={[...cases.map(toCaseItem), ...insights.map(toInsightItem), ...resources.map(toResourceItem)].slice(0, 3)} />
       <FAQ items={faqs} />
       <CTABand title={`${division.cta}.`} lede={`Tell us about your ${service.name.toLowerCase()} requirements. We will propose an approach, team and plan.`} primary={{ label: division.cta, href: division.ctaHref }} />
     </>
-  );
-}
-
-function Row({ k, v }: { k: string; v: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-line pb-3 last:border-0 last:pb-0">
-      <dt className="text-dim">{k}</dt>
-      <dd className="text-right text-fg">{v}</dd>
-    </div>
   );
 }

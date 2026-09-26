@@ -16,7 +16,7 @@ export default function IndustriesPage() {
   return (
     <>
       <PageHero crumbs={[{ name: "Industries", href: "/industries" }]} eyebrow={<span className="eyebrow">{industries.length} industries</span>} title="Technology shaped by industry realities." lede="Each industry has its own constraints, regulations and opportunities. We connect them to the right services, products and technologies." />
-      <Section bordered={false} className="pt-0">
+      <Section className="pt-0">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {industries.map((i) => (
             <Link key={i.slug} href={`/industries/${i.slug}`} className="card card-hover group flex flex-col p-6">

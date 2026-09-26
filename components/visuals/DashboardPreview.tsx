@@ -125,8 +125,8 @@ export function DashboardPreview({ kind, name, className }: { kind: PreviewKind;
                       </span>
                     ))}
                   </div>
-                  {c.table.rows.map((r) => (
-                    <div key={r[0]} className="grid grid-cols-3 border-b border-line px-2 py-1.5 last:border-0">
+                  {c.table.rows.map((r, ri) => (
+                    <div key={ri} className="grid grid-cols-3 border-b border-line px-2 py-1.5 last:border-0">
                       {r.map((cell, i) => (
                         <span key={i} className={cn("truncate text-[10px]", i === 0 ? "text-fg" : "text-muted")}>
                           {cell}

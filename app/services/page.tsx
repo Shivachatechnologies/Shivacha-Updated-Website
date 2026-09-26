@@ -8,6 +8,7 @@ import { CTABand } from "@/components/sections/CTABand";
 import { Section } from "@/components/ui/primitives";
 import { divisionTone } from "@/components/ui/division";
 import { cn } from "@/lib/cn";
+import { AutoIcon } from "@/components/graphics/autoIcon";
 
 export const metadata = buildMetadata({
   title: "Services: AI, Software, FinTech, Web3, Cloud & Cybersecurity",
@@ -38,22 +39,25 @@ export default function ServicesPage() {
         <Section key={d.id} id={d.id}>
           <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className={cn("font-mono text-[11px] tracking-[0.16em] uppercase", divisionTone[d.id].text)}>{d.name}</p>
+              <p className={cn("text-xs font-semibold", divisionTone[d.id].text)}>{d.name}</p>
               <h2 className="mt-2 text-3xl font-semibold tracking-tight text-fg">{d.tagline}</h2>
             </div>
             <Link href={`/capabilities/${d.id}`} className="btn-secondary">
               {d.short} overview
             </Link>
           </div>
-          <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {groupsForDivision(d.id).map((g) => (
-              <div key={g.id} id={anchor(g.id)} className="scroll-mt-24 bg-ink-950 p-6">
-                {g.track && <p className="mb-1 font-mono text-[10.5px] tracking-[0.16em] text-dim uppercase">{g.track}</p>}
+              <div key={g.id} id={anchor(g.id)} className="card scroll-mt-24 p-6">
+                <span className={cn("mb-4 flex size-10 items-center justify-center rounded-lg", divisionTone[d.id].bg, divisionTone[d.id].text)}>
+                  <AutoIcon title={g.name} className="size-5" />
+                </span>
+                {g.track && <p className={cn("mb-1 text-xs font-semibold", divisionTone[d.id].text)}>{g.track}</p>}
                 <h3 className="mb-4 font-semibold text-fg">{g.name}</h3>
                 <ul className="space-y-2">
                   {servicesForGroup(g.id).map((s) => (
                     <li key={s.slug}>
-                      <Link href={`/services/${s.slug}`} className="text-sm text-muted transition-colors hover:text-fg">
+                      <Link href={`/services/${s.slug}`} className="text-sm text-muted transition-colors hover:text-brand-blue">
                         {s.name}
                       </Link>
                     </li>
