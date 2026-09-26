@@ -17,7 +17,7 @@ export const metadata = buildMetadata({
 export default function CompanyPage() {
   return (
     <>
-      <PageHero crumbs={[{ name: "Company", href: "/company" }]} eyebrow={<span className="eyebrow">{siteConfig.legalName}</span>} title="Technology for companies building what comes next." lede={siteConfig.description} aside={<BrandOrbit />} />
+      <PageHero crumbs={[{ name: "Company", href: "/company" }]} eyebrow={<span className="eyebrow">{siteConfig.name}</span>} title="Technology for companies building what comes next." lede={siteConfig.description} aside={<BrandOrbit />} />
       <Section className="pt-0">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {companyPages.map((p) => (

@@ -1,7 +1,14 @@
 export const siteConfig = {
   name: "Shivacha Technologies",
   shortName: "Shivacha",
-  legalName: "Shivacha Technologies Private Limited",
+  /** Parent company (India). Use `name` ("Shivacha Technologies") everywhere else. */
+  legalName: "Shivacha Technologies Solution Private Limited",
+  /** Legal entities by country. */
+  entities: [
+    { name: "Shivacha Technologies Solution Private Limited", country: "India", countryCode: "IN" },
+    { name: "Shivacha Technologies LLC", country: "United States", countryCode: "US" },
+    { name: "Shivacha Technologies Limited", country: "United Kingdom", countryCode: "GB" },
+  ],
   url: (process.env.NEXT_PUBLIC_SITE_URL || "https://shivacha.com").replace(/\/$/, ""),
   tagline: "Technology for companies building what comes next.",
   description:
@@ -29,6 +36,7 @@ export const siteConfig = {
       label: "Gurgaon",
       country: "India",
       countryCode: "IN",
+      entity: "Shivacha Technologies Solution Private Limited",
       timeZone: "Asia/Kolkata",
       lines: ["8th Floor, Tower-B4, Spaze Itech Park", "Sector-49, Gurgaon", "Haryana 122018"],
       region: "Haryana",
@@ -44,6 +52,7 @@ export const siteConfig = {
       label: "Mohali",
       country: "India",
       countryCode: "IN",
+      entity: "Shivacha Technologies Solution Private Limited",
       timeZone: "Asia/Kolkata",
       lines: ["E-299, 8th Floor, Corporate Green Tower", "Sector 75, Mohali", "Punjab"],
       region: "Punjab",
@@ -59,6 +68,7 @@ export const siteConfig = {
       label: "Dallas, Texas",
       country: "United States",
       countryCode: "US",
+      entity: "Shivacha Technologies LLC",
       timeZone: "America/Chicago",
       lines: ["3699 McKinney Ave", "Dallas, Texas 75204"],
       region: "TX",
@@ -74,6 +84,7 @@ export const siteConfig = {
       label: "London",
       country: "United Kingdom",
       countryCode: "GB",
+      entity: "Shivacha Technologies Limited",
       timeZone: "Europe/London",
       lines: ["71-75 Shelton Street", "London WC2H 9JQ", "United Kingdom"],
       region: undefined,

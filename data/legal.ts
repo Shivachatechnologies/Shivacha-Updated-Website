@@ -19,7 +19,7 @@ export const legalPages: LegalPage[] = [
     description: "How Shivacha Technologies collects, uses and protects personal information.",
     updated,
     sections: [
-      { heading: "Who we are", body: ["This website is operated by Shivacha Technologies Private Limited (\"Shivacha\", \"we\"). Questions about this policy can be sent to info@shivacha.com."] },
+      { heading: "Who we are", body: ["This website is operated by Shivacha Technologies Solution Private Limited, India, on behalf of the Shivacha Technologies group, which also includes Shivacha Technologies LLC (United States) and Shivacha Technologies Limited (United Kingdom) (together \"Shivacha\", \"we\"). Questions about this policy can be sent to info@shivacha.com."] },
       { heading: "Information we collect", body: ["Information you provide through forms — such as your name, business email, company, country, role and project details — and any documents you choose to upload.", "Technical information such as device, browser and usage data collected through cookies and analytics tools where you have consented to them."] },
       { heading: "How we use information", body: ["To respond to enquiries, provide requested resources, arrange meetings, evaluate job applications, improve our website and — with consent where required — send relevant communications."] },
       { heading: "Legal bases and consent", body: ["We process personal information on the basis of your consent, our legitimate interests in responding to business enquiries, or to take steps before entering a contract. You may withdraw consent at any time."] },

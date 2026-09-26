@@ -31,7 +31,7 @@ export const companyPages: CompanyPage[] = [
       {
         heading: "Who we are",
         body: [
-          "Shivacha Technologies Private Limited was incorporated in 2024. The company began with a focus on blockchain engineering and has grown into a technology company organised around five divisions: Shivacha AI, Shivacha Digital, Shivacha FinTech, Shivacha Web3 and Shivacha Cloud.",
+          "Shivacha Technologies was founded in 2024. The company began with a focus on blockchain engineering and has grown into a technology company organised around five divisions: Shivacha AI, Shivacha Digital, Shivacha FinTech, Shivacha Web3 and Shivacha Cloud.",
           "We work remotely with companies worldwide — startups, scaleups and enterprises — across financial services, SaaS, commerce, real estate, logistics, healthcare and the public sector.",
         ],
       },
@@ -189,7 +189,7 @@ export const companyPages: CompanyPage[] = [
         heading: "How global delivery works",
         body: [
           "Teams are structured with agreed working-hour overlap for each client, asynchronous handoffs documented in shared tools and regular synchronous rituals. Security practices — company-managed devices, least-privilege access and confidentiality agreements — apply wherever engineers work.",
-          "Shivacha Technologies Private Limited is registered in India, with its headquarters in Gurgaon and offices in Mohali, Dallas and London. Market pages describe how we serve companies in each region.",
+          "Shivacha Technologies operates through Shivacha Technologies Solution Private Limited in India (headquarters in Gurgaon, office in Mohali), Shivacha Technologies LLC in the United States (Dallas) and Shivacha Technologies Limited in the United Kingdom (London). Market pages describe how we serve companies in each region.",
         ],
       },
     ],

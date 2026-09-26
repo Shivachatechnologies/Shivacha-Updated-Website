@@ -135,7 +135,8 @@ export function Footer() {
                   {o.label}
                   {o.headquarters && <span className="rounded-full bg-brand-blue/15 px-2 py-0.5 text-[10.5px] font-semibold text-brand-blue">HQ</span>}
                 </p>
-                <address className="mt-2 text-sm leading-relaxed text-muted not-italic">
+                <p className="mt-1 text-xs text-dim">{o.entity}</p>
+                <address className="mt-3 text-sm leading-relaxed text-muted not-italic">
                   {o.lines.map((line) => (
                     <span key={line} className="block">
                       {line}
@@ -184,9 +185,19 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="flex flex-col gap-4 pt-8 text-sm text-dim md:flex-row md:items-center md:justify-between">
-          <span>
-            © {new Date().getFullYear()} {siteConfig.legalName}. All rights reserved.
-          </span>
+          <div className="space-y-1.5">
+            <p>
+              © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
+            </p>
+            <p className="text-xs">
+              {siteConfig.entities.map((e, i) => (
+                <span key={e.name}>
+                  {i > 0 && <span aria-hidden> · </span>}
+                  {e.name} ({e.countryCode === "GB" ? "UK" : e.countryCode === "US" ? "USA" : e.country})
+                </span>
+              ))}
+            </p>
+          </div>
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
             {legalLinks.map(([label, href]) => (
               <li key={href}>

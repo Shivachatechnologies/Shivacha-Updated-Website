@@ -25,6 +25,20 @@ export const organizationSchema = () => ({
     postalCode: o.postalCode,
     addressCountry: o.countryCode,
   })),
+  subOrganization: siteConfig.entities
+    .filter((e) => e.name !== siteConfig.legalName)
+    .map((e) => {
+      const o = siteConfig.offices.find((x) => x.entity === e.name);
+      return {
+        "@type": "Organization",
+        name: e.name,
+        legalName: e.name,
+        url: siteConfig.url,
+        parentOrganization: { "@id": `${siteConfig.url}/#organization` },
+        address: o ? { "@type": "PostalAddress", streetAddress: o.street, addressLocality: o.city, addressRegion: o.region, postalCode: o.postalCode, addressCountry: o.countryCode } : undefined,
+        telephone: o?.phone,
+      };
+    }),
   contactPoint: siteConfig.enquiries.map((e) => ({
     "@type": "ContactPoint",
     contactType: e.label.replace(" enquiry", "").toLowerCase() === "general" ? "customer service" : e.label.replace(" enquiry", "").toLowerCase(),

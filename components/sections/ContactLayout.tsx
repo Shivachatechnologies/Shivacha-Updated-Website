@@ -43,6 +43,7 @@ export function ContactLayout({ crumbs, title, lede, eyebrow, children, side }: 
                       <span className="font-semibold text-fg">
                         {o.label}, {o.country}
                       </span>
+                      <span className="block text-xs text-dim">{o.entity}</span>
                       <span className="block text-muted">{o.lines.join(", ")}</span>
                       {o.phone && (
                         <a href={o.phoneHref} className="text-muted hover:text-fg">

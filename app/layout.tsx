@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   applicationName: siteConfig.name,
   authors: [{ name: siteConfig.name, url: siteConfig.url }],
   creator: siteConfig.name,
-  publisher: siteConfig.legalName,
+  publisher: siteConfig.name,
   formatDetection: { telephone: false },
   verification: process.env.NEXT_PUBLIC_GSC_VERIFICATION ? { google: process.env.NEXT_PUBLIC_GSC_VERIFICATION } : undefined,
   openGraph: { siteName: siteConfig.name, type: "website", locale: "en_US" },

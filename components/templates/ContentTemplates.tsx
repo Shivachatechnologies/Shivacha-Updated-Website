@@ -124,6 +124,7 @@ export function MarketTemplate({ market }: { market: Market }) {
             {office ? (
               <div className="mt-5 border-t border-line pt-5 text-sm">
                 <p className="font-semibold text-fg">Shivacha {office.label} office</p>
+                <p className="text-xs text-dim">{office.entity}</p>
                 <address className="mt-1 text-muted not-italic">{office.lines.join(", ")}</address>
                 {office.phone && (
                   <a href={office.phoneHref} className="mt-1 block text-muted hover:text-fg">
