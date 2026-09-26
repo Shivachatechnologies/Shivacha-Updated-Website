@@ -4,7 +4,7 @@ import { buildMetadata } from "@/lib/seo";
 import { PageHero } from "@/components/sections/PageHero";
 import { CTABand } from "@/components/sections/CTABand";
 import { LinkCard, Section, SectionHeader } from "@/components/ui/primitives";
-import { BrandOrbit } from "@/components/graphics/BrandOrbit";
+import { GlobeHero } from "@/components/graphics/DivisionArt";
 
 export const metadata = buildMetadata({
   title: "Careers",
@@ -15,7 +15,7 @@ export const metadata = buildMetadata({
 export default function CareersPage() {
   return (
     <>
-      <PageHero crumbs={[{ name: "Careers", href: "/careers" }]} eyebrow={<span className="eyebrow">Careers</span>} title="Build systems that matter, with people who care about craft." lede="Shivacha is a remote-first team of engineers, designers and product people building AI, fintech, Web3 and cloud systems for companies worldwide." aside={<BrandOrbit />} />
+      <PageHero crumbs={[{ name: "Careers", href: "/careers" }]} eyebrow={<span className="eyebrow">Careers</span>} title="Build systems that matter, with people who care about craft." lede="Shivacha is a remote-first team of engineers, designers and product people building AI, fintech, Web3 and cloud systems for companies worldwide." aside={<GlobeHero priority />} />
       <Section className="pt-0">
         <SectionHeader eyebrow="Teams" title="Where you could work" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

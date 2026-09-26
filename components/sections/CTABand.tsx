@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { LinkButton } from "@/components/ui/primitives";
 import { BookCallButton } from "@/components/leads/BookCall";
 
@@ -16,8 +17,7 @@ export function CTABand({
     <section className="py-16 sm:py-20">
       <div className="container-x">
         <div data-theme="dark" className="band-brand relative overflow-hidden rounded-[28px] px-6 py-14 text-fg sm:px-12 sm:py-16 lg:px-16">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/shivacha-mark.svg" alt="" aria-hidden className="pointer-events-none absolute -right-16 -bottom-24 size-[420px] opacity-[0.12] sm:-right-8" />
+          <Image src="/graphics/3d-api.png" alt="" aria-hidden width={560} height={325} sizes="480px" className="pointer-events-none absolute top-1/2 -right-10 hidden w-[44%] max-w-[520px] -translate-y-1/2 opacity-90 lg:block" />
           <div className="relative max-w-2xl">
             <h2 className="h-section text-fg">{title}</h2>
             <p className="lede mt-4">{lede}</p>

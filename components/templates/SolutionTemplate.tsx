@@ -37,7 +37,7 @@ export function SolutionTemplate({ solution }: { solution: Solution }) {
         }
         title={solution.h1}
         lede={solution.summary}
-        aside={<DivisionArt division={primary.id} label="Illustration" />}
+        aside={<DivisionArt division={primary.id} topic={solution.name} label={`${solution.name} illustration`} priority />}
         accent={isHybrid ? "#14c8b0" : "#0195ff"}
       >
         <LinkButton href={`/start-a-project?division=${primary.id}`} track={`cta:solution-${solution.slug}`}>

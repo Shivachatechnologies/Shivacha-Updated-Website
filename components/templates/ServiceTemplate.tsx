@@ -59,7 +59,7 @@ export function ServiceTemplate({ service }: { service: Service }) {
         title={service.name}
         lede={service.summary}
         accent={tone.hex}
-        aside={<DivisionArt division={division.id} label={`${division.name} illustration`} />}
+        aside={<DivisionArt division={division.id} topic={`${service.name} ${group.name}`} label={`${service.name} illustration`} priority />}
         footer={
           <FactStrip
             items={[

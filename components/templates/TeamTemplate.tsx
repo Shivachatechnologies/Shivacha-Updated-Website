@@ -24,7 +24,7 @@ export function TeamTemplate({ team }: { team: Team }) {
         eyebrow={<DivisionBadge division={team.division} />}
         title={`Dedicated ${team.name}`}
         lede={team.summary}
-        aside={<DivisionArt division={team.division} label="Illustration" />}
+        aside={<DivisionArt division={team.division} topic={team.name} label={`${team.name} illustration`} priority />}
       >
         <LinkButton href={hireHref} track={`cta:team-build-${team.slug}`}>
           Build This Team

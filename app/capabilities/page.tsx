@@ -10,7 +10,7 @@ import { Section, SectionHeader } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { divisionTone } from "@/components/ui/division";
 import { cn } from "@/lib/cn";
-import { BrandOrbit } from "@/components/graphics/BrandOrbit";
+import { RenderMosaic } from "@/components/graphics/DivisionArt";
 
 export const metadata = buildMetadata({
   title: "Capabilities: AI, Digital, FinTech, Web3 & Cloud",
@@ -26,7 +26,7 @@ export default function CapabilitiesPage() {
         eyebrow={<span className="eyebrow">Capabilities</span>}
         title="Five divisions. One engineering organisation."
         lede="Shivacha AI, Digital, FinTech, Web3 and Cloud are deep practices on their own — and designed to work together on the problems that cross them."
-        aside={<BrandOrbit />}
+        aside={<RenderMosaic />}
       />
       <Section className="pt-0">
         <div className="space-y-4">

@@ -32,7 +32,7 @@ export function IndustryTemplate({ industry }: { industry: Industry }) {
         }
         title={industry.h1}
         lede={industry.summary}
-        aside={<DivisionArt division={industry.divisions[0]} label="Illustration" />}
+        aside={<DivisionArt division={industry.divisions[0]} topic={industry.name} label={`${industry.name} technology illustration`} priority />}
       >
         <LinkButton href="/start-a-project" track={`cta:industry-${industry.slug}`}>
           Discuss Your Project

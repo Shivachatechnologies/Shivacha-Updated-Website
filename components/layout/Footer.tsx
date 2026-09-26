@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { siFacebook, siInstagram, siThreads, siX, siYoutube } from "simple-icons";
 import { MessageCircle, Briefcase, Mail, MapPin, MessageSquare, Phone, Users } from "lucide-react";
@@ -111,8 +112,9 @@ export function Footer() {
         </div>
 
         {/* Worldwide network */}
-        <div className="border-b border-line py-14">
-          <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="relative border-b border-line py-14">
+          <Image src="/graphics/3d-globe.jpg" alt="" aria-hidden width={640} height={480} sizes="560px" className="pointer-events-none absolute -top-10 right-[-6%] hidden w-[46%] max-w-[600px] opacity-40 mix-blend-screen lg:block" style={{ maskImage: "radial-gradient(closest-side, black 55%, transparent)" }} />
+          <div className="relative mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="eyebrow mb-3">Worldwide network</p>
               <h2 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
@@ -121,7 +123,7 @@ export function Footer() {
             </div>
             <p className="max-w-sm text-sm text-muted">Delivery teams work across time zones for clients in North America, Europe, the Middle East, Africa and Asia-Pacific.</p>
           </div>
-          <ul className="grid gap-4 sm:grid-cols-3">
+          <ul className="relative grid gap-4 sm:grid-cols-3">
             {siteConfig.offices.map((o) => (
               <li key={o.city} className="group relative flex flex-col rounded-2xl border border-line bg-white/[0.03] p-5 transition-colors hover:border-line-strong">
                 <div className="flex items-center justify-between gap-3">

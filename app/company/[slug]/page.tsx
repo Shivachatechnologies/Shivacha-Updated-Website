@@ -7,7 +7,7 @@ import { CTABand } from "@/components/sections/CTABand";
 import { PointsGrid } from "@/components/sections/blocks";
 import { JsonLd, LinkButton, Section } from "@/components/ui/primitives";
 import { siteConfig } from "@/data/siteConfig";
-import { BrandOrbit } from "@/components/graphics/BrandOrbit";
+import { GlobeHero } from "@/components/graphics/DivisionArt";
 
 type P = { params: Promise<{ slug: string }> };
 export const dynamicParams = false;
@@ -77,7 +77,7 @@ export default async function Page({ params }: P) {
   if (!page) notFound();
   return (
     <>
-      <PageHero crumbs={[{ name: "Company", href: "/company" }, { name: page.title, href: `/company/${slug}` }]} eyebrow={<span className="eyebrow">{page.title}</span>} title={page.h1} lede={page.lede} aside={<BrandOrbit />}>
+      <PageHero crumbs={[{ name: "Company", href: "/company" }, { name: page.title, href: `/company/${slug}` }]} eyebrow={<span className="eyebrow">{page.title}</span>} title={page.h1} lede={page.lede} aside={<GlobeHero priority />}>
         {slug === "partners" && <LinkButton href="/contact">Discuss a partnership</LinkButton>}
       </PageHero>
       {page.sections.map((s) => (

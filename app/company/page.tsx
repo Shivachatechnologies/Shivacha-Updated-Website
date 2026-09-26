@@ -6,7 +6,7 @@ import { buildMetadata } from "@/lib/seo";
 import { PageHero } from "@/components/sections/PageHero";
 import { CTABand } from "@/components/sections/CTABand";
 import { LinkCard, Section, SectionHeader } from "@/components/ui/primitives";
-import { BrandOrbit } from "@/components/graphics/BrandOrbit";
+import { GlobeHero } from "@/components/graphics/DivisionArt";
 
 export const metadata = buildMetadata({
   title: "Company",
@@ -17,7 +17,7 @@ export const metadata = buildMetadata({
 export default function CompanyPage() {
   return (
     <>
-      <PageHero crumbs={[{ name: "Company", href: "/company" }]} eyebrow={<span className="eyebrow">{siteConfig.name}</span>} title="Technology for companies building what comes next." lede={siteConfig.description} aside={<BrandOrbit />} />
+      <PageHero crumbs={[{ name: "Company", href: "/company" }]} eyebrow={<span className="eyebrow">{siteConfig.name}</span>} title="Technology for companies building what comes next." lede={siteConfig.description} aside={<GlobeHero priority />} />
       <Section className="pt-0">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {companyPages.map((p) => (

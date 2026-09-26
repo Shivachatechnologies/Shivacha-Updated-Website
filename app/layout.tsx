@@ -28,24 +28,15 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#03070f" },
-    { media: "(prefers-color-scheme: light)", color: "#f6f8fb" },
-  ],
-  colorScheme: "dark light",
+  themeColor: "#f6f8fb",
+  colorScheme: "light",
   width: "device-width",
   initialScale: 1,
 };
 
-/** Applies the saved (or system) theme before first paint so there is no flash. */
-const themeScript = `(function(){try{var t=localStorage.getItem("theme");if(t!=="light"&&t!=="dark")t="light";document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme="light"}})()`;
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="light" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
+    <html lang="en" data-theme="light" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="min-h-screen font-sans">
         <JsonLd data={[organizationSchema(), websiteSchema()]} />
         <Header nav={mainNav} contact={{ email: siteConfig.contact.email, phone: siteConfig.contact.phone, phoneHref: siteConfig.contact.phoneHref }} />

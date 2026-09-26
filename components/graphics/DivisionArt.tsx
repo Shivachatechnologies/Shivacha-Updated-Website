@@ -1,455 +1,203 @@
-import type { CSSProperties, ReactNode } from "react";
-import {
-  ArrowDownLeft, ArrowUpRight, Bot, Box, Check, CheckCircle2, Cloud, Cpu, Loader2, Lock, Server, ShieldCheck, Sparkles, Wifi,
-} from "lucide-react";
+import Image from "next/image";
+import type { ReactNode } from "react";
+import { Activity, Bot, CheckCircle2, Gauge, Lock, ShieldCheck, TrendingUp, Webhook } from "lucide-react";
 import type { DivisionId } from "@/data/types";
 import { cn } from "@/lib/cn";
 
 /**
- * Illustrated scenes, one per division. Composed from code (no image files) so they stay crisp,
- * theme-independent and light. Always rendered as a dark "stage" so they read the same in both themes.
+ * Illustrations built from offline 3D renders (public/graphics, source in scripts/graphics) plus small
+ * code-drawn UI cards. No stock imagery. Sample figures on the cards are illustrative only.
  */
-const palettes: Record<DivisionId | "product", [string, string]> = {
-  ai: ["rgb(107 124 255 / 0.55)", "rgb(1 149 255 / 0.25)"],
-  digital: ["rgb(1 149 255 / 0.5)", "rgb(92 200 255 / 0.25)"],
-  fintech: ["rgb(20 200 176 / 0.45)", "rgb(1 149 255 / 0.3)"],
-  web3: ["rgb(34 211 238 / 0.45)", "rgb(107 124 255 / 0.3)"],
-  cloud: ["rgb(92 200 255 / 0.5)", "rgb(1 149 255 / 0.25)"],
-  product: ["rgb(1 149 255 / 0.45)", "rgb(34 211 238 / 0.2)"],
+
+type RenderKey = "blockchain" | "fintech" | "ai" | "cloud" | "digital" | "tokens" | "security" | "exchange" | "api" | "globe";
+
+export const RENDERS: Record<RenderKey, { src: string; w: number; h: number; dark?: boolean }> = {
+  blockchain: { src: "/graphics/3d-blockchain.png", w: 1142, h: 752 },
+  fintech: { src: "/graphics/3d-fintech.png", w: 1192, h: 734 },
+  cloud: { src: "/graphics/3d-cloud.png", w: 959, h: 1087 },
+  digital: { src: "/graphics/3d-digital.png", w: 966, h: 751 },
+  tokens: { src: "/graphics/3d-tokens.png", w: 738, h: 865 },
+  security: { src: "/graphics/3d-security.png", w: 915, h: 563 },
+  exchange: { src: "/graphics/3d-exchange.png", w: 1214, h: 792 },
+  api: { src: "/graphics/3d-api.png", w: 1195, h: 693 },
+  ai: { src: "/graphics/3d-ai.jpg", w: 1600, h: 1200, dark: true },
+  globe: { src: "/graphics/3d-globe.jpg", w: 1600, h: 1200, dark: true },
 };
 
-export function DivisionArt({ division, className, label }: { division: DivisionId | "product"; className?: string; label?: string }) {
-  const [a, b] = palettes[division];
-  const Scene = { ai: AIScene, digital: DigitalScene, fintech: FinTechScene, web3: Web3Scene, cloud: CloudScene, product: DigitalScene }[division];
+const byDivision: Record<DivisionId | "product", RenderKey> = { ai: "ai", digital: "digital", fintech: "fintech", web3: "blockchain", cloud: "cloud", product: "digital" };
+
+/** Picks a render from the topic (service / group name) first, then the division. */
+export function pickRender(division: DivisionId | "product", topic = ""): RenderKey {
+  const t = topic.toLowerCase();
+  if (/exchange|trading|brokerage|order book|market making/.test(t)) return "exchange";
+  if (/security|audit|threat|zero trust|penetration|secrets|identity|compliance/.test(t)) return "security";
+  if (/token|rwa|securit(y|ies) token|stablecoin|nft/.test(t)) return "tokens";
+  if (/api|integration|microservice|middleware|webhook|interoperab/.test(t)) return "api";
+  if (/payment|bank|card|lending|wallet|fintech|ledger|remittance|neobank/.test(t)) return "fintech";
+  if (/blockchain|smart contract|defi|web3|protocol|dao|chain/.test(t)) return "blockchain";
+  if (/\bai\b|agent|llm|machine learning|rag|vision|nlp|copilot/.test(t)) return "ai";
+  if (/cloud|devops|kubernetes|sre|infrastructure|migration|monitoring/.test(t)) return "cloud";
+  if (/mobile|web|saas|mvp|product|app/.test(t)) return "digital";
+  return byDivision[division];
+}
+
+const tint: Record<RenderKey, string> = {
+  blockchain: "from-[#e7f3ff] via-[#f3f8ff] to-[#e9fbff]",
+  fintech: "from-[#e6fbf7] via-[#f2f9ff] to-[#e7f1ff]",
+  cloud: "from-[#e9f5ff] via-[#f5f9ff] to-[#eaf0ff]",
+  digital: "from-[#eaf2ff] via-[#f7f9fc] to-[#e7f7ff]",
+  tokens: "from-[#e8f8ff] via-[#f5f9ff] to-[#eeeeff]",
+  security: "from-[#e8efff] via-[#f5f8ff] to-[#e7f6ff]",
+  exchange: "from-[#e8faf6] via-[#f5f9ff] to-[#fdf0f0]",
+  api: "from-[#eaf1ff] via-[#f6f9ff] to-[#e7f9fb]",
+  ai: "",
+  globe: "",
+};
+
+function FloatCard({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={cn("absolute rounded-2xl border border-black/5 bg-white/90 p-3 text-[11px] leading-snug text-[#0b1424] shadow-[0_18px_40px_-18px_rgb(11_20_36/0.35)] backdrop-blur-sm", className)}>{children}</div>;
+}
+
+function Overlay({ k }: { k: RenderKey }) {
+  switch (k) {
+    case "fintech":
+      return (
+        <>
+          <FloatCard className="top-[7%] left-[6%]">
+            <p className="flex items-center gap-1.5 font-semibold text-emerald-600"><CheckCircle2 className="size-3.5" /> Settled · +500.00</p>
+            <p className="text-[#5b6678]">Transfer from A. Rivera</p>
+          </FloatCard>
+          <FloatCard className="right-[6%] bottom-[8%]">
+            <p className="text-[#5b6678]">Success rate</p>
+            <p className="text-base font-semibold">98.4%</p>
+          </FloatCard>
+        </>
+      );
+    case "blockchain":
+    case "tokens":
+      return (
+        <FloatCard className="right-[6%] bottom-[8%]">
+          <p className="flex items-center gap-1.5 font-semibold text-emerald-600"><CheckCircle2 className="size-3.5" /> Transfer confirmed</p>
+          <p className="font-mono text-[10px] text-[#5b6678]">0x8f2…a91 · 12 confirmations</p>
+        </FloatCard>
+      );
+    case "cloud":
+      return (
+        <FloatCard className="right-[6%] bottom-[8%]">
+          <p className="flex items-center gap-1.5 text-[#5b6678]"><Activity className="size-3.5 text-[#0195ff]" /> Uptime · 30 days</p>
+          <p className="text-base font-semibold">99.98%</p>
+        </FloatCard>
+      );
+    case "digital":
+      return (
+        <FloatCard className="top-[7%] left-[6%]">
+          <p className="flex items-center gap-1.5 font-semibold"><Gauge className="size-3.5 text-[#0195ff]" /> Core Web Vitals</p>
+          <p className="text-[#5b6678]">LCP 1.2s · INP 90ms · CLS 0.01</p>
+        </FloatCard>
+      );
+    case "security":
+      return (
+        <FloatCard className="top-[8%] left-[6%]">
+          <p className="flex items-center gap-1.5 font-semibold"><ShieldCheck className="size-3.5 text-[#0195ff]" /> Threat model reviewed</p>
+          <p className="flex items-center gap-1.5 text-[#5b6678]"><Lock className="size-3" /> Secrets in vault</p>
+        </FloatCard>
+      );
+    case "exchange":
+      return (
+        <FloatCard className="top-[7%] left-[6%]">
+          <p className="flex items-center gap-1.5 font-semibold"><TrendingUp className="size-3.5 text-emerald-600" /> BTC-USD · live depth</p>
+          <p className="text-[#5b6678]">Matching engine · p99 &lt; 5 ms</p>
+        </FloatCard>
+      );
+    case "api":
+      return (
+        <FloatCard className="right-[6%] bottom-[8%]">
+          <p className="flex items-center gap-1.5 font-semibold"><Webhook className="size-3.5 text-[#0195ff]" /> webhook.delivered</p>
+          <p className="font-mono text-[10px] text-emerald-600">200 OK · 84 ms</p>
+        </FloatCard>
+      );
+    case "ai":
+      return (
+        <div className="absolute right-[5%] bottom-[7%] rounded-2xl border border-white/10 bg-[#0d1b2e]/85 p-3 text-[11px] text-white shadow-2xl backdrop-blur">
+          <p className="flex items-center gap-1.5 font-semibold"><Bot className="size-3.5 text-[#aab4ff]" /> Agent run · 3 of 3 checks</p>
+          <p className="text-white/60">Human approval before payout</p>
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
+/** A 3D illustration on a soft stage, chosen by division and (optionally) topic. */
+export function DivisionArt({ division, topic, className, label, priority }: { division: DivisionId | "product"; topic?: string; className?: string; label?: string; priority?: boolean }) {
+  const k = pickRender(division, topic);
+  return <RenderStage k={k} className={className} label={label} priority={priority} />;
+}
+
+export function RenderStage({ k, className, label, priority, overlay = true }: { k: RenderKey; className?: string; label?: string; priority?: boolean; overlay?: boolean }) {
+  const r = RENDERS[k];
   return (
-    <div
-      data-theme="dark"
-      role="img"
-      aria-label={label ?? "Illustration"}
-      className={cn("scene relative isolate aspect-[5/4] w-full overflow-hidden rounded-3xl border border-white/10 text-fg", className)}
-      style={{ "--scene-a": a, "--scene-b": b } as CSSProperties}
-    >
-      <Dots />
-      <div aria-hidden className="absolute inset-0">
-        <Scene />
+    <figure className={cn("relative isolate aspect-[5/4] w-full overflow-hidden rounded-3xl border", r.dark ? "border-white/10 bg-[#050c18]" : cn("border-line bg-gradient-to-br", tint[k]), className)}>
+      {!r.dark && (
+        <div aria-hidden className="absolute inset-0 opacity-60" style={{ backgroundImage: "radial-gradient(rgb(1 115 204 / 0.12) 1px, transparent 1px)", backgroundSize: "22px 22px", maskImage: "radial-gradient(ellipse at 50% 45%, black 30%, transparent 75%)" }} />
+      )}
+      <Image
+        src={r.src}
+        alt={label ?? ""}
+        fill
+        priority={priority}
+        sizes="(min-width: 1024px) 560px, 92vw"
+        className={r.dark ? "object-cover" : "object-contain p-[8%] drop-shadow-[0_30px_40px_rgb(11_20_36/0.12)]"}
+      />
+      {overlay && (
+        <div aria-hidden>
+          <Overlay k={k} />
+        </div>
+      )}
+    </figure>
+  );
+}
+
+/** Home / company hero: the globe with our three offices. Pin positions come from the render script. */
+export function GlobeHero({ className, priority }: { className?: string; priority?: boolean }) {
+  const pins = [
+    { label: "Dallas", sub: "USA", x: 19.2, y: 36.8 },
+    { label: "London", sub: "UK", x: 54.9, y: 47.6 },
+    { label: "Gurgaon", sub: "India · HQ", x: 80.9, y: 35 },
+  ];
+  return (
+    <figure className={cn("relative isolate aspect-[4/3] w-full overflow-hidden rounded-[28px] border border-white/10 bg-[#050c18] text-white shadow-[0_40px_100px_-40px_rgb(1_40_90/0.6)]", className)}>
+      <Image src={RENDERS.globe.src} alt="Globe showing Shivacha offices in Dallas, London and Gurgaon" fill priority={priority} sizes="(min-width: 1024px) 620px, 92vw" className="object-cover" />
+      {pins.map((p) => (
+        <div key={p.label} aria-hidden className="absolute -translate-x-1/2 -translate-y-[calc(100%+14px)]" style={{ left: `${p.x}%`, top: `${p.y}%` }}>
+          <div className="rounded-xl border border-white/15 bg-[#0d1b2e]/85 px-2.5 py-1.5 text-center shadow-xl backdrop-blur">
+            <p className="text-[11px] leading-tight font-semibold">{p.label}</p>
+            <p className="text-[9.5px] leading-tight text-white/60">{p.sub}</p>
+          </div>
+        </div>
+      ))}
+      <div aria-hidden className="absolute bottom-[6%] left-[5%] rounded-2xl border border-white/10 bg-[#0d1b2e]/85 p-3.5 shadow-2xl backdrop-blur">
+        <p className="text-[11px] text-white/60">Engineering teams</p>
+        <p className="text-sm font-semibold">India · USA · UK</p>
       </div>
-    </div>
-  );
-}
-
-function Dots() {
-  return (
-    <div
-      aria-hidden
-      className="absolute inset-0 opacity-[0.35]"
-      style={{ backgroundImage: "radial-gradient(rgb(255 255 255 / 0.12) 1px, transparent 1px)", backgroundSize: "22px 22px", maskImage: "radial-gradient(ellipse at 60% 40%, black, transparent 75%)" }}
-    />
-  );
-}
-
-function Card({ className, children, style }: { className?: string; children: ReactNode; style?: CSSProperties }) {
-  return (
-    <div className={cn("float-card absolute p-3.5 text-[11px] leading-snug", className)} style={style}>
-      {children}
-    </div>
-  );
-}
-
-function Mark({ className }: { className?: string }) {
-  // Cached file instead of an inline path: the mark appears in several scenes per page.
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src="/brand/shivacha-mark.svg" alt="" className={className} />;
-}
-
-function Bar({ w, className }: { w: string; className?: string }) {
-  return <span className={cn("block h-1.5 rounded-full bg-white/15", className)} style={{ width: w }} />;
-}
-
-/* ---------------- AI ---------------- */
-function AIScene() {
-  return (
-    <>
-      <Card className="top-[9%] left-[7%] w-[58%] drift">
-        <div className="mb-2.5 flex items-center gap-2 text-white/60">
-          <span className="flex size-5 items-center justify-center rounded-md bg-white/10 text-[9px]">U</span>
-          Summarise the claim and check policy cover.
-        </div>
-        <div className="rounded-lg border border-[#6b7cff]/30 bg-[#6b7cff]/10 p-2.5">
-          <div className="mb-1.5 flex items-center gap-1.5 font-semibold text-[#aab4ff]">
-            <Sparkles className="size-3" /> Assistant
-          </div>
-          <p className="text-white/80">Water damage, kitchen. Covered under section 4.2, excess applies.</p>
-          <div className="mt-2 flex gap-1.5">
-            {["policy.pdf · p4", "claim-2031"].map((c) => (
-              <span key={c} className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px] text-white/60">
-                {c}
-              </span>
-            ))}
-          </div>
-        </div>
-      </Card>
-      <Card className="right-[6%] bottom-[10%] w-[50%] drift-slow">
-        <div className="mb-2.5 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 font-semibold text-white">
-            <Bot className="size-3.5 text-[#aab4ff]" /> Agent run
+      <div aria-hidden className="absolute top-[6%] right-[5%] hidden flex-wrap justify-end gap-1.5 sm:flex">
+        {["AI", "Digital", "FinTech", "Web3", "Cloud"].map((d) => (
+          <span key={d} className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10.5px] font-medium backdrop-blur">
+            {d}
           </span>
-          <span className="rounded-full bg-emerald-400/15 px-1.5 py-0.5 text-[9px] text-emerald-300">live</span>
-        </div>
-        {[
-          ["Classify document", true],
-          ["Extract 12 fields", true],
-          ["Check policy rules", false],
-        ].map(([t, done]) => (
-          <div key={String(t)} className="flex items-center gap-2 border-t border-white/5 py-1.5 text-white/75">
-            {done ? <CheckCircle2 className="size-3.5 text-emerald-400" /> : <Loader2 className="size-3.5 animate-spin text-[#aab4ff]" />}
-            {t}
-          </div>
-        ))}
-        <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-amber-400/10 px-2 py-1 text-[9.5px] text-amber-200">
-          <ShieldCheck className="size-3" /> Human approval required
-        </div>
-      </Card>
-      <Card className="bottom-[14%] left-[8%] hidden w-[30%] sm:block">
-        <p className="text-white/55">Eval score</p>
-        <p className="mt-0.5 text-lg font-semibold text-white">0.94</p>
-        <div className="mt-2 flex h-8 items-end gap-1">
-          {[40, 55, 48, 70, 66, 82, 90].map((h, i) => (
-            <span key={i} className="flex-1 rounded-sm bg-[#6b7cff]" style={{ height: `${h}%`, opacity: 0.35 + i * 0.09 }} />
-          ))}
-        </div>
-      </Card>
-    </>
-  );
-}
-
-/* ---------------- FinTech ---------------- */
-function FinTechScene() {
-  return (
-    <>
-      <div
-        className="drift absolute top-[10%] left-[8%] aspect-[1.6] w-[52%] rounded-2xl p-4 shadow-[0_30px_60px_-20px_rgb(0_0_0/0.8)]"
-        style={{ background: "linear-gradient(135deg, #0195ff 0%, #0a6fd1 45%, #14c8b0 130%)", transform: "rotate(-6deg)" }}
-      >
-        <div className="flex items-start justify-between">
-          <Mark className="size-7 brightness-0 invert" />
-          <Wifi className="size-4 rotate-90 text-white/80" />
-        </div>
-        <div className="mt-[14%] h-5 w-7 rounded-md bg-gradient-to-br from-amber-200 to-amber-400 opacity-90" />
-        <p className="mt-3 font-mono text-[12px] tracking-[0.2em] text-white/90">•••• 4821</p>
-        <p className="mt-1 text-[9px] tracking-wider text-white/70 uppercase">Virtual · Program A</p>
-      </div>
-      <Card className="top-[8%] right-[6%] w-[38%] drift-slow">
-        <p className="text-white/55">Available balance</p>
-        <p className="mt-0.5 text-lg font-semibold text-white">24,180.40</p>
-        <svg viewBox="0 0 120 36" className="mt-1.5 h-9 w-full">
-          <defs>
-            <linearGradient id="ft-g" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0" stopColor="#14c8b0" stopOpacity=".5" />
-              <stop offset="1" stopColor="#14c8b0" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path d="M0 30 L15 26 L30 28 L45 18 L60 21 L75 12 L90 15 L105 6 L120 8 L120 36 L0 36Z" fill="url(#ft-g)" />
-          <path d="M0 30 L15 26 L30 28 L45 18 L60 21 L75 12 L90 15 L105 6 L120 8" fill="none" stroke="#14c8b0" strokeWidth="1.6" />
-        </svg>
-      </Card>
-      <Card className="right-[6%] bottom-[8%] left-[20%]">
-        <div className="mb-1.5 flex items-center justify-between">
-          <span className="font-semibold text-white">Recent activity</span>
-          <span className="text-white/40">Today</span>
-        </div>
-        {[
-          ["Card · Grocery store", "−42.18", false, "Settled"],
-          ["Transfer from A. Rivera", "+500.00", true, "Completed"],
-          ["USDC → USD conversion", "+200.00", true, "Settled"],
-        ].map(([t, v, inc, st]) => (
-          <div key={String(t)} className="flex items-center gap-2.5 border-t border-white/5 py-1.5">
-            <span className={cn("flex size-6 items-center justify-center rounded-full", inc ? "bg-emerald-400/15 text-emerald-300" : "bg-white/10 text-white/70")}>
-              {inc ? <ArrowDownLeft className="size-3" /> : <ArrowUpRight className="size-3" />}
-            </span>
-            <span className="flex-1 text-white/80">{t}</span>
-            <span className="hidden text-white/40 sm:inline">{st}</span>
-            <span className={cn("w-16 text-right font-medium", inc ? "text-emerald-300" : "text-white")}>{v}</span>
-          </div>
-        ))}
-      </Card>
-    </>
-  );
-}
-
-/* ---------------- Web3 ---------------- */
-function Cube({ className, tone = "#22d3ee", label }: { className?: string; tone?: string; label: string }) {
-  return (
-    <div className={cn("absolute", className)}>
-      <svg viewBox="0 0 100 110" className="w-full drop-shadow-[0_20px_30px_rgb(0_0_0/0.6)]">
-        <path d="M50 5 L95 30 L50 55 L5 30Z" fill={tone} fillOpacity=".55" />
-        <path d="M5 30 L50 55 L50 105 L5 80Z" fill={tone} fillOpacity=".3" />
-        <path d="M95 30 L50 55 L50 105 L95 80Z" fill={tone} fillOpacity=".18" />
-        <path d="M50 5 L95 30 L95 80 L50 105 L5 80 L5 30Z M5 30 L50 55 L95 30 M50 55 L50 105" fill="none" stroke="white" strokeOpacity=".35" strokeWidth="1" />
-      </svg>
-      <span className="absolute inset-x-0 -bottom-5 text-center font-mono text-[9px] text-white/60">{label}</span>
-    </div>
-  );
-}
-
-function Web3Scene() {
-  return (
-    <>
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 500 400" preserveAspectRatio="none" aria-hidden>
-        <path d="M95 150 C 150 150, 170 120, 225 120 S 310 150, 365 150" fill="none" stroke="#22d3ee" strokeOpacity=".5" strokeWidth="1.5" strokeDasharray="4 5" className="animate-dash" />
-      </svg>
-      <Cube className="top-[22%] left-[7%] w-[18%]" label="#18,204,551" />
-      <Cube className="top-[15%] left-[41%] w-[18%] drift" tone="#6b7cff" label="#18,204,552" />
-      <Cube className="top-[22%] right-[7%] w-[18%]" label="#18,204,553" />
-      <Card className="bottom-[8%] left-[7%] w-[48%] drift-slow">
-        <div className="flex items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-[#22d3ee]/15 text-[#67e8f9]">
-            <Box className="size-4" />
-          </span>
-          <div>
-            <p className="font-semibold text-white">Fund A · Tokenized units</p>
-            <p className="text-white/50">ERC-3643 · eligible holders only</p>
-          </div>
-        </div>
-        <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-white/5 pt-2.5">
-          {[
-            ["Holders", "128"],
-            ["Units", "40,000"],
-            ["NAV", "1.024"],
-          ].map(([k, v]) => (
-            <div key={k}>
-              <p className="text-[9px] text-white/45">{k}</p>
-              <p className="font-semibold text-white">{v}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
-      <Card className="right-[6%] bottom-[12%] w-[38%]">
-        <div className="flex items-center gap-1.5 font-semibold text-emerald-300">
-          <CheckCircle2 className="size-3.5" /> Transfer confirmed
-        </div>
-        <p className="mt-1.5 font-mono text-[10px] text-white/60">0x8f2…a91 → 0x1c7…4de</p>
-        <div className="mt-2 flex items-center justify-between rounded-md bg-white/5 px-2 py-1">
-          <span className="text-white/55">Compliance check</span>
-          <Check className="size-3 text-emerald-300" />
-        </div>
-      </Card>
-    </>
-  );
-}
-
-/* ---------------- Cloud ---------------- */
-function CloudScene() {
-  const pods = Array.from({ length: 12 }, (_, i) => i);
-  return (
-    <>
-      <Card className="top-[9%] left-[7%] w-[54%] drift">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 font-semibold text-white">
-            <Server className="size-3.5 text-[#7dd3fc]" /> prod-cluster · eu-west
-          </span>
-          <span className="text-white/45">k8s 1.31</span>
-        </div>
-        <div className="grid grid-cols-6 gap-1.5">
-          {pods.map((i) => (
-            <span key={i} className={cn("flex aspect-square items-center justify-center rounded-md border", i === 7 ? "border-amber-300/40 bg-amber-300/15" : "border-[#5cc8ff]/30 bg-[#5cc8ff]/10")}>
-              <Cpu className={cn("size-3", i === 7 ? "text-amber-200" : "text-[#7dd3fc]")} />
-            </span>
-          ))}
-        </div>
-        <div className="mt-2 flex justify-between text-[10px] text-white/50">
-          <span>11/12 healthy</span>
-          <span className="text-amber-200">1 rolling update</span>
-        </div>
-      </Card>
-      <Card className="top-[14%] right-[6%] w-[31%] drift-slow">
-        <p className="text-white/55">Uptime · 30d</p>
-        <p className="mt-0.5 text-lg font-semibold text-white">99.98%</p>
-        <div className="mt-2 flex gap-[3px]">
-          {Array.from({ length: 18 }, (_, i) => (
-            <span key={i} className={cn("h-5 flex-1 rounded-[2px]", i === 11 ? "bg-amber-300/70" : "bg-emerald-400/70")} />
-          ))}
-        </div>
-      </Card>
-      <Card className="right-[6%] bottom-[9%] left-[16%]">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="font-semibold text-white">Deploy pipeline</span>
-          <span className="font-mono text-white/45">main · 4f2a91c</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {["Build", "Test", "Scan", "Staging", "Prod"].map((s, i) => (
-            <div key={s} className="flex flex-1 items-center gap-2">
-              <span className={cn("flex w-full items-center justify-center gap-1 rounded-md border py-1.5 text-[10px]", i < 4 ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "border-[#5cc8ff]/40 bg-[#5cc8ff]/10 text-[#bae6fd]")}>
-                {i < 4 ? <Check className="size-3" /> : <Loader2 className="size-3 animate-spin" />}
-                {s}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-2.5 flex items-center gap-3 text-[10px] text-white/55">
-          <span className="flex items-center gap-1">
-            <Lock className="size-3" /> Secrets in vault
-          </span>
-          <span className="flex items-center gap-1">
-            <Cloud className="size-3" /> Terraform plan: 3 changes
-          </span>
-        </div>
-      </Card>
-    </>
-  );
-}
-
-/* ---------------- Digital ---------------- */
-function DigitalScene() {
-  return (
-    <>
-      <div className="float-card drift absolute top-[9%] left-[6%] w-[66%] overflow-hidden p-0">
-        <div className="flex items-center gap-1.5 border-b border-white/10 px-3 py-2">
-          {[0, 1, 2].map((i) => (
-            <span key={i} className="size-2 rounded-full bg-white/20" />
-          ))}
-          <span className="ml-2 flex-1 rounded bg-white/5 px-2 py-0.5 font-mono text-[9px] text-white/45">app.yourproduct.com</span>
-        </div>
-        <div className="grid grid-cols-[56px_1fr] gap-3 p-3">
-          <div className="space-y-2">
-            <Mark className="mb-3 size-5" />
-            {["72%", "55%", "80%", "60%"].map((w, i) => (
-              <Bar key={i} w={w} className={i === 0 ? "bg-[#0195ff]/70" : undefined} />
-            ))}
-          </div>
-          <div>
-            <Bar w="40%" className="mb-2 h-2.5 bg-white/30" />
-            <div className="grid grid-cols-3 gap-2">
-              {["#0195ff", "#14c8b0", "#6b7cff"].map((c) => (
-                <div key={c} className="rounded-lg border border-white/10 bg-white/[0.04] p-2">
-                  <Bar w="50%" />
-                  <span className="mt-1.5 block h-2.5 w-3/4 rounded-full" style={{ background: c }} />
-                </div>
-              ))}
-            </div>
-            <div className="mt-2 flex h-14 items-end gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] p-2">
-              {[30, 50, 42, 65, 58, 80, 72, 92].map((h, i) => (
-                <span key={i} className="flex-1 rounded-sm bg-[#0195ff]" style={{ height: `${h}%`, opacity: 0.35 + i * 0.08 }} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="drift-slow absolute right-[7%] bottom-[7%] w-[27%] rounded-[22px] border-[5px] border-[#1c2a40] bg-[#0b1626] p-2 shadow-[0_30px_60px_-20px_rgb(0_0_0/0.9)]">
-        <div className="mx-auto mb-2 h-1 w-8 rounded-full bg-white/15" />
-        <Bar w="55%" className="mb-2 h-2 bg-white/30" />
-        <div className="rounded-lg p-2" style={{ background: "linear-gradient(135deg,#0195ff,#14c8b0)" }}>
-          <p className="text-[8px] text-white/80">Balance</p>
-          <p className="text-[11px] font-semibold text-white">1,240.00</p>
-        </div>
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="mt-1.5 flex items-center gap-1.5">
-            <span className="size-4 rounded-full bg-white/10" />
-            <Bar w="60%" />
-          </div>
         ))}
       </div>
-      <Card className="bottom-[10%] left-[8%] w-[34%]">
-        <p className="mb-2 font-semibold text-white">Core Web Vitals</p>
-        <div className="flex gap-2">
-          {[
-            ["LCP", "1.2s"],
-            ["INP", "90ms"],
-            ["CLS", "0.01"],
-          ].map(([k, v]) => (
-            <div key={k} className="flex-1 rounded-md bg-emerald-400/10 px-1.5 py-1 text-center">
-              <p className="text-[8.5px] text-emerald-200/80">{k}</p>
-              <p className="text-[10.5px] font-semibold text-emerald-200">{v}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </>
+    </figure>
   );
 }
 
-/** Homepage hero: one product surface with AI, Web3 and cloud signals around it. */
-export function HeroScene({ className }: { className?: string }) {
+/** 2×2 bento of renders, for index-page heroes. */
+export function RenderMosaic({ keys = ["blockchain", "fintech", "ai", "cloud"], className }: { keys?: RenderKey[]; className?: string }) {
   return (
-    <div
-      data-theme="dark"
-      role="img"
-      aria-label="Illustration of a Shivacha-built platform: payments dashboard, AI agent, blockchain transfer and cloud status"
-      className={cn("scene relative isolate aspect-[1/1] w-full overflow-hidden rounded-[28px] border border-white/10 text-fg sm:aspect-[6/5]", className)}
-    >
-      <Dots />
-      <div aria-hidden className="absolute inset-0">
-        <div className="float-card absolute top-[12%] left-[8%] w-[74%] overflow-hidden p-0">
-          <div className="flex items-center gap-1.5 border-b border-white/10 px-3 py-2">
-            {[0, 1, 2].map((i) => (
-              <span key={i} className="size-2 rounded-full bg-white/20" />
-            ))}
-            <span className="ml-2 font-mono text-[9.5px] text-white/50">Payments · Overview</span>
-          </div>
-          <div className="p-3.5">
-            <div className="grid grid-cols-3 gap-2 text-[10px]">
-              {[
-                ["Volume today", "1.28M", "+8.2%"],
-                ["Success rate", "98.4%", "+0.6%"],
-                ["Settled", "T+1", "on time"],
-              ].map(([k, v, d]) => (
-                <div key={k} className="rounded-lg border border-white/10 bg-white/[0.04] p-2">
-                  <p className="text-white/50">{k}</p>
-                  <p className="mt-0.5 text-[13px] font-semibold text-white">{v}</p>
-                  <p className="text-emerald-300">{d}</p>
-                </div>
-              ))}
-            </div>
-            <svg viewBox="0 0 300 80" className="mt-3 h-20 w-full">
-              <defs>
-                <linearGradient id="hero-g" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stopColor="#0195ff" stopOpacity=".55" />
-                  <stop offset="1" stopColor="#0195ff" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <path d="M0 64 L25 58 L50 60 L75 46 L100 50 L125 36 L150 40 L175 28 L200 32 L225 20 L250 24 L275 12 L300 14 L300 80 L0 80Z" fill="url(#hero-g)" />
-              <path d="M0 64 L25 58 L50 60 L75 46 L100 50 L125 36 L150 40 L175 28 L200 32 L225 20 L250 24 L275 12 L300 14" fill="none" stroke="#33aaff" strokeWidth="2" />
-            </svg>
-            <div className="mt-2 space-y-1 text-[10px]">
-              {[
-                ["pay_8F2k · Card", "Provider A", "Captured"],
-                ["pay_91Qe · A2A", "Bank rail", "Pending"],
-              ].map(([a, b, c]) => (
-                <div key={a} className="flex justify-between border-t border-white/5 pt-1 text-white/70">
-                  <span>{a}</span>
-                  <span className="text-white/45">{b}</span>
-                  <span className={c === "Captured" ? "text-emerald-300" : "text-amber-200"}>{c}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <Card className="drift top-[5%] right-[5%] hidden w-[40%] sm:block">
-          <div className="flex items-center gap-1.5 font-semibold text-white">
-            <Bot className="size-3.5 text-[#aab4ff]" /> Fraud agent
-          </div>
-          <p className="mt-1 text-white/65">Flagged 3 of 1,204 payments for review.</p>
-          <div className="mt-2 flex items-center gap-1.5 text-[9.5px] text-[#aab4ff]">
-            <Sparkles className="size-3" /> Explainable · human-approved
-          </div>
-        </Card>
-        <Card className="drift-slow bottom-[7%] left-[5%] w-[44%]">
-          <div className="flex items-center gap-1.5 font-semibold text-emerald-300">
-            <CheckCircle2 className="size-3.5" /> Stablecoin settlement
-          </div>
-          <p className="mt-1 font-mono text-[10px] text-white/55">0x8f2…a91 · 12 confirmations</p>
-        </Card>
-        <Card className="right-[6%] bottom-[12%] hidden w-[34%] sm:block">
-          <p className="flex items-center gap-1.5 text-white/60">
-            <Server className="size-3 text-[#7dd3fc]" /> 3 regions
-          </p>
-          <p className="mt-0.5 text-[15px] font-semibold text-white">99.98%</p>
-          <div className="mt-1.5 flex gap-[3px]">
-            {Array.from({ length: 14 }, (_, i) => (
-              <span key={i} className="h-3.5 flex-1 rounded-[2px] bg-emerald-400/70" />
-            ))}
-          </div>
-        </Card>
-      </div>
+    <div className={cn("grid grid-cols-2 gap-3", className)} aria-hidden>
+      {keys.map((k, i) => (
+        <RenderStage key={k} k={k} overlay={false} className={cn("aspect-square rounded-2xl", i === 0 && "translate-y-4", i === 3 && "-translate-y-4")} />
+      ))}
     </div>
   );
 }

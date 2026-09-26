@@ -1,0 +1,3 @@
+import http from "node:http"; import { readFile } from "node:fs/promises"; import path from "node:path";
+const types = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml" };
+http.createServer(async (req, res) => { try { const p = path.join(process.cwd(), decodeURIComponent(req.url.split("?")[0])); const d = await readFile(p); res.writeHead(200, { "content-type": types[path.extname(p)] || "application/octet-stream" }); res.end(d); } catch { res.writeHead(404); res.end(); } }).listen(4567, () => console.log("ready"));

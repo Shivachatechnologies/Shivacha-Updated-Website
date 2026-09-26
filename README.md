@@ -76,14 +76,10 @@ The official logo lives in [`public/brand`](public/brand): the original files (`
 
 ## Visual system
 
-- **Illustrations** are composed in code, not image files: `components/graphics/DivisionArt.tsx` (one scene per division, plus the homepage `HeroScene`), `TechOrbit` (technology pages), `BrandOrbit` (company pages) and `Cover` (generated covers for insights and work). They render as dark "stages" in both themes.
+- **3D graphics** in `public/graphics/3d-*.{png,jpg}` are rendered offline with three.js from `scripts/graphics/scenes.js` (blockchain, fintech, AI, cloud, devices, globe with our offices, tokenization, security, exchange, API) — no stock imagery. `components/graphics/DivisionArt.tsx` picks a render by division/topic and adds small UI cards; `GlobeHero` (home, company), `RenderMosaic` (index heroes), `Cover` (insights, work) and `TechOrbit` (technology pages) build on them. The site uses a single light theme.
 - **Technology logos** come from [simple-icons](https://simpleicons.org) (CC0) via `lib/brand/techLogos.ts`; `TechLogo` falls back to a lettermark when a brand has no icon. Logos identify the technologies we build with and imply no partnership.
 - **Icons on cards** are picked automatically from the card title by `components/graphics/autoIcon.tsx` (keyword → Lucide icon), so new data gets sensible icons without extra fields.
 - **Section bands** alternate automatically (`main > section:nth-of-type(even)`); pass `tone="brand"` to `Section` for a dark navy band.
-
-## Dark / light theme
-
-A sun/moon button in the header (`components/layout/ThemeToggle.tsx`) switches themes. The choice is saved in `localStorage` (`theme`); first-time visitors get the light theme. A tiny inline script in `app/layout.tsx` sets `<html data-theme>` before first paint, so there is no flash. Theme tokens live in `app/globals.css` (`[data-theme="light"]` / `[data-theme="dark"]`); use token classes (`bg-ink-*`, `text-fg`, `text-muted`, `border-line`, `bg-tint/[…]`) rather than hard-coded white/black, and the `light:` variant for light-only tweaks. Product UI previews stay dark in both themes (`data-theme="dark"` island).
 
 ## Content model
 

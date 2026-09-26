@@ -36,7 +36,7 @@ export function CapabilityTemplate({ cap, division }: { cap: Capability; divisio
         title={cap.h1}
         lede={cap.lede}
         accent={tone.hex}
-        aside={<DivisionArt division={division.id} label={`${division.name} illustration`} />}
+        aside={<DivisionArt division={division.id} label={`${division.name} illustration`} priority />}
       >
         <LinkButton href={division.ctaHref} track={`cta:capability-${division.id}`}>
           {division.cta}

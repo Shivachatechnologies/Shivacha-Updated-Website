@@ -132,7 +132,7 @@ export function ProductTemplate({ product }: { product: Product }) {
               ))}
             </div>
           ) : (
-            <DivisionArt division={division.id} label={`${product.name} illustration`} />
+            <DivisionArt division={division.id} topic={product.name} label={`${product.name} illustration`} />
           )}
         </div>
       </Section>

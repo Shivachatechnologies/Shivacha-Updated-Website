@@ -11,7 +11,6 @@ import { Icon } from "@/components/ui/Icon";
 import { AutoIcon } from "@/components/graphics/autoIcon";
 import { cn } from "@/lib/cn";
 import { Logo } from "./Logo";
-import { ThemeToggle } from "./ThemeToggle";
 import { BookCallButton, openBookCall } from "@/components/leads/BookCall";
 
 export const openSearch = () => window.dispatchEvent(new CustomEvent("shivacha:search"));
@@ -113,7 +112,6 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
           >
             <Search className="size-4" aria-hidden />
           </button>
-          <ThemeToggle />
           <Link href="/contact" className="hidden px-2 text-[14px] font-medium text-muted transition-colors hover:text-fg lg:inline">
             Contact
           </Link>

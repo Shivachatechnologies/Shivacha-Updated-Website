@@ -14,7 +14,7 @@ import { HybridFintechDiagram } from "@/components/visuals/HybridFintechDiagram"
 import { DashboardPreview } from "@/components/visuals/DashboardPreview";
 import { CTABand } from "@/components/sections/CTABand";
 import { DivisionShowcase, type ShowcaseItem } from "@/components/sections/DivisionShowcase";
-import { HeroScene } from "@/components/graphics/DivisionArt";
+import { GlobeHero, RenderStage } from "@/components/graphics/DivisionArt";
 import { TechMarquee } from "@/components/graphics/TechMarquee";
 import { Cover } from "@/components/graphics/Cover";
 import { BookCallButton } from "@/components/leads/BookCall";
@@ -107,7 +107,7 @@ export default function HomePage() {
               ))}
             </dl>
           </div>
-          <HeroScene />
+          <GlobeHero priority />
         </div>
       </section>
 
@@ -222,18 +222,21 @@ export default function HomePage() {
               ))}
             </ul>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              [`${services.length}+`, "engineering services", "/services"],
-              [products.length, "ready-to-launch products", "/products"],
-              [`${technologies.length}+`, "technologies in our stack", "/technologies"],
-              [industries.length, "industries served", "/industries"],
-            ].map(([v, l, h], i) => (
-              <Link key={String(l)} href={String(h)} className={i === 0 ? "card card-hover band-brand p-6 text-white" : "card card-hover p-6"} data-theme={i === 0 ? "dark" : undefined}>
-                <p className="text-4xl font-semibold tracking-tight text-fg sm:text-5xl">{v}</p>
-                <p className="mt-2 text-sm text-muted">{l}</p>
-              </Link>
-            ))}
+          <div className="relative mb-6">
+            <RenderStage k="security" label="Security-first engineering illustration" />
+            <div className="absolute -bottom-6 left-4 right-4 grid grid-cols-4 overflow-hidden rounded-2xl border border-line bg-ink-900 shadow-[0_20px_50px_-24px_rgb(11_20_36/0.35)] sm:left-8 sm:right-8">
+              {[
+                [`${services.length}+`, "services", "/services"],
+                [products.length, "products", "/products"],
+                [`${technologies.length}+`, "technologies", "/technologies"],
+                [industries.length, "industries", "/industries"],
+              ].map(([v, l, h]) => (
+                <Link key={String(l)} href={String(h)} className="border-line px-3 py-3.5 text-center transition-colors not-last:border-r hover:bg-ink-850 sm:py-4">
+                  <span className="block text-xl font-semibold tracking-tight text-fg sm:text-2xl">{v}</span>
+                  <span className="block text-[11px] text-muted sm:text-xs">{l}</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </Section>
