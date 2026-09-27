@@ -7,6 +7,7 @@ import { askAIAction, type AskState } from "@/lib/ai/actions";
 import { inputCls } from "@/components/admin/ui";
 import { CopyButton } from "@/components/admin/CopyButton";
 import { Markdown } from "./markdown";
+import { EXECUTION_CLASS_LABELS } from "@/lib/ai/router/policy";
 
 type Turn = { question: string; result: NonNullable<NonNullable<AskState>["result"]> };
 
@@ -109,7 +110,9 @@ function Answer({ turn }: { turn: Turn }) {
       <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
         <span className="inline-flex items-center gap-1 font-semibold text-fg"><Bot className="size-3.5" aria-hidden />{r.agent}</span>
         <span className={STATUS_TONE[r.status] ?? "text-muted"}>{r.status.replace(/_/g, " ").toLowerCase()}</span>
+        {r.route && <span className="rounded-full border border-line px-2 py-0.5 text-dim" title="How the execution router handled this request">{EXECUTION_CLASS_LABELS[r.route]}</span>}
         {r.provider === "none" && <span className="text-amber-700">provider not connected</span>}
+        {r.taskId && <Link href={`/admin/ai/tasks/${r.taskId}`} className="text-brand-blue">Follow the task →</Link>}
         {r.executionId && <Link href={`/admin/ai/logs/${r.executionId}`} className="ml-auto text-dim hover:text-fg">Audit log →</Link>}
       </div>
       <Markdown text={r.text} />

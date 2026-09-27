@@ -11,6 +11,7 @@ import { canRunAgent, getAgentConfig, type AgentConfig, type AIModeName } from "
 import { aiLimits, assertBudget, BudgetError } from "./cost";
 import { DEFAULT_MODEL, getProvider, providerError, webSearchEnabled, type AIProvider, type AIToolOutcome } from "./provider";
 import { getTool, toolPermissions, toolSchema, type ToolCtx, type ToolDef } from "./tools";
+import type { ExecutionClass } from "./router/policy";
 
 /**
  * The AI Workforce runtime: routes a request to an agent, runs its tool loop under the requesting user's permissions,
@@ -38,6 +39,8 @@ export interface RunInput {
   task?: TaskHooks;
   /** Channel-specific instructions (e.g. voice: short spoken answers). Never widens tools or permissions. */
   channelHint?: string;
+  /** Classification from the global execution router (lib/ai/router). Narrows tools for reads; lets simple actions run now. */
+  route?: { cls: ExecutionClass; reason: string };
 }
 
 /** A tool that only touches the running task (plan, progress, memory). No data permissions are involved. */
@@ -158,6 +161,12 @@ const FALLBACK: Record<string, [string, Record<string, unknown>][]> = {
   research: [],
   knowledge: [],
 };
+/** Router guidance added to the system prompt. It shapes the answer; tool policy below enforces it. */
+const ROUTE_RULES: Partial<Record<ExecutionClass, string>> = {
+  INSTANT_READ: "Execution class INSTANT_READ: this is a read-only question. Answer it now from read tools in this reply. Do not change any data, do not create tasks, and never say the request was queued or added as a background task.",
+  INSTANT_ACTION: "Execution class INSTANT_ACTION: a simple change the user asked for directly. Do it now with the matching tool in this reply, then confirm exactly what changed. Never say it was queued as a background task.",
+  APPROVAL_REQUIRED: "Execution class APPROVAL_REQUIRED: prepare the action with the matching tool now; it goes to the Human Approval Center and runs only after a person approves. Tell the user it is waiting for approval.",
+};
 const ENTITY_TOOL: Record<EntityRef["entity"], string> = { Lead: "getLead", Deal: "getDeal", Project: "getProject", Invoice: "getInvoice", Ticket: "getTicket", Client: "getClient" };
 
 const clip = (v: unknown, max = 14_000) => {
@@ -226,6 +235,7 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
     if (!tool || !cfg.tools.has(name)) return done(false, { content: `Tool "${name}" is not available to this agent.`, isError: true }, "not allowed");
     const parsed = tool.input.safeParse(raw ?? {});
     if (!parsed.success) return done(false, { content: `Invalid input: ${parsed.error.issues.map((i) => `${i.path.join(".") || "input"}: ${i.message}`).join("; ")}`.slice(0, 800), isError: true }, "invalid input");
+    if (input.route?.cls === "INSTANT_READ" && tool.kind === "write") return done(false, { content: "Not executed: this request was classified as a read-only question. Answer it without changing data.", isError: true }, "read-only request");
     const needed = toolPermissions(tool, parsed.data);
     if (!isSystem(user) && !needed.every((p) => can(user.role, p))) {
       await audit({ userId: user.id, action: "ai.tool.denied", entity: "AIExecution", entityId: exec.id, metadata: { tool: name, needed } });
@@ -251,12 +261,15 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
         return done(true, { content: "Not executed: this agent is in OBSERVE mode. Present it to the user as a recommendation." });
       }
       const autonomous = mode === "AUTONOMOUS" && !isSystem(user) && tool.risk === "LOW" && !tool.alwaysApprove && cfg.tools.get(name) === true && !cfg.approvalActions.includes(name);
-      if (autonomous) {
+      // The person asked for this exact change and holds every permission it needs (checked above), so a simple internal
+      // change runs now, as if they did it themselves. Customer contact, HIGH/CRITICAL risk and admin-listed tools still go to approval.
+      const instant = !autonomous && input.route?.cls === "INSTANT_ACTION" && !isSystem(user) && !input.task && (tool.risk === "LOW" || tool.risk === "MEDIUM") && !tool.alwaysApprove && !cfg.approvalActions.includes(name);
+      if (autonomous || instant) {
         const r = await tool.run(ctx, parsed.data);
         r.records?.forEach((x) => records.add(x));
         lastRecords = r.records;
         actions.push((lastAction = { tool: name, summary: preview.summary, status: "EXECUTED" }));
-        await audit({ userId: user.id, action: "ai.action.autonomous", entity: "AIExecution", entityId: exec.id, metadata: { tool: name, summary: preview.summary } });
+        await audit({ userId: user.id, action: instant ? "ai.action.instant" : "ai.action.autonomous", entity: "AIExecution", entityId: exec.id, metadata: { tool: name, summary: preview.summary } });
         return done(true, { content: clip({ executed: true, result: r.data }) });
       }
       const approval = await createApproval({ executionId: exec.id, agentSlug: cfg.spec.slug, tool, input: parsed.data, preview, requestedById: isSystem(user) ? null : user.id, reason: `${cfg.name}: ${routed.request.slice(0, 400)}`, taskId: input.task?.taskId });
@@ -287,9 +300,9 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
         ? (await db.aIMessage.findMany({ where: { conversationId }, orderBy: { createdAt: "desc" }, take: 10, select: { role: true, content: true } })).reverse().filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role as "user" | "assistant", content: m.content.slice(0, 4000) }))
         : [];
       const memory = context ? (await db.aIMemory.findFirst({ where: { scope: "entity", entity: context.entity, entityId: context.id, key: "last-summary", OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } }))?.value ?? null : null;
-      const allowed: ToolDef[] = [...cfg.tools.keys()].map((n) => getTool(n)!).filter((t: ToolDef) => !(t.name === "webResearch" && webSearchEnabled())).filter((t) => isSystem(user) || t.permissions.every((p: Permission) => can(user.role, p)));
+      const allowed: ToolDef[] = [...cfg.tools.keys()].map((n) => getTool(n)!).filter((t: ToolDef) => !(t.name === "webResearch" && webSearchEnabled())).filter((t) => isSystem(user) || t.permissions.every((p: Permission) => can(user.role, p))).filter((t) => input.route?.cls !== "INSTANT_READ" || t.kind !== "write");
       const r = await provider.run({
-        system: [systemPrompt(cfg, user, mode, context, memory), input.task?.system, input.channelHint].filter(Boolean).join("\n\n"),
+        system: [systemPrompt(cfg, user, mode, context, memory), input.route ? ROUTE_RULES[input.route.cls] : null, input.task?.system, input.channelHint].filter(Boolean).join("\n\n"),
         history: history.filter((h, i, a) => i === 0 || h.role !== a[i - 1].role).filter((h, i) => !(i === 0 && h.role === "assistant")),
         prompt: routed.request,
         tools: [...allowed.map((t) => ({ name: t.name, description: t.description, inputSchema: toolSchema(t) })), ...(input.task?.tools ?? []).map((v) => ({ name: v.name, description: v.description, inputSchema: v.inputSchema }))],
@@ -331,13 +344,13 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
 
   await db.aIExecution.update({
     where: { id: exec.id },
-    data: { status, toolsUsed: json(toolsUsed), recordsAccessed: json([...records].slice(0, 500)), actionsProposed: json(actions), actionsExecuted: json(actions.filter((a) => a.status === "EXECUTED")), result: json({ text: text.slice(0, 50_000), drafts }), error: error?.slice(0, 1000), inputTokens, outputTokens, costUsd: cost.toFixed(6), durationMs: Date.now() - started, finishedAt: new Date() },
+    data: { status, toolsUsed: json(toolsUsed), recordsAccessed: json([...records].slice(0, 500)), actionsProposed: json(actions), actionsExecuted: json(actions.filter((a) => a.status === "EXECUTED")), result: json({ text: text.slice(0, 50_000), drafts, route: input.route ?? null }), error: error?.slice(0, 1000), inputTokens, outputTokens, costUsd: cost.toFixed(6), durationMs: Date.now() - started, finishedAt: new Date() },
   });
   if (conversationId) {
     await db.aIMessage.createMany({ data: [{ conversationId, role: "user", content: routed.request.slice(0, 20_000) }, { conversationId, role: "assistant", content: text.slice(0, 50_000), executionId: exec.id, data: json({ agent: cfg.spec.slug, drafts, actions }) }] });
     await db.aIConversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } });
   }
-  await audit({ userId: isSystem(user) ? null : user.id, action: "ai.execute", entity: "AIExecution", entityId: exec.id, metadata: { agent: cfg.spec.slug, trigger, mode, status, tools: toolsUsed.map((t) => t.tool), approvals: actions.filter((a) => a.approvalId).length } });
+  await audit({ userId: isSystem(user) ? null : user.id, action: "ai.execute", entity: "AIExecution", entityId: exec.id, metadata: { agent: cfg.spec.slug, trigger, mode, status, route: input.route?.cls ?? null, tools: toolsUsed.map((t) => t.tool), approvals: actions.filter((a) => a.approvalId).length } });
 
   return { executionId: exec.id, agent: cfg.spec.slug, status, text, provider: provider ? provider.name : "none", drafts, actions, toolsUsed: toolsUsed.map((t) => t.tool), conversationId, error };
 }
