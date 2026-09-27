@@ -1,0 +1,33 @@
+import type { Permission } from "@/lib/auth/permissions";
+
+/**
+ * The AI Workforce: specialised agents. Each agent may only use its listed tools, and only the tools the requesting
+ * user is permitted to use (tools re-check RBAC on every call). Agents inherit the user's permissions — they never
+ * have more access than the person who asked.
+ */
+export interface AgentSpec {
+  slug: string;
+  name: string;
+  description: string;
+  /** Permission needed to run the agent at all (in addition to ai:execute). */
+  requires: Permission;
+  tools: string[];
+  capabilities: string[];
+}
+
+export const AGENTS: AgentSpec[] = [
+  { slug: "ceo", name: "AI CEO Agent", description: "Executive intelligence across CRM, sales, finance, projects, support and marketing: briefings, risks and recommendations grounded in live data.", requires: "executive:view", tools: ["getBusinessSummary", "searchLeads", "searchDeals", "getPipelineSummary", "searchInvoices", "getFinanceSummary", "searchProjects", "searchTickets", "getMarketingSummary", "getInsights", "createNotification"], capabilities: ["Daily CEO briefing", "Revenue & pipeline summary", "Important deals", "Overdue payments", "Project & support risks", "Recommendations"] },
+  { slug: "sales", name: "AI Sales Agent", description: "Qualifies, scores and summarises leads, recommends services, estimates deal ranges from comparable won deals, drafts follow-ups and meeting briefs, flags stalled deals.", requires: "leads:view", tools: ["searchLeads", "getLead", "searchDeals", "getDeal", "getPipelineSummary", "recommendServices", "createLeadActivity", "createFollowUp", "createTask", "updateLead", "draftEmail", "sendEmail", "searchKnowledge"], capabilities: ["Analyze & qualify leads", "Recommend services", "Estimate deal range", "Next best action", "Draft follow-ups", "Meeting briefings", "Stalled deals"] },
+  { slug: "sdr", name: "AI SDR Agent", description: "Prioritises prospects and prepares personalised outreach sequences for human approval. Respects opt-outs and daily limits — never sends on its own.", requires: "leads:view", tools: ["searchLeads", "getLead", "recommendServices", "draftEmail", "sendEmail", "createTask", "searchKnowledge"], capabilities: ["Prioritise prospects", "Identify likely requirements", "Personalised outreach drafts", "Follow-up sequences (approval required)"] },
+  { slug: "crm", name: "AI CRM Agent", description: "Keeps the CRM clean: duplicates, missing information, stale leads, overdue follow-ups, account history and ownership suggestions.", requires: "leads:view", tools: ["searchLeads", "getLead", "findDuplicates", "findDataGaps", "getOverdueFollowUps", "createFollowUp", "updateLead", "createLeadActivity"], capabilities: ["Detect duplicates", "Missing information", "Stale leads", "Overdue follow-ups", "Account history", "Ownership suggestions"] },
+  { slug: "proposal", name: "AI Proposal Agent", description: "Turns a deal into a structured proposal DRAFT (scope, deliverables, timeline, milestones, payment schedule) from the deal and the Shivacha catalogue. Never sends or approves.", requires: "proposals:manage", tools: ["getDeal", "searchDeals", "recommendServices", "createProposalDraft", "searchKnowledge"], capabilities: ["Analyze deal", "Recommend services", "Draft scope & deliverables", "Timeline & milestones", "Payment schedule", "Creates DRAFT only"] },
+  { slug: "marketing", name: "AI Marketing Agent", description: "Analyses real campaign and lead-source data, identifies strong markets and services, suggests content and SEO opportunities. Never invents analytics.", requires: "marketing:view", tools: ["getMarketingSummary", "searchCampaigns", "getContentInventory", "searchKnowledge"], capabilities: ["Campaign analysis", "High-performing markets/services", "SEO & content suggestions", "Landing page analysis"] },
+  { slug: "project", name: "AI Project Manager Agent", description: "Monitors projects: overdue tasks, blockers, milestone and schedule risk, scope-creep signals; drafts status summaries and client updates.", requires: "projects:view", tools: ["searchProjects", "getProject", "createTask", "draftProjectUpdate"], capabilities: ["Overdue tasks", "Blockers", "Milestone risk", "Scope creep signals", "Status summaries", "Client update drafts"] },
+  { slug: "customer-success", name: "AI Customer Success Agent", description: "Account summaries, delivery and payment risks, unresolved issues, meeting briefs and expansion opportunities from actual account history.", requires: "clients:view", tools: ["searchClients", "getClient", "searchProjects", "searchTickets", "searchInvoices", "draftEmail", "sendEmail"], capabilities: ["Account summary", "Project risks", "Unresolved issues", "Meeting brief", "Expansion opportunities"] },
+  { slug: "support", name: "AI Support Agent", description: "Classifies and prioritises tickets, summarises threads, searches the knowledge base, drafts replies, spots duplicates and SLA risk.", requires: "support:view", tools: ["searchTickets", "getTicket", "searchKnowledge", "draftTicketReply", "updateTicket"], capabilities: ["Classify & prioritise", "Summaries", "Knowledge search", "Draft replies", "Duplicate issues", "SLA risk"] },
+  { slug: "finance", name: "AI Finance Agent", description: "Revenue summaries, overdue invoices, payment history and unusual patterns. Read-only on financial records; payment reminders need approval.", requires: "finance:view", tools: ["getFinanceSummary", "searchInvoices", "getInvoice", "searchClients", "draftEmail", "sendEmail"], capabilities: ["Revenue summaries", "Overdue invoices", "Payment history", "Outstanding amounts", "Unusual patterns", "Cannot modify financial records"] },
+  { slug: "research", name: "AI Research Agent", description: "Company, market, competitor, technology and prospect research — separating FACT (internal record), SOURCE, AI INFERENCE and RECOMMENDATION. Web research only when a search provider is configured.", requires: "leads:view", tools: ["getLead", "getClient", "searchKnowledge", "webResearch"], capabilities: ["Company research", "Market research", "Competitor research", "Technology research", "Labels facts vs inference"] },
+  { slug: "knowledge", name: "AI Knowledge Agent", description: "Answers from the internal Knowledge Base, respecting article visibility and the user's permissions.", requires: "knowledge:view", tools: ["searchKnowledge"], capabilities: ["Knowledge answers with citations", "Respects visibility"] },
+];
+
+export const agentBySlug = (slug: string) => AGENTS.find((a) => a.slug === slug);

@@ -13,6 +13,7 @@ import { KV, Kpi, KpiGrid, StatusBadge, Tabs, str, type SP } from "@/components/
 import { ActivityPanel, DocumentsPanel, RelatedList } from "@/components/admin/os-panels";
 import { ClientForm } from "@/components/admin/clients/client-form";
 import { AiActions } from "@/components/admin/ai/contextual";
+import { CommunicationPanel } from "@/components/admin/comms/panel";
 
 export const metadata = { title: "Client" };
 
@@ -88,6 +89,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
           </div>
           <div className="min-w-0 space-y-5">
             {flags.AI_WORKFORCE && can(user.role, "ai:execute") && <AiActions entity="Client" id={c.id} />}
+            {flags.COMMUNICATION && can(user.role, "communication:view") && <CommunicationPanel target={{ clientId: c.id }} role={user.role} email={c.contacts[0]?.email ?? c.billingEmail} phone={c.contacts[0]?.phone ?? c.phone} />}
             <Panel title={`Contacts (${c.contacts.length})`}>
               <ul className="divide-y divide-line">
                 {c.contacts.map((ct) => (

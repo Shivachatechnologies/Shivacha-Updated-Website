@@ -8,6 +8,7 @@ import { sendMail } from "@/lib/email/mailer";
 import { notify, rolesWith } from "@/lib/os/notify";
 import { nextNumber } from "@/lib/os/numbers";
 import { isEnabled } from "@/lib/os/flags";
+import { hrefFor } from "./href";
 import { actionSchema, allMatch, conditionSchema, isPublicHttpsUrl, render, type AutomationAction, type Trigger } from "./rules";
 
 export interface AutomationEvent {
@@ -245,17 +246,8 @@ const getClientId = (ev: AutomationEvent) => {
   return undefined;
 };
 
-const HREF: Record<string, (id: string) => string> = {
-  Lead: (id) => `/admin/leads/${id}`,
-  Deal: (id) => `/admin/deals/${id}`,
-  Proposal: (id) => `/admin/proposals/${id}`,
-  Invoice: (id) => `/admin/finance/invoices/${id}`,
-  Payment: (id) => `/admin/finance/payments/${id}`,
-  Ticket: (id) => `/admin/support/${id}`,
-  Project: (id) => `/admin/projects/${id}`,
-  FollowUp: () => `/admin/follow-ups`,
-};
-export const hrefFor = (ev: Pick<AutomationEvent, "entity" | "entityId">) => HREF[ev.entity]?.(ev.entityId);
 
 const notificationTypeFor = (t: Trigger) =>
   (({ NEW_LEAD: "lead.new", DEAL_WON: "deal.won", PROPOSAL_SENT: "proposal.viewed", PROPOSAL_EXPIRING: "proposal.expiring", INVOICE_OVERDUE: "invoice.overdue", PAYMENT_RECEIVED: "payment.received", TICKET_CREATED: "ticket.created", PROJECT_DELAYED: "milestone.due", FOLLOW_UP_DUE: "followup.due" }) as const)[t];
+
+export { hrefFor };

@@ -14,6 +14,8 @@ import { LIFECYCLE_STAGES } from "@/lib/crm/constants";
 import { CURRENCIES, fmtMoney } from "@/lib/os/money";
 import { getFlags } from "@/lib/os/flags";
 import { StatusBadge } from "@/components/admin/os";
+import { CommunicationPanel } from "@/components/admin/comms/panel";
+import { AiActions } from "@/components/admin/ai/contextual";
 
 export const metadata = { title: "Lead" };
 
@@ -232,6 +234,7 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
         </div>
 
         <div className="min-w-0 space-y-5">
+          {flags.AI_WORKFORCE && can(user.role, "ai:execute") && <AiActions entity="Lead" id={lead.id} />}
           {caps.viewDeals && (
             <Panel title="Deals">
               {lead.deals.length === 0 ? (
@@ -339,6 +342,7 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
             )}
           </Panel>
 
+          {flags.COMMUNICATION && can(user.role, "communication:view") && <CommunicationPanel target={{ leadId: lead.id }} role={user.role} email={lead.email} phone={lead.phone} />}
           <Panel title="Notes">
             {caps.edit && (
               <ActionForm action={addNoteAction.bind(null, lead.id)} resetOnOk className="mb-4">

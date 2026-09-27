@@ -412,6 +412,63 @@ try {
     const pdfDenied = await sales.request.get(`${state.invoiceUrl}/pdf`);
     check(pdfDenied.status() === 403, `sales manager cannot download invoice PDFs (${pdfDenied.status()})`);
   }
+
+  if (!only.length || only.includes("auto")) {
+    /* ───── campaign ───── */
+    await p.goto("/admin/marketing/campaigns/new");
+    await p.fill("#f-name", `Flow campaign ${RUN}`);
+    await p.fill("#f-utmCampaign", `flow-${RUN}`);
+    await p.selectOption("#f-status", "ACTIVE");
+    await p.click("button:has-text('Create campaign')");
+    await p.waitForURL(/campaigns\/c/, { timeout: 30000 });
+    state.campaignUrl = p.url();
+    await p.fill("input[aria-label='Date']", new Date().toISOString().slice(0, 10));
+    await p.fill("input[aria-label='Spend']", "250");
+    await p.click("button:has-text('Save day')");
+    check(await toast(p, "Metrics saved"), "campaign spend entered");
+
+    /* ───── automation from template ───── */
+    await p.goto("/admin/automations");
+    await p.locator("li", { hasText: "New lead → assign, follow up, notify, AI analysis" }).locator("button:has-text('Add (disabled)')").click();
+    await p.waitForTimeout(1500);
+    await p.goto("/admin/automations");
+    await p.locator("tbody a", { hasText: "New lead → assign" }).first().click();
+    await p.waitForURL(/automations\/c/);
+    state.automationUrl = p.url();
+    await p.check("input[name=enabled]");
+    await p.click("button:has-text('Save automation')");
+    check(await toast(p, "Automation saved"), "automation enabled");
+
+    /* ───── public website lead (existing lead API) ───── */
+    const anon = await ctxFor();
+    const email = `auto-${RUN}@shivacha.com`;
+    const lr = await anon.request.post("/api/lead", { headers: { origin: BASE, "content-type": "application/json" }, data: { type: "project", name: `Auto Lead ${RUN}`, email, company: "Auto Co", country: "India", phone: "+91 98111 22333", service: "AI Development", budget: "$25K–$50K", message: "Automation test lead from the public form.", utm_campaign: `flow-${RUN}`, utm_source: "google", utm_medium: "cpc", _t: String(Date.now() - 15000) } });
+    check(lr.status() === 200, `public lead form still works (${lr.status()})`);
+    let ok = false;
+    for (let i = 0; i < 10 && !ok; i++) {
+      await p.waitForTimeout(1500);
+      await p.goto(`/admin/leads?q=${encodeURIComponent(email)}`);
+      ok = (await p.locator("tbody tr", { hasText: "QA Sales" }).count()) === 1;
+    }
+    check(ok, "NEW_LEAD automation assigned the website lead round-robin (QA Sales)");
+    await p.locator("tbody a", { hasText: `Auto Lead ${RUN}` }).click();
+    await p.waitForURL(/leads\/c/);
+    check((await p.locator("text=First response to").count()) >= 1, "automation scheduled the first-response follow-up");
+    await p.goto("/admin/automations/runs");
+    check((await p.locator("tbody tr", { hasText: "New lead → assign" }).first().locator("text=Succeeded").count()) === 1, "automation run logged as succeeded");
+    await p.goto(state.campaignUrl);
+    const leadsKpi = await p.locator("p", { hasText: /^Leads$/ }).locator("xpath=following-sibling::p[1]").innerText();
+    check(leadsKpi === "1", `lead attributed to its campaign via utm_campaign (${leadsKpi})`);
+    check((await p.locator("text=$250.00").count()) >= 1, "CPL computed from real spend ($250 / 1 lead)");
+    await p.goto("/admin/notifications");
+    check((await p.locator(`text=New lead: Auto Lead ${RUN}`).count()) >= 1, "in-app notification for the new lead");
+
+    /* ───── leave it disabled for other runs ───── */
+    await p.goto(state.automationUrl);
+    await p.uncheck("input[name=enabled]");
+    await p.click("button:has-text('Save automation')");
+    await toast(p, "Automation saved");
+  }
 } catch (e) {
   check(false, `unexpected error: ${e.message.split("\n")[0]}`);
 } finally {
