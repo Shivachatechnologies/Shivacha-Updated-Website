@@ -11,6 +11,8 @@ export interface AdminNavItem {
 
 export interface AdminNavGroup {
   title?: string;
+  /** Icon for the module in the collapsed (icon-only) sidebar. */
+  icon?: string;
   flag?: FeatureFlag;
   items: AdminNavItem[];
 }
@@ -27,6 +29,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "CRM",
+    icon: "Inbox",
     items: [
       { label: "Leads", href: "/admin/leads", icon: "Inbox", permission: "leads:view" },
       { label: "Pipeline", href: "/admin/crm/pipeline", icon: "Columns3", permission: "leads:view", flag: "ADVANCED_CRM" },
@@ -38,6 +41,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "Sales",
+    icon: "Handshake",
     flag: "SALES_PIPELINE",
     items: [
       { label: "Deals", href: "/admin/deals", icon: "Handshake", permission: "deals:view" },
@@ -48,6 +52,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "Clients",
+    icon: "Building",
     items: [
       { label: "Clients", href: "/admin/clients", icon: "Building", permission: "clients:view" },
       { label: "Contacts", href: "/admin/contacts", icon: "Contact", permission: "clients:view" },
@@ -57,6 +62,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "Projects",
+    icon: "FolderKanban",
     flag: "PROJECTS",
     items: [
       { label: "Projects", href: "/admin/projects", icon: "FolderKanban", permission: "projects:view" },
@@ -68,6 +74,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "Finance",
+    icon: "Landmark",
     flag: "FINANCE",
     items: [
       { label: "Revenue", href: "/admin/finance", icon: "TrendingUp", permission: "finance:view" },
@@ -79,6 +86,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "Marketing",
+    icon: "Megaphone",
     items: [
       { label: "Analytics", href: "/admin/marketing", icon: "BarChart3", permission: "marketing:view", flag: "MARKETING_ANALYTICS" },
       { label: "Campaigns", href: "/admin/marketing/campaigns", icon: "Megaphone", permission: "marketing:view", flag: "MARKETING_ANALYTICS" },
@@ -89,6 +97,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "Communication",
+    icon: "MessagesSquare",
     flag: "COMMUNICATION",
     items: [
       { label: "Timeline", href: "/admin/communication", icon: "MessagesSquare", permission: "communication:view" },
@@ -100,6 +109,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "Support",
+    icon: "LifeBuoy",
     items: [
       { label: "Tickets", href: "/admin/support", icon: "LifeBuoy", permission: "support:view", flag: "SUPPORT" },
       { label: "Knowledge Base", href: "/admin/knowledge", icon: "BookOpen", permission: "knowledge:view" },
@@ -107,6 +117,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "AI Workforce",
+    icon: "BrainCircuit",
     flag: "AI_WORKFORCE",
     items: [
       { label: "Command Center", href: "/admin/ai", icon: "Bot", permission: "ai:view" },
@@ -120,6 +131,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "Automations",
+    icon: "Workflow",
     flag: "AUTOMATIONS",
     items: [
       { label: "Workflows", href: "/admin/automations", icon: "Workflow", permission: "automations:view" },
@@ -129,6 +141,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "Insights",
+    icon: "FileBarChart",
     items: [
       { label: "Reports", href: "/admin/reports", icon: "FileBarChart", permission: "reports:view" },
       { label: "Performance", href: "/admin/performance", icon: "Trophy", permission: "performance:view" },
@@ -136,6 +149,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "Platform",
+    icon: "Server",
     items: [
       { label: "Integrations", href: "/admin/integrations", icon: "Plug", permission: "integrations:view", flag: "INTEGRATIONS" },
       { label: "Security", href: "/admin/security", icon: "Lock", permission: "security:view" },
@@ -144,6 +158,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "Content",
+    icon: "Layers",
     items: [
       { label: "Pages", href: "/admin/pages", icon: "FileText", permission: "pages:manage" },
       { label: "Services", href: "/admin/services", icon: "Layers", permission: "services:manage" },
@@ -159,6 +174,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: "Settings",
+    icon: "Settings",
     items: [
       { label: "Settings", href: "/admin/settings", icon: "Settings", permission: "settings:manage" },
       { label: "Feature Flags", href: "/admin/settings/features", icon: "ToggleRight", permission: "settings:manage" },
@@ -166,6 +182,25 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { label: "Audit Logs", href: "/admin/audit-logs", icon: "ScrollText", permission: "audit:view" },
     ],
   },
+];
+
+export interface QuickCreateItem {
+  label: string;
+  href: string;
+  icon: string;
+  permission: Permission;
+  flag?: FeatureFlag;
+}
+
+/** Top-bar "Create" menu. Same permission and feature-flag rules as the pages it opens. */
+export const QUICK_CREATE: QuickCreateItem[] = [
+  { label: "New lead", href: "/admin/leads/new", icon: "Inbox", permission: "leads:create" },
+  { label: "New deal", href: "/admin/deals/new", icon: "Handshake", permission: "deals:manage", flag: "SALES_PIPELINE" },
+  { label: "New proposal", href: "/admin/proposals/new", icon: "FileSignature", permission: "proposals:manage", flag: "PROPOSALS" },
+  { label: "New quote", href: "/admin/quotes/new", icon: "Receipt", permission: "proposals:manage", flag: "PROPOSALS" },
+  { label: "New client", href: "/admin/clients/new", icon: "Building", permission: "clients:manage" },
+  { label: "New project", href: "/admin/projects/new", icon: "FolderKanban", permission: "projects:manage", flag: "PROJECTS" },
+  { label: "New invoice", href: "/admin/finance/invoices/new", icon: "FileText", permission: "finance:manage", flag: "FINANCE" },
 ];
 
 /** Every route prefix mapped to its feature flag, used to block disabled modules server-side. */

@@ -1,7 +1,8 @@
 import { db } from "@/lib/db/client";
 import { requirePermission } from "@/lib/auth/session";
 import { saveSettingAction } from "@/lib/admin/system-actions";
-import { SETTING_DEFAULTS, type SiteSettings } from "@/lib/admin/settings";
+import { SETTING_DEFAULTS, type SiteSettings, type TargetSettings } from "@/lib/admin/settings";
+import { CURRENCIES } from "@/lib/os/money";
 import { isCalendlyConfigured, calendlyUrl } from "@/lib/calendly";
 import { siteConfig } from "@/data/siteConfig";
 import { storageMode } from "@/lib/storage";
@@ -15,8 +16,9 @@ const configured = (v: boolean) => (v ? <Badge tone="green">Configured</Badge> :
 
 export default async function SettingsPage() {
   await requirePermission("settings:manage");
-  const row = await db.setting.findUnique({ where: { key: "site" } });
+  const [row, tRow] = await Promise.all([db.setting.findUnique({ where: { key: "site" } }), db.setting.findUnique({ where: { key: "targets" } })]);
   const s: SiteSettings = { ...SETTING_DEFAULTS.site, ...((row?.value as object) ?? {}) };
+  const t: TargetSettings = { ...SETTING_DEFAULTS.targets, ...((tRow?.value as object) ?? {}) };
   const env = process.env;
   return (
     <>
@@ -82,6 +84,25 @@ export default async function SettingsPage() {
               <span className="truncate text-xs text-muted">{isCalendlyConfigured() ? calendlyUrl : "Not set — booking falls back to the meeting form"}</span>
             </li>
           </ul>
+        </Panel>
+        <Panel title="Business targets">
+          <ActionForm action={saveSettingAction.bind(null, "targets")} className="space-y-3">
+            <p className="text-xs text-dim">Shown as the target line on the dashboard revenue chart. Leave empty to show no target.</p>
+            <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
+              <div>
+                <label className={labelCls} htmlFor="tmr">Monthly revenue target</label>
+                <input id="tmr" name="monthlyRevenue" inputMode="decimal" defaultValue={t.monthlyRevenue ?? ""} placeholder="e.g. 250000" className={inputCls} />
+                <FieldError name="monthlyRevenue" />
+              </div>
+              <div>
+                <label className={labelCls} htmlFor="tcur">Currency</label>
+                <select id="tcur" name="currency" defaultValue={t.currency} className={inputCls}>
+                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+            <SubmitButton>Save targets</SubmitButton>
+          </ActionForm>
         </Panel>
       </div>
     </>

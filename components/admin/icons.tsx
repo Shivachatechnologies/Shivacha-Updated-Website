@@ -1,15 +1,15 @@
 import {
-  Activity, AlertTriangle, ArrowRightLeft, BarChart3, Bell, BookOpen, Bot, Boxes, Briefcase, Bug, Building, Building2, CalendarClock, Coins, Columns3, Contact, Copy, Cpu, CreditCard,
-  FileBarChart, FileSignature, FileText, Flag, FolderKanban, FolderOpen, Gauge, GitPullRequest, Handshake, HeartPulse, HelpCircle, History, ImageIcon, Inbox, KeyRound, Layers,
+  Activity, AlertTriangle, ArrowRightLeft, BarChart3, Bell, BookOpen, Bot, Boxes, BrainCircuit, Briefcase, Bug, Building, Building2, CalendarClock, Coins, Columns3, Contact, Copy, Cpu, CreditCard,
+  FileBarChart, FileSignature, FileText, Flag, FolderKanban, FolderOpen, Gauge, GitPullRequest, Handshake, HeartPulse, HelpCircle, History, ImageIcon, Inbox, KeyRound, Landmark, Layers,
   LayoutDashboard, LifeBuoy, Lightbulb, ListChecks, ListTodo, ListTree, Lock, Mail, Megaphone, MessageCircle, MessagesSquare, Newspaper, PanelsTopLeft, Phone, Plug, Receipt,
-  ReceiptText, ScrollText, Search, Settings, ShieldCheck, Sparkles, ToggleRight, TrendingUp, Trophy, Upload, Users, Users2, Video, Wallet, Workflow, type LucideIcon,
+  ReceiptText, ScrollText, Search, Server, Settings, ShieldCheck, Sparkles, ToggleRight, TrendingUp, Trophy, Upload, Users, Users2, Video, Wallet, Workflow, type LucideIcon,
 } from "lucide-react";
 
 const icons: Record<string, LucideIcon> = {
-  Activity, AlertTriangle, ArrowRightLeft, BarChart3, Bell, BookOpen, Bot, Boxes, Briefcase, Bug, Building, Building2, CalendarClock, Coins, Columns3, Contact, Copy, Cpu, CreditCard,
-  FileBarChart, FileSignature, FileText, Flag, FolderKanban, FolderOpen, Gauge, GitPullRequest, Handshake, HeartPulse, HelpCircle, History, ImageIcon, Inbox, KeyRound, Layers,
+  Activity, AlertTriangle, ArrowRightLeft, BarChart3, Bell, BookOpen, Bot, Boxes, BrainCircuit, Briefcase, Bug, Building, Building2, CalendarClock, Coins, Columns3, Contact, Copy, Cpu, CreditCard,
+  FileBarChart, FileSignature, FileText, Flag, FolderKanban, FolderOpen, Gauge, GitPullRequest, Handshake, HeartPulse, HelpCircle, History, ImageIcon, Inbox, KeyRound, Landmark, Layers,
   LayoutDashboard, LifeBuoy, Lightbulb, ListChecks, ListTodo, ListTree, Lock, Mail, Megaphone, MessageCircle, MessagesSquare, Newspaper, PanelsTopLeft, Phone, Plug, Receipt,
-  ReceiptText, ScrollText, Search, Settings, ShieldCheck, ToggleRight, TrendingUp, Trophy, Upload, Users, Users2, Video, Wallet, Workflow,
+  ReceiptText, ScrollText, Search, Server, Settings, ShieldCheck, ToggleRight, TrendingUp, Trophy, Upload, Users, Users2, Video, Wallet, Workflow,
 };
 
 export function AdminIcon({ name, className }: { name: string; className?: string }) {

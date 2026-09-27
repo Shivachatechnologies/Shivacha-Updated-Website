@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
-import { CheckCircle2, Loader2, Menu, Search, X, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Search, XCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { AdminIcon } from "./icons";
 import { useFormPending } from "./forms";
 
 /* ───────── toasts ───────── */
@@ -121,99 +119,6 @@ export function AutoSubmit() {
     return () => form.removeEventListener("change", onChange);
   }, []);
   return <span ref={ref} hidden />;
-}
-
-/* ───────── navigation ───────── */
-
-export interface NavGroup {
-  title?: string;
-  items: { label: string; href: string; icon: string }[];
-}
-
-export function SidebarNav({ groups, footer }: { groups: NavGroup[]; footer: ReactNode }) {
-  const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-  const [prev, setPrev] = useState(pathname);
-  if (prev !== pathname) {
-    setPrev(pathname);
-    setOpen(false);
-  }
-  // The most specific matching item is active (so /admin/ai/agents does not also light up /admin/ai).
-  const activeHref = groups
-    .flatMap((g) => g.items.map((i) => i.href))
-    .filter((h) => pathname === h || pathname.startsWith(`${h}/`))
-    .sort((a, b) => b.length - a.length)[0];
-  const nav = (
-    <nav aria-label="Admin" className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
-      {groups.map((g, i) => {
-        const hasActive = g.items.some((it) => it.href === activeHref);
-        const list = (
-          <ul className="space-y-0.5 pb-2">
-            {g.items.map((it) => {
-              const active = it.href === activeHref;
-              return (
-                <li key={it.href}>
-                  <Link href={it.href} aria-current={active ? "page" : undefined} className={cn("flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] transition-colors", active ? "bg-ink-800 font-medium text-fg" : "text-muted hover:bg-ink-850 hover:text-fg")}>
-                    <AdminIcon name={it.icon} className="size-4 shrink-0" />
-                    {it.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        );
-        if (!g.title || g.title === "Overview") return <div key={g.title ?? i}>{list}</div>;
-        return (
-          <details key={g.title} open={hasActive || undefined} className="group/nav">
-            <summary className="flex cursor-pointer list-none items-center justify-between rounded-md px-2 py-1.5 font-mono text-[10.5px] tracking-[0.08em] text-dim uppercase select-none hover:text-fg [&::-webkit-details-marker]:hidden">
-              {g.title}
-              <span aria-hidden className="transition-transform group-open/nav:rotate-90">›</span>
-            </summary>
-            {list}
-          </details>
-        );
-      })}
-    </nav>
-  );
-  return (
-    <>
-      <button type="button" onClick={() => setOpen(true)} className="flex size-9 items-center justify-center rounded-md border border-line text-fg lg:hidden" aria-label="Open navigation">
-        <Menu className="size-4" />
-      </button>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-line bg-ink-900 lg:flex">
-        <Brand />
-        {nav}
-        <div className="border-t border-line p-3">{footer}</div>
-      </aside>
-      {open && (
-        <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
-          <button type="button" aria-label="Close navigation" className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-[min(84vw,300px)] flex-col border-r border-line bg-ink-900">
-            <div className="flex items-center justify-between pr-3">
-              <Brand />
-              <button type="button" onClick={() => setOpen(false)} className="flex size-9 items-center justify-center rounded-md border border-line" aria-label="Close navigation">
-                <X className="size-4" />
-              </button>
-            </div>
-            {nav}
-            <div className="border-t border-line p-3">{footer}</div>
-          </aside>
-        </div>
-      )}
-    </>
-  );
-}
-
-function Brand() {
-  return (
-    <Link href="/admin/dashboard" className="flex h-14 items-center gap-2.5 px-5">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/brand/shivacha-mark.svg" alt="" className="size-6" />
-      <span className="text-[14px] font-semibold tracking-tight text-fg">
-        Shivacha <span className="font-normal text-muted">OS</span>
-      </span>
-    </Link>
-  );
 }
 
 /* ───────── global search (⌘K) ───────── */
