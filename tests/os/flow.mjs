@@ -149,6 +149,124 @@ try {
     const anonDl = await (await ctxFor()).request.get((await p.locator("a[href*='/download']").first().getAttribute("href")), { maxRedirects: 0 });
     check([302, 307, 401].includes(anonDl.status()), `document download blocked without session (${anonDl.status()})`);
   }
+
+  if (!only.length || only.includes("portal")) {
+    const fs = await import("node:fs");
+    Object.assign(state, JSON.parse(fs.readFileSync(path.join(tmpdir(), "shivacha-flow-state.json"), "utf8")), state);
+    /* ───── client B with a client-visible document (must never leak to client A) ───── */
+    await p.goto("/admin/clients/new");
+    await p.fill("#f-name", `Other Corp ${RUN}`);
+    await p.click("button:has-text('Create client')");
+    await p.waitForURL(/\/admin\/clients\/c/, { timeout: 30000 });
+    state.clientB = p.url().replace(BASE, "").split("?")[0];
+    const secret = path.join(tmpdir(), `secret-${RUN}.pdf`);
+    writeFileSync(secret, "%PDF-1.4\n% client B confidential\n%%EOF\n");
+    await p.goto(`${state.clientB}?tab=documents`);
+    await p.setInputFiles("input[name=files]", secret);
+    await p.selectOption("select[name=visibility]", "CLIENT");
+    await p.click("button:has-text('Upload')");
+    check(await toast(p, "1 file uploaded"), "client B document uploaded (client-visible)");
+    await p.reload();
+    state.docB = (await p.locator("a[href*='/download']").first().getAttribute("href")).split("/")[3];
+
+    /* ───── client A: one internal + one shared document ───── */
+    await p.goto(`${state.clientUrl}?tab=documents`);
+    const internal = path.join(tmpdir(), `internal-${RUN}.pdf`);
+    writeFileSync(internal, "%PDF-1.4\n% internal only\n%%EOF\n");
+    await p.setInputFiles("input[name=files]", internal);
+    await p.selectOption("select[name=visibility]", "INTERNAL");
+    await p.click("button:has-text('Upload')");
+    await toast(p, "1 file uploaded");
+    await p.reload();
+    state.docAInternal = (await p.locator("a[href*='/download']").first().getAttribute("href")).split("/")[3];
+
+    /* ───── invite + set password ───── */
+    await p.goto("/admin/portal-users");
+    await p.selectOption("select[name=clientId]", { value: state.clientUrl.split("/").pop() });
+    await p.fill("input[name=name]", "Jane Portal");
+    await p.fill("input[name=email]", `jane-${RUN}@acme-flow.com`);
+    await p.click("button:has-text('Send invitation')");
+    const inv = p.locator("input[aria-label='Share link']");
+    await inv.waitFor({ timeout: 20000 });
+    const invite = (await inv.inputValue()).replace(/^https?:\/\/[^/]+/, "");
+    check(invite.startsWith("/client/set-password?token="), "portal invitation link issued");
+
+    const portal = await ctxFor();
+    const cp = await portal.newPage();
+    const gate = await cp.goto("/client/dashboard");
+    check(cp.url().includes("/client/login"), "portal requires sign-in");
+    await cp.goto(invite);
+    await cp.fill("#password", "alllowercaseonly");
+    await cp.fill("#confirm", "alllowercaseonly");
+    await cp.click("button:has-text('Set password')");
+    check(await cp.locator("[role=alert]", { hasText: "mix" }).waitFor({ timeout: 15000 }).then(() => true, () => false), "portal password policy enforced server-side");
+    await cp.fill("#password", PW);
+    await cp.fill("#confirm", PW);
+    await cp.click("button:has-text('Set password')");
+    check(await cp.locator("text=Password set").waitFor({ timeout: 15000 }).then(() => true, () => false), "portal password set from invitation");
+    const reuse = await (await ctxFor()).newPage();
+    await reuse.goto(invite);
+    await reuse.fill("#password", PW);
+    await reuse.fill("#confirm", PW);
+    await reuse.click("button:has-text('Set password')");
+    check(await reuse.locator("[role=alert]", { hasText: "invalid or has expired" }).waitFor({ timeout: 15000 }).then(() => true, () => false), "invitation link is single-use");
+
+    await cp.goto("/client/login");
+    await cp.fill("#email", `jane-${RUN}@acme-flow.com`);
+    await cp.fill("#password", PW);
+    await Promise.all([cp.waitForURL(/\/client\/dashboard/, { timeout: 30000 }), cp.click("button:has-text('Sign in')")]);
+    check(await cp.locator("text=Welcome, Jane").isVisible(), "portal user signs in");
+    const adminFromPortal = await cp.goto("/admin/dashboard");
+    check(cp.url().includes("/admin/login"), "portal session grants no admin access");
+
+    /* ───── isolation ───── */
+    const r1 = await portal.request.get(`/client/documents/${state.docB}/download`);
+    check(r1.status() === 404, `client A cannot download client B's document (${r1.status()})`);
+    const r2 = await portal.request.get(`/client/documents/${state.docAInternal}/download`);
+    check(r2.status() === 404, `client A cannot download its own INTERNAL document (${r2.status()})`);
+    await cp.goto("/client/documents");
+    check((await cp.locator(`text=secret-${RUN}.pdf`).count()) === 0 && (await cp.locator(`text=internal-${RUN}.pdf`).count()) === 0, "document list shows neither B's nor internal files");
+    await cp.goto("/client/proposals");
+    check((await cp.locator("tbody tr").count()) >= 1, "client A sees its own sent proposal");
+    const propId = state.proposalUrl.split("/").pop();
+    const r3 = await portal.request.get(`/client/proposals/${propId}/pdf`);
+    check(r3.status() === 200, "client A downloads its own proposal PDF");
+    const other = await ctxFor();
+    const r4 = await other.request.get(`/client/proposals/${propId}/pdf`, { maxRedirects: 0 });
+    check([307, 401].includes(r4.status()), `proposal PDF needs a portal session (${r4.status()})`);
+
+    /* ───── ticket + message ───── */
+    await cp.goto("/client/support/new");
+    await cp.fill("#subject", `Login issue ${RUN}`);
+    await cp.fill("#description", "Users cannot log in to the admin dashboard since this morning.");
+    await cp.selectOption("#priority", "HIGH");
+    await cp.click("button:has-text('Create ticket')");
+    await cp.waitForURL(/\/client\/support\/c/, { timeout: 30000 });
+    state.portalTicket = cp.url().split("/").pop();
+    check(await cp.locator("h1", { hasText: `Login issue ${RUN}` }).waitFor({ timeout: 15000 }).then(() => true, () => false), "client creates a support ticket");
+    await cp.fill("textarea[name=body]", "Adding: it affects all users.");
+    await cp.click("button:has-text('Send reply')");
+    check(await cp.locator("text=Reply sent").waitFor({ timeout: 15000 }).then(() => true, () => false), "client replies on the ticket");
+    await cp.goto("/client/messages");
+    await cp.fill("textarea[name=body]", `Hello team ${RUN}`);
+    await cp.click("button:has-text('Send')");
+    check(await cp.locator("text=Message sent").waitFor({ timeout: 15000 }).then(() => true, () => false), "client messages the account team");
+    await p.goto(`${state.clientUrl}?tab=messages`);
+    check((await p.locator(`text=Hello team ${RUN}`).count()) === 1, "staff sees the portal message");
+    await p.fill("textarea[name=body]", "Thanks — we are on it.");
+    await p.click("button:has-text('Post to portal')");
+    await toast(p, "Message posted");
+    await p.locator("text=we are on it").first().waitFor({ timeout: 15000 }).catch(() => {});
+    await cp.reload();
+    check(await cp.locator("text=we are on it").first().waitFor({ timeout: 15000 }).then(() => true, () => false), "staff reply appears in the portal");
+
+    /* ───── disabling revokes sessions ───── */
+    await p.goto(`/admin/portal-users?q=jane-${RUN}`);
+    await p.click("button:has-text('Disable')");
+    await p.locator("button:has-text('Enable')").waitFor({ timeout: 20000 });
+    await cp.goto("/client/dashboard");
+    check(await cp.waitForURL(/\/client\/login/, { timeout: 15000 }).then(() => true, () => false), "disabling a portal user ends their session immediately");
+  }
 } catch (e) {
   check(false, `unexpected error: ${e.message.split("\n")[0]}`);
 } finally {

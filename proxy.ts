@@ -3,6 +3,8 @@ import { findRedirect, recordRedirectHit } from "@/lib/cms/redirects";
 
 const PUBLIC_ADMIN = ["/admin/login", "/admin/forgot-password", "/admin/reset-password"];
 const COOKIE = process.env.NODE_ENV === "production" ? "__Host-shv_admin" : "shv_admin";
+const PUBLIC_PORTAL = ["/client/login", "/client/forgot-password", "/client/set-password"];
+const PORTAL_COOKIE = process.env.NODE_ENV === "production" ? "__Host-shv_client" : "shv_client";
 
 /**
  * 1. /admin: optimistic check for the session cookie (the session itself is validated server-side on every
@@ -18,6 +20,21 @@ export async function proxy(req: NextRequest) {
       const url = req.nextUrl.clone();
       url.pathname = "/admin/login";
       url.search = pathname === "/admin" ? "" : `?next=${encodeURIComponent(pathname + search)}`;
+      return NextResponse.redirect(url);
+    }
+    const res = NextResponse.next();
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    res.headers.set("Cache-Control", "no-store");
+    return res;
+  }
+
+  // Client portal: optimistic cookie check (sessions and tenant ownership are validated server-side on every request).
+  if (pathname === "/client" || pathname.startsWith("/client/")) {
+    const isPublic = PUBLIC_PORTAL.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+    if (!isPublic && !req.cookies.get(PORTAL_COOKIE)?.value) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/client/login";
+      url.search = "";
       return NextResponse.redirect(url);
     }
     const res = NextResponse.next();

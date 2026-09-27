@@ -5,7 +5,7 @@ import { can } from "@/lib/auth/permissions";
 import { requireAccess } from "@/lib/os/guard";
 import { getFlags } from "@/lib/os/flags";
 import { byCurrency, fmtMoney, fmtMulti } from "@/lib/os/money";
-import { archiveClientAction, saveContactAction, updateClientAction } from "@/lib/clients/actions";
+import { archiveClientAction, replyPortalMessageAction, saveContactAction, updateClientAction } from "@/lib/clients/actions";
 import { PageHeader, Panel, fmtDate, inputCls } from "@/components/admin/ui";
 import { SubmitButton } from "@/components/admin/client";
 import { ActionForm } from "@/components/admin/forms";
@@ -46,6 +46,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
     { key: "commercial", label: "Deals & proposals", count: deals.length + proposals.length + quotes.length + contracts.length },
     { key: "delivery", label: "Projects & support", count: projects.length + tickets.length },
     ...(seeFinance ? [{ key: "finance", label: "Invoices & payments", count: invoices.length }] : []),
+    { key: "messages", label: "Portal messages" },
     { key: "documents", label: "Documents" },
     { key: "timeline", label: "Timeline" },
   ].map((t) => ({ ...t, href: `/admin/clients/${id}${t.key === "overview" ? "" : `?tab=${t.key}`}` }));
@@ -154,8 +155,37 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
           <RelatedList title="Payments" empty="No payments." items={payments.map((d) => ({ id: d.id, href: `/admin/finance/payments/${d.id}`, label: d.number, right: fmtMoney(d.amount, d.currency, { compact: true }), status: d.status }))} />
         </div>
       )}
+      {tab === "messages" && <PortalMessages clientId={c.id} canReply={manage} />}
       {tab === "documents" && <DocumentsPanel target={{ kind: "client", id: c.id }} where={{ clientId: c.id }} canManage={manage} />}
       {tab === "timeline" && <ActivityPanel where={{ clientId: c.id }} note={manage ? { kind: "client", id: c.id } : undefined} take={150} />}
     </>
+  );
+}
+
+async function PortalMessages({ clientId, canReply }: { clientId: string; canReply: boolean }) {
+  const rows = await db.communication.findMany({ where: { clientId, provider: "portal" }, orderBy: { occurredAt: "desc" }, take: 100, include: { user: { select: { name: true } } } });
+  return (
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <Panel title="Thread">
+        {rows.length === 0 ? <p className="text-sm text-dim">No portal messages yet.</p> : (
+          <ol className="space-y-3">
+            {rows.map((m) => (
+              <li key={m.id} className={`rounded-md border p-3 ${m.direction === "INBOUND" ? "border-line" : "border-brand-blue/30 bg-brand-blue/5"}`}>
+                <p className="text-sm whitespace-pre-wrap text-fg">{m.body}</p>
+                <p className="mt-1 text-xs text-dim">{m.direction === "INBOUND" ? `${String((m.meta as Record<string, unknown> | null)?.portalUserName ?? m.fromAddress ?? "Client")} (client)` : m.user?.name ?? "Staff"} · {fmtDate(m.occurredAt, true)}</p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </Panel>
+      {canReply && (
+        <Panel title="Reply">
+          <ActionForm action={replyPortalMessageAction.bind(null, clientId)} resetOnOk className="space-y-2">
+            <textarea name="body" required rows={5} maxLength={10000} aria-label="Reply" className={`${inputCls} h-auto py-2`} />
+            <SubmitButton>Post to portal</SubmitButton>
+          </ActionForm>
+        </Panel>
+      )}
+    </div>
   );
 }

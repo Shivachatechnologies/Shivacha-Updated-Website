@@ -104,3 +104,19 @@ export async function archiveClientAction(id: string): Promise<ActionState> {
     return fail(e, "clients");
   }
 }
+
+/** Staff reply in the client-portal message thread. */
+export async function replyPortalMessageAction(clientId: string, _: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const user = await authorize("clients:manage");
+    const body = z.string().trim().min(1, "Write a message").max(10000).parse(form.get("body"));
+    const client = await db.client.findFirst({ where: { id: clientId, deletedAt: null }, select: { id: true } });
+    if (!client) return { error: "Client not found." };
+    await db.communication.create({ data: { channel: "NOTE", direction: "OUTBOUND", status: "SENT", provider: "portal", subject: "Portal message", body, clientId, userId: user.id } });
+    await logActivity({ type: "MESSAGE", summary: "Replied in the client portal", actorId: user.id, clientId });
+    revalidatePath(`/admin/clients/${clientId}`);
+    return { ok: "Message posted to the client portal." };
+  } catch (e) {
+    return fail(e, "clients");
+  }
+}
