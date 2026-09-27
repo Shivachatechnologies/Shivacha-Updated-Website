@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LeadWebsiteActivity } from "@/components/admin/visitors/lead-activity";
 import { notFound } from "next/navigation";
 import { Mail, MessageCircle, Phone } from "lucide-react";
 import { db } from "@/lib/db/client";
@@ -177,6 +178,8 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
               <Field k="UTM term / content" v={[lead.utmTerm, lead.utmContent].filter(Boolean).join(" / ")} />
             </dl>
           </Panel>
+
+          {can(user.role, "visitors:view") && <LeadWebsiteActivity leadId={lead.id} />}
 
           {caps.edit && (
             <Panel title="Edit lead">

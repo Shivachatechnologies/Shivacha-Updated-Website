@@ -9,6 +9,7 @@ import {
 } from "@/lib/validation";
 import { emailDomainAcceptsMail } from "@/lib/leads/emailDomain";
 import { buildLead, processLead } from "@/lib/leads/pipeline";
+import { linkVisitorToLead, VISITOR_COOKIE } from "@/lib/visitors/collect";
 
 export const runtime = "nodejs";
 
@@ -147,6 +148,9 @@ export async function POST(req: NextRequest) {
   }
   // Visitor confirmation and CRM webhook finish after the response is sent.
   after(result.background);
+  // Website activity → CRM: link this browser's first-party visitor record to the lead it just created.
+  const visitorId = req.cookies.get(VISITOR_COOKIE)?.value;
+  if (visitorId && result.crm.id && type !== "job") after(() => linkVisitorToLead(visitorId, result.crm.id!).then(() => undefined).catch((e) => console.error("[lead] visitor link failed", (e as Error).message)));
   console.info("[lead] accepted", { id: lead.id, type, stored: result.store.driver, crm: result.crm.stored, notified: result.notified, score: lead.score });
   return NextResponse.json({ ok: true, id: lead.id });
 }

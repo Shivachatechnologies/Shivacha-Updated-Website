@@ -8,6 +8,7 @@ import { TalkToShivacha } from "@/components/leads/TalkToShivacha";
 import { CalendlyModalHost } from "@/components/leads/BookCall";
 import { ExitIntent } from "@/components/leads/ExitIntent";
 import { Analytics } from "@/components/layout/Analytics";
+import { VisitorTracker } from "@/components/layout/VisitorTracker";
 import { JsonLd } from "@/components/ui/primitives";
 import { organizationSchema, websiteSchema } from "@/lib/jsonld";
 import type { NavColumn } from "@/data/types";
@@ -29,6 +30,7 @@ export function SiteChrome({ children, footerNav, settings }: { children: ReactN
       <ExitIntent />
       <CommandPalette />
       <Analytics />
+      <VisitorTracker />
     </>
   );
 }
