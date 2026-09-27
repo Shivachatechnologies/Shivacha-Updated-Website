@@ -18,6 +18,7 @@ import { logActivity } from "@/lib/os/activity";
 import { notify } from "@/lib/os/notify";
 import { newLeadId } from "@/lib/leads/id";
 import { WORKFORCE_TOOLS } from "./tools-workforce";
+import { COUNT_TOOLS } from "./tools-counts";
 
 /**
  * Controlled tools — the only way an agent can touch data. Every call is checked against the requesting user's
@@ -720,6 +721,7 @@ const TOOLS: ToolDef[] = [
     },
   }),
   ...WORKFORCE_TOOLS,
+  ...COUNT_TOOLS,
 ];
 
 const STOP = new Set(["the", "and", "for", "with", "our", "you", "your", "that", "this", "are", "need", "want", "from", "have", "will", "can", "into", "platform", "solution", "system"]);

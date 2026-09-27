@@ -10,7 +10,7 @@ import { canRunAgent, getAgentConfig } from "../agents";
 import { routeRequest, runAgent, type EntityRef, type ProposedAction, type RunOutput } from "../runner";
 import { createEmployeeTask } from "../workforce/engine";
 import { ensureEmployees } from "../workforce/employees";
-import { instantAnswer } from "./instant";
+import { instantAnswer, ownerOf, type Call } from "./instant";
 import { classifyRequest, type Classification, type ExecutionClass, type ReplyLanguage } from "./policy";
 
 export { classifyRequest, EXECUTION_CLASS_LABELS, EXECUTION_CLASSES, type ExecutionClass } from "./policy";
@@ -72,11 +72,11 @@ const QUEUED: Record<ReplyLanguage, (who: string) => string> = {
 const blocked = (c: Classification, agent: string, error: string, conversationId: string | null): RouteOutput => ({ cls: c.cls, reason: c.reason, language: c.language, agent, status: "BLOCKED", text: error, spoken: error, executionId: null, conversationId, provider: "none", drafts: [], actions: [], toolsUsed: [], error });
 
 /** Records an answer the router produced itself (instant data or a clarifying question) like any other execution. */
-async function recordDirect(i: RouteInput, agent: string, c: Classification, text: string, tools: string[], records: string[], started: number) {
+async function recordDirect(i: RouteInput, agent: string, c: Classification, text: string, tools: string[], records: string[], started: number, instant: Call | null = null) {
   const cfg = await getAgentConfig(agent);
   let conversationId = i.conversationId ?? null;
   if (conversationId) conversationId = (await db.aIConversation.findFirst({ where: { id: conversationId, userId: i.user.id }, select: { id: true } }))?.id ?? null;
-  if (!conversationId && i.channel !== "voice") conversationId = (await db.aIConversation.create({ data: { userId: i.user.id, title: i.text.slice(0, 120), expiresAt: new Date(Date.now() + 30 * 86400_000) } })).id;
+  if (!conversationId) conversationId = (await db.aIConversation.create({ data: { userId: i.user.id, title: i.text.slice(0, 120), expiresAt: new Date(Date.now() + 30 * 86400_000) } })).id;
   const exec = await db.aIExecution.create({
     data: {
       agentSlug: agent,
@@ -97,11 +97,19 @@ async function recordDirect(i: RouteInput, agent: string, c: Classification, tex
     },
   });
   if (conversationId) {
-    await db.aIMessage.createMany({ data: [{ conversationId, role: "user", content: i.text.slice(0, 20_000) }, { conversationId, role: "assistant", content: text, executionId: exec.id, data: json({ agent, drafts: [], actions: [], route: c.cls }) }] });
+    await db.aIMessage.createMany({ data: [{ conversationId, role: "user", content: i.text.slice(0, 20_000) }, { conversationId, role: "assistant", content: text, executionId: exec.id, data: json({ agent, drafts: [], actions: [], route: c.cls, instant }) }] });
     await db.aIConversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } });
   }
   await db.aIAgent.updateMany({ where: { slug: agent }, data: { lastActivityAt: new Date() } }).catch(() => null);
   return { executionId: exec.id, conversationId };
+}
+
+/** The controlled read behind the previous instant answer in this conversation, for follow-ups like "show them". */
+async function lastInstantCall(userId: string, conversationId: string | null): Promise<Call | null> {
+  if (!conversationId) return null;
+  const m = await db.aIMessage.findFirst({ where: { conversationId, role: "assistant", conversation: { userId } }, orderBy: { createdAt: "desc" }, select: { data: true } });
+  const call = (m?.data as { instant?: Call | null } | null)?.instant;
+  return call && typeof call.tool === "string" ? call : null;
 }
 
 export async function executeRequest(i: RouteInput): Promise<RouteOutput> {
@@ -130,10 +138,20 @@ export async function executeRequest(i: RouteInput): Promise<RouteOutput> {
   }
 
   if (c.cls === "INSTANT_READ" && !i.context) {
-    const a = await instantAnswer(i.user, request, c.language);
+    const previous = await lastInstantCall(i.user.id, i.conversationId ?? null);
+    let agent = spec.slug;
+    let a = await instantAnswer(i.user, agent, request, c.language, previous);
+    // Nobody picked an employee: hand the question to the colleague whose tools cover it.
+    if (a?.outOfScope && !i.agentSlug) {
+      const owner = await ownerOf(i.user, a.outOfScope, agent);
+      if (owner) {
+        agent = owner.spec.slug;
+        a = await instantAnswer(i.user, agent, request, c.language, previous);
+      }
+    }
     if (a) {
-      const r = await recordDirect({ ...i, text: request }, spec.slug, c, a.text, a.metrics.map((m) => `instant:${m}`), a.records, started);
-      return { ...base, status: "SUCCEEDED", text: a.text, spoken: a.spoken, executionId: r.executionId, conversationId: r.conversationId, provider: "router", drafts: [], actions: [], toolsUsed: a.metrics.map((m) => `instant:${m}`) };
+      const r = await recordDirect({ ...i, text: request }, agent, c, a.text, a.tools, a.records, started, a.followUp);
+      return { ...base, agent, status: "SUCCEEDED", text: a.text, spoken: a.spoken, executionId: r.executionId, conversationId: r.conversationId, provider: "router", drafts: [], actions: [], toolsUsed: a.tools };
     }
   }
 
