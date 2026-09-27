@@ -10,6 +10,7 @@ import { base32Decode, base32Encode, totpAt, verifyTotp } from "../../lib/auth/t
 import { resolveRange } from "../../lib/os/range";
 import { AGENTS } from "../../lib/ai/catalog";
 import { costOf, priceFor } from "../../lib/ai/provider";
+import { migrationUrl } from "../../scripts/db/migration-url.mjs";
 
 test("money: Decimal line and document totals (no float drift)", () => {
   const l = lineAmounts({ quantity: "3", unitPrice: "0.10", discountPct: "0", taxPct: "0" });
@@ -102,4 +103,16 @@ test("AI pricing: known models priced, unknown models priced at the safe maximum
   assert.deepEqual(priceFor("claude-sonnet-5"), [2, 10]);
   assert.deepEqual(priceFor("some-new-model"), [10, 50]);
   assert.equal(costOf("claude-opus-5", { input: 1_000_000, output: 100_000 }).toFixed(2), "7.50");
+});
+
+test("migrations use a direct (non-pooled) connection to the same database", () => {
+  const pooled = "postgresql://u:p@ep-cool-name-123456-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require";
+  const d = migrationUrl({ DATABASE_URL: pooled });
+  assert.equal(d.source, "DATABASE_URL (Neon direct host)");
+  assert.equal(new URL(d.url!).hostname, "ep-cool-name-123456.eu-central-1.aws.neon.tech", "same endpoint, pooler removed");
+  assert.equal(new URL(d.url!).pathname + new URL(d.url!).search, "/neondb?sslmode=require", "same database and options");
+  assert.equal(migrationUrl({ DATABASE_URL: pooled, DATABASE_URL_UNPOOLED: "postgresql://direct" }).source, "DATABASE_URL_UNPOOLED", "explicit direct URL wins");
+  const local = "postgresql://postgres@localhost:5433/db";
+  assert.deepEqual(migrationUrl({ DATABASE_URL: local }), { url: local, source: "DATABASE_URL" }, "non-pooled URLs are used as-is");
+  assert.equal(migrationUrl({}).url, undefined);
 });
