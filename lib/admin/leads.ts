@@ -8,7 +8,8 @@ export type LeadStatusName = (typeof LEAD_STATUSES)[number];
 export type LeadPriorityName = (typeof LEAD_PRIORITIES)[number];
 export const PAGE_SIZE = 25;
 
-export type LeadFilters = Partial<Record<"q" | "status" | "priority" | "country" | "service" | "product" | "source" | "assigned" | "from" | "to" | "archived" | "sort" | "page", string>>;
+export type LeadFilters = Partial<Record<"q" | "status" | "priority" | "country" | "service" | "product" | "source" | "assigned" | "from" | "to" | "archived" | "sort" | "page" | "lifecycle" | "tag", string>>;
+const LIFECYCLE = ["LEAD", "MQL", "SQL", "OPPORTUNITY", "CUSTOMER", "EVANGELIST", "DISQUALIFIED"];
 
 const clip = (v?: string, n = 120) => (v ? v.slice(0, n) : undefined);
 
@@ -23,6 +24,8 @@ export function leadWhere(f: LeadFilters): Prisma.LeadWhereInput {
   if (f.service) where.service = clip(f.service);
   if (f.product) where.product = clip(f.product);
   if (f.source) where.source = clip(f.source);
+  if (f.lifecycle && LIFECYCLE.includes(f.lifecycle)) where.lifecycleStage = f.lifecycle as "LEAD";
+  if (f.tag) where.tags = { has: clip(f.tag.toLowerCase(), 40) };
   if (f.assigned === "unassigned") where.assignedToId = null;
   else if (f.assigned) where.assignedToId = clip(f.assigned, 40);
   const from = f.from && /^\d{4}-\d{2}-\d{2}$/.test(f.from) ? new Date(`${f.from}T00:00:00Z`) : undefined;

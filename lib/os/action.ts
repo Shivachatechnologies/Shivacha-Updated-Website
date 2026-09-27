@@ -50,3 +50,9 @@ export const pctStr = z.preprocess((v) => (v == null || v === "" ? "0" : String(
 
 export const toDateInput = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : "");
 export const toDateTimeInput = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 16) : "");
+
+/**
+ * Success result that reloads `path` and shows the message as a toast. Used by workflow buttons whose own form
+ * disappears after the status changes (so an inline toast would never render).
+ */
+export const okThen = (path: string, message: string): ActionState => ({ ok: message, redirect: `${path}${path.includes("?") ? "&" : "?"}toast=${encodeURIComponent(message)}` });

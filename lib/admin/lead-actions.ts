@@ -7,6 +7,8 @@ import { authorize, AuthError } from "@/lib/auth/session";
 import { can } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
 import { LEAD_PRIORITIES, LEAD_STATUSES } from "./leads";
+import { CURRENCIES } from "@/lib/os/money";
+import { LIFECYCLE_STAGES } from "@/lib/crm/constants";
 
 export type ActionState = { ok?: string; error?: string; fieldErrors?: Record<string, string> } | undefined;
 
@@ -51,12 +53,22 @@ const updateSchema = z.object({
   }),
   lastContactedAt: optDate,
   nextFollowUpAt: optDate,
+  // CRM 2.0
+  city: opt(80),
+  website: opt(300),
+  team: opt(80),
+  currency: z.enum(CURRENCIES).optional(),
+  lifecycleStage: z.enum(LIFECYCLE_STAGES).optional(),
+  tags: z.string().max(500).optional().transform((v) => (v == null ? undefined : [...new Set(v.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean))].slice(0, 20))),
 });
+const CRM2_FIELDS = ["city", "website", "team", "currency", "lifecycleStage", "tags"] as const;
 
 export async function updateLeadAction(id: string, _: ActionState, form: FormData): Promise<ActionState> {
   try {
     const user = await authorize("leads:edit");
     const data = updateSchema.parse(Object.fromEntries(form));
+    // CRM 2.0 fields are only written when the form actually sent them.
+    for (const k of CRM2_FIELDS) if (!form.has(k)) delete (data as Record<string, unknown>)[k];
     const before = await db.lead.findUnique({ where: { id }, select: { status: true, priority: true } });
     if (!before) return { error: "Lead not found." };
     await db.lead.update({ where: { id }, data: { ...data, estimatedValue: data.estimatedValue } });

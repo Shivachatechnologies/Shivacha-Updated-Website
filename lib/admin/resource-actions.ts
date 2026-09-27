@@ -12,7 +12,7 @@ import { RESOURCES, SLUG_RE, fromFormValue, isResourceKey, slugify, type Resourc
 export type ResourceState = { ok?: string; error?: string; fieldErrors?: Record<string, string>; redirect?: string } | undefined;
 
 /** Top-level paths already used by the site; CMS pages cannot take them. */
-const RESERVED = new Set(["admin", "api", "accessibility", "book-a-meeting", "capabilities", "careers", "company", "contact", "cookie-policy", "dedicated-teams", "disclaimer", "glossary", "hire-developers", "industries", "insights", "lp", "markets", "privacy-policy", "products", "project-estimator", "request-demo", "resources", "security", "services", "solutions", "start-a-project", "technologies", "terms", "white-label-development", "work", "robots.txt", "sitemap.xml", "llms.txt", "search-index.json", "uploads", ...hireRoles.map((r) => r.slug)]);
+const RESERVED = new Set(["admin", "api", "p", "client", "help", "usa", "uk", "uae", "saudi-arabia", "europe", "africa", "singapore", "australia", "canada", "accessibility", "book-a-meeting", "capabilities", "careers", "company", "contact", "cookie-policy", "dedicated-teams", "disclaimer", "glossary", "hire-developers", "industries", "insights", "lp", "markets", "privacy-policy", "products", "project-estimator", "request-demo", "resources", "security", "services", "solutions", "start-a-project", "technologies", "terms", "white-label-development", "work", "robots.txt", "sitemap.xml", "llms.txt", "search-index.json", "uploads", ...hireRoles.map((r) => r.slug)]);
 
 // Prisma delegates share the same method shapes; this keeps the generic code readable.
 type Delegate = {

@@ -9,6 +9,11 @@ import { addNoteAction, assignLeadAction, markContactedAction, scheduleFollowUpA
 import { Badge, LEAD_STATUS_TONE, PRIORITY_TONE, PageHeader, Panel, fmtDate, inputCls, label, labelCls } from "@/components/admin/ui";
 import { SubmitButton } from "@/components/admin/client";
 import { ActionForm, FieldError } from "@/components/admin/forms";
+import { convertLeadAction } from "@/lib/crm/actions";
+import { LIFECYCLE_STAGES } from "@/lib/crm/constants";
+import { CURRENCIES, fmtMoney } from "@/lib/os/money";
+import { getFlags } from "@/lib/os/flags";
+import { StatusBadge } from "@/components/admin/os";
 
 export const metadata = { title: "Lead" };
 
@@ -25,6 +30,12 @@ const ACTIVITY: Record<string, string> = {
   FOLLOWUP_UPDATED: "Follow-up updated",
   ARCHIVE: "Archived",
   UNARCHIVE: "Restored",
+  CONVERTED_TO_DEAL: "Converted to deal",
+  MERGED: "Merged another lead into this one",
+  MERGED_INTO: "Merged into another lead",
+  EMAIL_SENT: "Email sent",
+  CALL_LOGGED: "Call logged",
+  AI_ANALYSIS: "AI analysis",
 };
 
 function describe(type: string, data: unknown, users: Map<string, string>) {
@@ -37,6 +48,8 @@ function describe(type: string, data: unknown, users: Map<string, string>) {
   }
   if (type === "CONTACTED" && d.channel) return `via ${d.channel === "whatsapp" ? "WhatsApp" : d.channel}`;
   if (type === "FOLLOWUP_SCHEDULED" && d.dueAt) return `for ${fmtDate(String(d.dueAt), true)}`;
+  if (type === "CONVERTED_TO_DEAL" && d.number) return String(d.number);
+  if ((type === "MERGED" && d.from) || (type === "MERGED_INTO" && d.into)) return String(d.from ?? d.into);
   return "";
 }
 
@@ -52,12 +65,16 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
       notes: { orderBy: { createdAt: "desc" }, take: 100, include: { author: { select: { name: true } } } },
       activities: { orderBy: { createdAt: "desc" }, take: 100, include: { actor: { select: { name: true } } } },
       followUps: { orderBy: { dueAt: "asc" }, include: { assignedTo: { select: { name: true } } } },
+      deals: { where: { deletedAt: null }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, number: true, name: true, stage: true, value: true, currency: true } },
+      tasks: { where: { status: { not: "DONE" } }, orderBy: { dueDate: "asc" }, take: 20, select: { id: true, title: true, status: true, dueDate: true, assignee: { select: { name: true } } } },
+      client: { select: { id: true, name: true, number: true } },
     },
   });
   if (!lead) notFound();
+  const flags = await getFlags();
   const users = await db.user.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   const userMap = new Map(users.map((u) => [u.id, u.name]));
-  const caps = { edit: can(user.role, "leads:edit"), assign: can(user.role, "leads:assign"), followups: can(user.role, "followups:manage") };
+  const caps = { edit: can(user.role, "leads:edit"), assign: can(user.role, "leads:assign"), followups: can(user.role, "followups:manage"), deals: flags.SALES_PIPELINE && can(user.role, "deals:manage"), viewDeals: flags.SALES_PIPELINE && can(user.role, "deals:view") };
   const digits = lead.phone?.replace(/[^\d]/g, "") ?? "";
   const extra = lead.extra && typeof lead.extra === "object" && !Array.isArray(lead.extra) ? Object.entries(lead.extra as Record<string, unknown>).filter(([, v]) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0)) : [];
   const now = new Date();
@@ -125,8 +142,13 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
               <Field k="Email" v={<a className="text-brand-blue hover:underline" href={`mailto:${lead.email}`}>{lead.email}</a>} />
               <Field k="Phone / WhatsApp" v={lead.phone} />
               <Field k="Company" v={lead.company} />
-              <Field k="Country" v={lead.country} />
+              <Field k="Country" v={[lead.city, lead.country].filter(Boolean).join(", ")} />
+              <Field k="Website" v={lead.website ? <a className="text-brand-blue hover:underline" href={lead.website} target="_blank" rel="noopener noreferrer nofollow">{lead.website}</a> : null} />
               <Field k="Form" v={label(lead.formType)} />
+              <Field k="Lifecycle stage" v={label(lead.lifecycleStage)} />
+              <Field k="Team" v={lead.team} />
+              <Field k="Tags" v={lead.tags.length ? lead.tags.map((t) => <Link key={t} href={`/admin/leads?tag=${encodeURIComponent(t)}`} className="mr-1 inline-block rounded bg-ink-800 px-1.5 text-xs text-muted hover:text-fg">{t}</Link>) : null} />
+              {lead.client && <Field k="Client" v={<Link className="text-brand-blue hover:underline" href={`/admin/clients/${lead.client.id}`}>{lead.client.name} · {lead.client.number}</Link>} />}
             </dl>
           </Panel>
 
@@ -135,7 +157,7 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
               <Field k="Service" v={lead.service} />
               <Field k="Product" v={lead.product} />
               <Field k="Budget" v={lead.budget} />
-              <Field k="Estimated value" v={lead.estimatedValue ? `$${Number(lead.estimatedValue).toLocaleString()}` : null} />
+              <Field k="Estimated value" v={lead.estimatedValue ? fmtMoney(lead.estimatedValue, lead.currency) : null} />
               <Field k="Message" v={lead.message ? <span className="whitespace-pre-wrap">{lead.message}</span> : null} wide />
               {extra.map(([k, v]) => (
                 <Field key={k} k={k} v={typeof v === "string" ? v : JSON.stringify(v)} />
@@ -177,7 +199,23 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
                     {LEAD_PRIORITIES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
                   </select>
                 </div>
-                {input("estimatedValue", "Estimated value (USD)", lead.estimatedValue ? String(lead.estimatedValue) : "")}
+                {input("estimatedValue", "Estimated value", lead.estimatedValue ? String(lead.estimatedValue) : "")}
+                <div>
+                  <label htmlFor="f-currency" className={labelCls}>Currency</label>
+                  <select id="f-currency" name="currency" defaultValue={lead.currency} className={inputCls}>
+                    {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="f-lifecycleStage" className={labelCls}>Lifecycle stage</label>
+                  <select id="f-lifecycleStage" name="lifecycleStage" defaultValue={lead.lifecycleStage} className={inputCls}>
+                    {LIFECYCLE_STAGES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
+                  </select>
+                </div>
+                {input("city", "City", lead.city)}
+                {input("website", "Website", lead.website)}
+                {input("team", "Team", lead.team)}
+                {input("tags", "Tags (comma separated)", lead.tags.join(", "))}
                 {input("lastContactedAt", "Last contacted (UTC)", toLocal(lead.lastContactedAt), "datetime-local")}
                 {input("nextFollowUpAt", "Next follow-up (UTC)", toLocal(lead.nextFollowUpAt), "datetime-local")}
                 <div className="sm:col-span-2">
@@ -194,6 +232,40 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
         </div>
 
         <div className="min-w-0 space-y-5">
+          {caps.viewDeals && (
+            <Panel title="Deals">
+              {lead.deals.length === 0 ? (
+                <p className="text-sm text-dim">No deals yet.</p>
+              ) : (
+                <ul className="space-y-2 text-sm">
+                  {lead.deals.map((d) => (
+                    <li key={d.id} className="flex items-center justify-between gap-2">
+                      <Link href={`/admin/deals/${d.id}`} className="min-w-0 truncate font-medium text-fg hover:text-brand-blue">{d.number} · {d.name}</Link>
+                      <span className="flex shrink-0 items-center gap-2"><span className="text-xs text-muted tabular-nums">{fmtMoney(d.value, d.currency, { compact: true })}</span><StatusBadge value={d.stage} /></span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {caps.deals && !lead.archivedAt && (
+                <ActionForm action={convertLeadAction.bind(null, lead.id)} className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
+                  <input name="name" placeholder="Deal name (optional)" aria-label="Deal name" maxLength={200} className={`${inputCls} min-w-0 flex-1`} />
+                  <SubmitButton variant="secondary">Convert to deal</SubmitButton>
+                </ActionForm>
+              )}
+            </Panel>
+          )}
+          {lead.tasks.length > 0 && (
+            <Panel title="Open tasks">
+              <ul className="space-y-1.5 text-sm">
+                {lead.tasks.map((t) => (
+                  <li key={t.id} className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-fg">{t.title}</span>
+                    <span className="shrink-0 text-xs text-dim">{t.assignee?.name ?? "Unassigned"}{t.dueDate ? ` · ${fmtDate(t.dueDate)}` : ""}</span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
           <Panel title="Sales">
             <dl className="grid grid-cols-2 gap-4">
               <Field k="Owner" v={lead.assignedTo?.name} />

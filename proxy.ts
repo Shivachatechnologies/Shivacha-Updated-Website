@@ -26,6 +26,15 @@ export async function proxy(req: NextRequest) {
     return res;
   }
 
+  // Secret proposal links: never indexed, never cached.
+  if (pathname.startsWith("/p/")) {
+    const res = NextResponse.next();
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    res.headers.set("Cache-Control", "no-store");
+    res.headers.set("Referrer-Policy", "no-referrer");
+    return res;
+  }
+
   const rule = await findRedirect(pathname);
   if (rule) {
     recordRedirectHit(rule.id);
