@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "We already received several requests from this email. Our team will be in touch." }, { status: 429 });
   }
 
-  const lead = buildLead(type, values, files, { country: countryFromHeaders(req), referer: req.headers.get("referer")?.slice(0, 300) ?? "" });
+  const lead = buildLead(type, values, files, { country: countryFromHeaders(req), referer: req.headers.get("referer")?.slice(0, 300) ?? "", userAgent: req.headers.get("user-agent") ?? "" });
   const result = await processLead(lead);
   if (!result.accepted) {
     return NextResponse.json({ ok: false, error: "We could not submit your request right now. Please email sales@shivacha.com or message us on WhatsApp." }, { status: 502 });

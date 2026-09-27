@@ -41,7 +41,7 @@ function row(label: string, value: string, html = false) {
   return `<tr><td style="padding:9px 0;border-bottom:1px solid #eef2f7;width:170px;vertical-align:top;font-size:13px;color:#5b6678">${esc(label)}</td><td style="padding:9px 0;border-bottom:1px solid #eef2f7;font-size:14px;color:#0b1424;font-weight:500">${html ? value : esc(dash(value))}</td></tr>`;
 }
 
-const scoreColor = { Hot: ["#fde8e8", "#b42318"], Warm: ["#fff4e0", "#9a5b00"], Cold: ["#e6f0fb", "#0068b3"] } as const;
+const scoreColor = { Hot: ["#fde8e8", "#b42318"], Warm: ["#fff4e0", "#9a5b00"], Nurture: ["#e6f0fb", "#0068b3"] } as const;
 
 /* ───────── Sales notification → sales@shivacha.com ───────── */
 

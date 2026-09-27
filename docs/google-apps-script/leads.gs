@@ -24,17 +24,46 @@ const HEADERS = [
   "Lead Score", "Lead Status", "Assigned Sales Person", "Notes", "Last Contacted", "Next Follow-up (UTC)",
   "Score Label", "Form", "Referrer", "Extra Details",
 ];
-const STATUSES = ["New", "Contacted", "Qualified", "Proposal Sent", "Negotiation", "Won", "Lost", "Follow-up"];
+const STATUSES = ["New", "Contacted", "Qualified", "Meeting", "Proposal", "Negotiation", "Won", "Lost", "Nurture"];
 const STATUS_COLORS = {
-  "New": "#e6f0fb", "Contacted": "#fff4e0", "Qualified": "#e7f7ef", "Proposal Sent": "#ede9fe",
-  "Negotiation": "#fdf2e3", "Won": "#d1fadf", "Lost": "#fde8e8", "Follow-up": "#fef3c7",
+  "New": "#e6f0fb", "Contacted": "#fff4e0", "Qualified": "#e7f7ef", "Meeting": "#e0f2fe", "Proposal": "#ede9fe",
+  "Negotiation": "#fdf2e3", "Won": "#d1fadf", "Lost": "#fde8e8", "Nurture": "#fef3c7",
 };
+/** Earlier status names, mapped to the current pipeline by updateStatuses(). */
+const LEGACY_STATUSES = { "Proposal Sent": "Proposal", "Follow-up": "Nurture" };
 
 /** Run once from the editor: creates the Leads tab, header, dropdown and colours. */
 function setup() {
   const sheet = getSheet_(SHEET_NAME);
   if (sheet.getLastRow() === 0) formatSheet_(sheet, HEADERS, STATUSES, HEADERS.indexOf("Lead Status"));
   Logger.log("Leads sheet ready: " + SpreadsheetApp.getActiveSpreadsheet().getUrl());
+}
+
+/**
+ * Run once from the editor after updating this script on an existing sheet: renames legacy statuses
+ * (Proposal Sent → Proposal, Follow-up → Nurture) and refreshes the Lead Status dropdown and colours.
+ * Rows and all other columns are left untouched.
+ */
+function updateStatuses() {
+  const sheet = getSheet_(SHEET_NAME);
+  const col = HEADERS.indexOf("Lead Status") + 1;
+  const last = sheet.getLastRow();
+  const statusRange = sheet.getRange(2, col, 4999, 1);
+  statusRange.clearDataValidations();
+  if (last > 1) {
+    const range = sheet.getRange(2, col, last - 1, 1);
+    const values = range.getValues().map(function (r) { return [LEGACY_STATUSES[r[0]] || r[0]]; });
+    range.setValues(values);
+  }
+  statusRange.setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(STATUSES, true).setAllowInvalid(false).build());
+  const others = sheet.getConditionalFormatRules().filter(function (rule) {
+    return !rule.getRanges().some(function (r) { return r.getColumn() === col; });
+  });
+  const rules = STATUSES.map(function (st) {
+    return SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(st).setBackground(STATUS_COLORS[st] || "#ffffff").setRanges([statusRange]).build();
+  });
+  sheet.setConditionalFormatRules(others.concat(rules));
+  Logger.log("Lead statuses updated.");
 }
 
 function doPost(e) {

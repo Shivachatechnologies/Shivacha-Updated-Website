@@ -9,6 +9,7 @@ import { Footer } from "@/components/layout/Footer";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { TalkToShivacha } from "@/components/leads/TalkToShivacha";
 import { CalendlyModalHost } from "@/components/leads/BookCall";
+import { ExitIntent } from "@/components/leads/ExitIntent";
 import { Analytics } from "@/components/layout/Analytics";
 import { JsonLd } from "@/components/ui/primitives";
 import { organizationSchema, websiteSchema } from "@/lib/jsonld";
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Footer />
         <TalkToShivacha />
         <CalendlyModalHost />
+        <ExitIntent />
         <CommandPalette />
         <Analytics />
       </body>

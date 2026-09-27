@@ -35,10 +35,24 @@ const base: Record<string, Rule> = {
   utm_campaign: { max: 160 },
   landing_page: { max: 300 },
   referrer: { max: 300 },
+  utm_term: { max: 160 },
+  utm_content: { max: 160 },
+  first_source: { max: 160 },
+  first_medium: { max: 120 },
+  first_campaign: { max: 160 },
+  first_landing: { max: 300 },
+  first_referrer: { max: 300 },
+  first_seen: { max: 40 },
+  device: { max: 20 },
+  visits: { max: 6 },
+  pages_viewed: { max: 6 },
+  intent_pages: { max: 300 },
 };
 
 /** Attribution captured on the client; accepted on every form. */
-const attribution = { utm_source: base.utm_source, utm_medium: base.utm_medium, utm_campaign: base.utm_campaign, landing_page: base.landing_page, referrer: base.referrer };
+const attribution = Object.fromEntries(
+  ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "landing_page", "referrer", "first_source", "first_medium", "first_campaign", "first_landing", "first_referrer", "first_seen", "device", "visits", "pages_viewed", "intent_pages"].map((k) => [k, base[k]]),
+) as Record<string, Rule>;
 
 export const leadSchemas: Record<LeadType, Record<string, Rule>> = {
   /** Two-step project inquiry. Only name and email are mandatory. */

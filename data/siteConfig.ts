@@ -1,3 +1,13 @@
+/** Digits-only WhatsApp number from an env override, falling back to the confirmed default. */
+function waNumber(env: string | undefined, fallback: string) {
+  const d = (env ?? "").replace(/\D/g, "");
+  return d.length >= 8 && d.length <= 15 ? d : fallback;
+}
+function waDisplay(env: string | undefined, fallback: string) {
+  const d = (env ?? "").replace(/\D/g, "");
+  return d.length >= 8 && d.length <= 15 ? `+${d}` : fallback;
+}
+
 export const siteConfig = {
   name: "Shivacha Technologies",
   shortName: "Shivacha",
@@ -19,13 +29,15 @@ export const siteConfig = {
     email: "info@shivacha.com",
     phone: "+91 81711 33917",
     phoneHref: "tel:+918171133917",
-    whatsapp: "https://wa.me/918171133917",
+    get whatsapp() {
+      return `https://wa.me/${siteConfig.whatsappLines[0].number}`;
+    },
   },
-  /** WhatsApp lines offered to visitors. `number` is digits only (country code first) for wa.me links. */
+  /** Single source of WhatsApp numbers for the whole site. Each can be overridden with an env var (digits only). */
   whatsappLines: [
-    { id: "in", country: "India", countryCode: "IN", number: "918171133917", display: "+91 81711 33917" },
-    { id: "us", country: "USA", countryCode: "US", number: "13348469075", display: "+1 (334) 846-9075" },
-    { id: "uk", country: "UK", countryCode: "GB", number: "447446971836", display: "+44 7446 971836" },
+    { id: "in", country: "India", countryCode: "IN", number: waNumber(process.env.NEXT_PUBLIC_WHATSAPP_SALES_NUMBER, "918171133917"), display: waDisplay(process.env.NEXT_PUBLIC_WHATSAPP_SALES_NUMBER, "+91 81711 33917") },
+    { id: "us", country: "USA", countryCode: "US", number: waNumber(process.env.NEXT_PUBLIC_WHATSAPP_US_NUMBER, "13348469075"), display: waDisplay(process.env.NEXT_PUBLIC_WHATSAPP_US_NUMBER, "+1 (334) 846-9075") },
+    { id: "uk", country: "UK", countryCode: "GB", number: waNumber(process.env.NEXT_PUBLIC_WHATSAPP_UK_NUMBER, "447446971836"), display: waDisplay(process.env.NEXT_PUBLIC_WHATSAPP_UK_NUMBER, "+44 7446 971836") },
   ],
   /** Enquiry desks shown in the footer and on the contact page. */
   enquiries: [

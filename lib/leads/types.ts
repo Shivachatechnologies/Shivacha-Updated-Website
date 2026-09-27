@@ -21,7 +21,7 @@ export interface LeadRecord {
   utmMedium: string;
   utmCampaign: string;
   score: number;
-  scoreLabel: "Hot" | "Warm" | "Cold";
+  scoreLabel: "Hot" | "Warm" | "Nurture";
   status: LeadStatus;
   assignedTo: string;
   notes: string;

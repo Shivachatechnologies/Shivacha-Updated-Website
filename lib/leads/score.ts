@@ -30,7 +30,17 @@ export const isWorkEmail = (email: string) => {
   return !!domain && !FREE_EMAIL.has(domain);
 };
 
-export function scoreLead(l: { email: string; phone: string; company: string; service: string; budget: string; description: string }) {
+export type ScoreLabel = "Hot" | "Warm" | "Nurture";
+
+/**
+ * Fit (budget, service, work email, phone, company, brief) plus engagement (return visits, pages viewed,
+ * high-intent pages such as the estimator, hire or pricing pages, and paid-campaign traffic).
+ * Low scores are labelled Nurture — never rejected.
+ */
+export function scoreLead(
+  l: { email: string; phone: string; company: string; service: string; budget: string; description: string },
+  e: { visits?: number; pagesViewed?: number; intentPages?: number; paid?: boolean } = {},
+) {
   let s = l.budget ? (BUDGET_POINTS[l.budget] ?? 8) : 8;
   if (l.service) s += HIGH_VALUE_SERVICES.has(l.service) ? 15 : l.service === "Other" ? 5 : 10;
   if (isWorkEmail(l.email)) s += 15;
@@ -38,8 +48,15 @@ export function scoreLead(l: { email: string; phone: string; company: string; se
   if (l.company) s += 10;
   const len = l.description.trim().length;
   s += len > 200 ? 15 : len > 60 ? 8 : len > 0 ? 3 : 0;
+  // Engagement signals (capped at 15 so fit still dominates).
+  let eng = 0;
+  if ((e.visits ?? 1) > 1) eng += 5;
+  if ((e.pagesViewed ?? 1) >= 5) eng += 3;
+  eng += Math.min(2, e.intentPages ?? 0) * 3;
+  if (e.paid) eng += 2;
+  s += Math.min(15, eng);
   const score = Math.min(100, s);
-  const label: "Hot" | "Warm" | "Cold" = score >= 70 ? "Hot" : score >= 45 ? "Warm" : "Cold";
+  const label: ScoreLabel = score >= 70 ? "Hot" : score >= 45 ? "Warm" : "Nurture";
   return { score, label };
 }
 

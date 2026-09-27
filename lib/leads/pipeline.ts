@@ -8,9 +8,11 @@ import { forwardToWebhook, saveLead } from "./store";
 import type { LeadRecord } from "./types";
 
 const CORE = new Set(["name", "email", "phone", "company", "service", "budget", "message", "source", "utm_source", "utm_medium", "utm_campaign", "landing_page", "referrer", "type", "_t", "company_fax", "cf-turnstile-response"]);
-const LABELS: Record<string, string> = { role: "Role", product: "Product", team: "Team needed", teamSize: "Team size", timeline: "Timeline", preferredTime: "Preferred time", division: "Division", resource: "Resource", job: "Role applied for", linkedin: "LinkedIn / portfolio", country: "Country (stated)", website: "Website", companySize: "Company size", industry: "Industry", requirement: "Requirement" };
+const LABELS: Record<string, string> = {
+  utm_term: "UTM Term", utm_content: "UTM Content", first_source: "First-touch source", first_medium: "First-touch medium", first_campaign: "First-touch campaign",
+  first_landing: "First landing page", first_referrer: "First referrer", first_seen: "First visit (UTC)", device: "Device", visits: "Visits", pages_viewed: "Pages viewed", intent_pages: "High-intent pages viewed", role: "Role", product: "Product", team: "Team needed", teamSize: "Team size", timeline: "Timeline", preferredTime: "Preferred time", division: "Division", resource: "Resource", job: "Role applied for", linkedin: "LinkedIn / portfolio", country: "Country (stated)", website: "Website", companySize: "Company size", industry: "Industry", requirement: "Requirement" };
 
-export function buildLead(type: LeadType, v: Record<string, string>, files: LeadRecord["attachments"], ctx: { country: string; referer: string }): LeadRecord {
+export function buildLead(type: LeadType, v: Record<string, string>, files: LeadRecord["attachments"], ctx: { country: string; referer: string; userAgent?: string }): LeadRecord {
   const now = new Date();
   const lead = {
     email: v.email ?? "",
@@ -20,11 +22,21 @@ export function buildLead(type: LeadType, v: Record<string, string>, files: Lead
     budget: v.budget ?? "",
     description: v.message ?? "",
   };
-  const { score, label } = scoreLead(lead);
+  const { score, label } = scoreLead(lead, {
+    visits: Number(v.visits) || 1,
+    pagesViewed: Number(v.pages_viewed) || 1,
+    intentPages: v.intent_pages ? v.intent_pages.split(",").filter(Boolean).length : 0,
+    paid: /cpc|ppc|paid|ads?$/i.test(v.utm_medium ?? "") || (v.landing_page ?? "").startsWith("/lp/"),
+  });
   const extra: Record<string, string> = {};
+  if (!v.device && ctx.userAgent) extra.Device = /Mobi|Android|iPhone/i.test(ctx.userAgent) ? "Mobile" : /iPad|Tablet/i.test(ctx.userAgent) ? "Tablet" : "Desktop";
   for (const [k, val] of Object.entries(v)) if (!CORE.has(k) && val) extra[LABELS[k] ?? k] = val;
+  const dup = findDuplicate(v.email ?? "", v.phone ?? "", now);
+  if (dup) extra["Possible duplicate"] = `Same ${dup.by} as ${dup.id} (${dup.at.slice(0, 10)}) — merge in the sheet rather than treating as new`;
+  const id = newLeadId(now);
+  if (type !== "newsletter") rememberLead(id, v.email ?? "", v.phone ?? "", now);
   return {
-    id: newLeadId(now),
+    id,
     createdAt: now.toISOString(),
     formType: type,
     name: v.name ?? "",
@@ -46,6 +58,33 @@ export function buildLead(type: LeadType, v: Record<string, string>, files: Lead
     extra,
     attachments: files,
   };
+}
+
+/**
+ * Duplicate detection: the same email or phone within 30 days is flagged (never rejected) so sales can
+ * merge it. In-memory per server instance — a sheet-level check (e.g. conditional formatting on the
+ * Email column) covers multi-instance deployments.
+ */
+const DUP_WINDOW = 30 * 24 * 3600_000;
+const seen = new Map<string, { id: string; at: string }>();
+const normPhone = (p: string) => p.replace(/\D/g, "").slice(-10);
+
+function findDuplicate(email: string, phone: string, now: Date) {
+  const keys: [string, string][] = [];
+  if (email) keys.push([`e:${email.toLowerCase()}`, "email"]);
+  if (normPhone(phone).length >= 7) keys.push([`p:${normPhone(phone)}`, "phone"]);
+  for (const [k, by] of keys) {
+    const hit = seen.get(k);
+    if (hit && now.getTime() - Date.parse(hit.at) < DUP_WINDOW) return { ...hit, by };
+  }
+  return null;
+}
+
+function rememberLead(id: string, email: string, phone: string, now: Date) {
+  if (seen.size > 20000) seen.clear();
+  const rec = { id, at: now.toISOString() };
+  if (email) seen.set(`e:${email.toLowerCase()}`, rec);
+  if (normPhone(phone).length >= 7) seen.set(`p:${normPhone(phone)}`, rec);
 }
 
 export const salesInbox = () => process.env.LEAD_NOTIFY_TO || "sales@shivacha.com";

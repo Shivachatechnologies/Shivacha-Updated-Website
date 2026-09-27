@@ -10,6 +10,7 @@ import { track } from "@/lib/analytics";
 import { attributionProps, getAttribution } from "@/lib/attribution";
 import { WhatsAppPicker } from "./WhatsAppPicker";
 import { cn } from "@/lib/cn";
+import { DIAL_COUNTRIES, guessDialCountry, toE164 } from "@/lib/phone";
 import { BookCallButton } from "./BookCall";
 
 type Values = { name: string; email: string; phone: string; company: string; service: string; budget: string; message: string };
@@ -23,6 +24,7 @@ const STEP1: (keyof Values)[] = ["name", "email", "phone"];
 export function InquiryForm({ source, className, variant = "page", defaultService }: { source?: string; className?: string; variant?: "page" | "modal"; defaultService?: string }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [v, setV] = useState<Values>({ ...initial, service: defaultService && (SERVICE_OPTIONS as readonly string[]).includes(defaultService) ? defaultService : "" });
+  const [dialIso, setDialIso] = useState("IN");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
   const [serverError, setServerError] = useState("");
@@ -35,6 +37,11 @@ export function InquiryForm({ source, className, variant = "page", defaultServic
   const firstField = useRef<HTMLInputElement>(null);
   const formName = variant === "modal" ? "inquiry_modal" : "inquiry_page";
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- time-zone guess is only available after hydration
+    setDialIso(guessDialCountry());
+  }, []);
 
   useEffect(() => {
     startedAt.current = Date.now();
@@ -100,7 +107,7 @@ export function InquiryForm({ source, className, variant = "page", defaultServic
 
   function continueToStep2(e: React.FormEvent) {
     e.preventDefault();
-    const check = validateLead("project", { name: v.name, email: v.email, phone: v.phone });
+    const check = validateLead("project", { name: v.name, email: v.email, phone: toE164(dialIso, v.phone) });
     const stepErrors = Object.fromEntries(Object.entries(check.errors).filter(([k]) => STEP1.includes(k as keyof Values)));
     setErrors(stepErrors);
     if (Object.keys(stepErrors).length) {
@@ -114,7 +121,7 @@ export function InquiryForm({ source, className, variant = "page", defaultServic
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const payload: Record<string, string> = { ...v, type: "project", source: source ?? window.location.pathname, _t: String(startedAt.current), company_fax: honeypot.current?.value ?? "", ...getAttribution() };
+    const payload: Record<string, string> = { ...v, phone: toE164(dialIso, v.phone), type: "project", source: source ?? window.location.pathname, _t: String(startedAt.current), company_fax: honeypot.current?.value ?? "", ...getAttribution() };
     const token = (e.currentTarget.querySelector('[name="cf-turnstile-response"]') as HTMLInputElement | null)?.value;
     if (token) payload["cf-turnstile-response"] = token;
     const check = validateLead("project", payload);
@@ -171,8 +178,20 @@ export function InquiryForm({ source, className, variant = "page", defaultServic
           <Field id="inq-email" label="Work email" required icon={<Mail className="size-4" />} error={errors.email}>
             <input id="inq-email" type="email" inputMode="email" value={v.email} onChange={set("email")} onFocus={onStart} autoComplete="email" className="field h-12 pl-11" placeholder="jane@company.com" aria-invalid={!!errors.email} />
           </Field>
-          <Field id="inq-phone" label="WhatsApp / Phone" hint="Optional · include country code" icon={<Phone className="size-4" />} error={errors.phone}>
-            <input id="inq-phone" type="tel" inputMode="tel" value={v.phone} onChange={set("phone")} onFocus={onStart} autoComplete="tel" className="field h-12 pl-11" placeholder="+1 555 010 2030" aria-invalid={!!errors.phone} />
+          <Field id="inq-phone" label="WhatsApp / Phone" hint="Optional" error={errors.phone}>
+            <div className="flex gap-2">
+              <div className="relative shrink-0">
+                <Phone className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-dim" aria-hidden />
+                <select aria-label="Country calling code" value={dialIso} onChange={(e) => setDialIso(e.target.value)} className="field h-12 w-[112px] pr-2 pl-9 text-sm">
+                  {DIAL_COUNTRIES.map((c) => (
+                    <option key={c.iso} value={c.iso} title={c.name}>
+                      {c.iso} +{c.dial}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <input id="inq-phone" type="tel" inputMode="tel" value={v.phone} onChange={set("phone")} onFocus={onStart} autoComplete="tel-national" className="field h-12 min-w-0 flex-1" placeholder="Mobile number" aria-invalid={!!errors.phone} />
+            </div>
           </Field>
           <button type="submit" className="btn-primary h-12 w-full text-[15px]">
             Continue <ArrowRight className="size-4" />

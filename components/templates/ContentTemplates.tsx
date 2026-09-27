@@ -16,7 +16,9 @@ import { CTABand } from "@/components/sections/CTABand";
 import { FAQ } from "@/components/sections/FAQ";
 import { DivisionBadge, JsonLd, LinkButton, Section, SectionHeader } from "@/components/ui/primitives";
 import { LeadForm } from "@/components/forms/LeadForm";
+import { LeadMagnetViewTracker } from "@/components/forms/ProductViewTracker";
 import { LeadPanel } from "@/components/leads/LeadPanel";
+import { serviceOption } from "@/data/serviceAnswers";
 import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toServiceItem, toTechItem, toIndustryLink, nonNull } from "./mappers";
 import { BookCallButton } from "@/components/leads/BookCall";
 
@@ -38,7 +40,12 @@ export function CaseStudyTemplate({ cs }: { cs: CaseStudy }) {
         title={cs.title}
         aside={<Cover kind={cs.division} label={cs.kind === "client" ? "Client case study" : "Reference architecture"} className="aspect-[4/3] rounded-3xl" />}
         lede={cs.summary}
-      />
+      >
+        <LinkButton href="#enquire" track={`case_study_cta:${cs.slug}`}>
+          Discuss a Similar Project
+        </LinkButton>
+        <BookCallButton label="Book a Call" variant="secondary" source={`case:${cs.slug}`} />
+      </PageHero>
       {cs.kind === "reference-architecture" && (
         <div className="container-x -mt-6 mb-4">
           <div className="flex gap-3 rounded-xl border border-line bg-tint/[0.02] p-4 text-sm text-muted">
@@ -92,7 +99,12 @@ export function CaseStudyTemplate({ cs }: { cs: CaseStudy }) {
       <RelatedSection eyebrow="Services" title="Services involved" items={pick.services(cs.services).map(toServiceItem)} />
       <RelatedSection eyebrow="Products" title="Related products" items={pick.products(cs.products).map(toProductItem)} />
       <RelatedSection eyebrow="More work" title="Other reference architectures" items={others.map(toCaseItem)} />
-      <CTABand />
+      <LeadPanel
+        title="Discuss a similar project."
+        lede={`Building something like "${cs.title}"? Tell us about your goals and constraints and we will reply with an approach and next steps.`}
+        service={serviceOption(cs.title, cs.division)}
+        source={`case:${cs.slug}`}
+      />
     </>
   );
 }
@@ -172,6 +184,7 @@ export function ResourceTemplate({ resource }: { resource: Resource }) {
   const more = resources.filter((r) => r.slug !== resource.slug && (r.division === resource.division || r.category === resource.category)).slice(0, 3);
   return (
     <>
+      <LeadMagnetViewTracker slug={resource.slug} category={resource.category} />
       <PageHero
         crumbs={[{ name: "Resources", href: "/resources" }, { name: cat.name, href: `/resources/${cat.slug}` }, { name: resource.title, href: `/resources/${cat.slug}/${resource.slug}` }]}
         eyebrow={

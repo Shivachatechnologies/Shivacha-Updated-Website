@@ -137,6 +137,7 @@ export function LeadForm({ type, hidden = {}, className, compact }: { type: Lead
       }
       track(v.event, { form: type, division: obj.division, industry: obj.industry, budget: obj.budget, product: obj.product || hidden.product, resource: hidden.resource });
       if (type !== "newsletter" && type !== "job") track("generate_lead", { form: type, ...attributionProps() });
+      if (type === "resource") track("lead_magnet_download", { resource: hidden.resource });
       setDone({ name: obj.name ?? "", email: obj.email ?? "", id: (json as { id?: string }).id ?? "" });
       setStatus("done");
     } catch {

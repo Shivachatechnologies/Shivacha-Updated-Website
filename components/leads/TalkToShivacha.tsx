@@ -16,14 +16,21 @@ const INQUIRY_EVENT = "shivacha:inquiry";
 
 /** Opens the project inquiry form in a modal (used by "Send Project Inquiry" and other CTAs). */
 export function openInquiry(detail: { source?: string; service?: string } = {}) {
-  track("cta_click", { cta: "send_project_inquiry", location: detail.source ?? "unknown" });
+  track("cta_click", {
+    cta: "send_project_inquiry",
+    location: detail.source ?? "unknown",
+  });
   window.dispatchEvent(new CustomEvent(INQUIRY_EVENT, { detail }));
 }
 
 /** Floating "Talk to Shivacha" button + the global inquiry modal. Mounted once in the root layout. */
 export function TalkToShivacha() {
   const [menu, setMenu] = useState(false);
-  const [inquiry, setInquiry] = useState<{ open: boolean; service?: string; source?: string }>({ open: false });
+  const [inquiry, setInquiry] = useState<{
+    open: boolean;
+    service?: string;
+    source?: string;
+  }>({ open: false });
   const pathname = usePathname();
   const wrap = useRef<HTMLDivElement>(null);
 
@@ -59,9 +66,13 @@ export function TalkToShivacha() {
   return (
     <>
       {!hidden && (
-        <div ref={wrap} className="fixed right-4 bottom-4 z-[60] sm:right-6 sm:bottom-6" style={{ marginBottom: "env(safe-area-inset-bottom)" }}>
+        <div ref={wrap} className="fixed inset-x-0 bottom-0 z-[60] sm:inset-x-auto sm:right-6 sm:bottom-6">
           {menu && (
-            <div role="menu" aria-label="Talk to Shivacha" className="absolute right-0 bottom-[calc(100%+12px)] w-[300px] animate-[menu-in_.18s_ease-out] overflow-hidden rounded-2xl border border-line bg-ink-900 p-2 shadow-[0_30px_80px_-20px_rgb(0_0_0/0.45)]">
+            <div
+              role="menu"
+              aria-label="Talk to Shivacha"
+              className="absolute right-3 bottom-[calc(100%+12px)] w-[300px] sm:right-0 animate-[menu-in_.18s_ease-out] overflow-hidden rounded-2xl border border-line bg-ink-900 p-2 shadow-[0_30px_80px_-20px_rgb(0_0_0/0.45)]"
+            >
               <p className="px-3 pt-2 pb-3 text-sm text-muted">How would you like to start?</p>
               <MenuItem
                 icon={<CalendarDays className="size-5" />}
@@ -81,6 +92,38 @@ export function TalkToShivacha() {
               </div>
             </div>
           )}
+          {/* Mobile: sticky action bar */}
+          <nav
+            aria-label="Quick actions"
+            className="grid grid-cols-3 border-t border-line bg-ink-900/95 px-2 pt-2 shadow-[0_-12px_30px_-18px_rgb(0_0_0/0.35)] backdrop-blur sm:hidden"
+            style={{
+              paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                track("cta_click", { cta: "mobile_bar_enquire" });
+                openInquiry({ source: "mobile_bar" });
+              }}
+              className="flex flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold text-fg"
+            >
+              <FileText className="size-5 text-brand-blue" aria-hidden /> Get Estimate
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                track("cta_click", { cta: "mobile_bar_call" });
+                openBookCall({ source: "mobile_bar" });
+              }}
+              className="flex flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold text-fg"
+            >
+              <CalendarDays className="size-5 text-brand-blue" aria-hidden /> Book a Call
+            </button>
+            <button type="button" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)} className="flex flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold text-fg">
+              <MessageCircle className="size-5 text-[#1faa53]" aria-hidden /> WhatsApp
+            </button>
+          </nav>
           <button
             type="button"
             aria-haspopup="menu"
@@ -89,7 +132,7 @@ export function TalkToShivacha() {
               setMenu((m) => !m);
               if (!menu) track("cta_click", { cta: "talk_to_shivacha" });
             }}
-            className="group flex h-12 items-center gap-2.5 rounded-full bg-brand-600 pr-5 pl-2 font-semibold text-white shadow-[0_16px_40px_-12px_rgb(1_115_204/0.8)] ring-4 ring-brand-blue/15 transition-transform hover:-translate-y-0.5 sm:h-13"
+            className="group hidden h-12 items-center gap-2.5 rounded-full bg-brand-600 sm:flex pr-5 pl-2 font-semibold text-white shadow-[0_16px_40px_-12px_rgb(1_115_204/0.8)] ring-4 ring-brand-blue/15 transition-transform hover:-translate-y-0.5 sm:h-13"
           >
             <span className="flex size-8 items-center justify-center rounded-full bg-white/15 sm:size-9">
               {menu ? (

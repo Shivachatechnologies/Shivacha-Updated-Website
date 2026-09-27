@@ -2,7 +2,9 @@
 
 import Script from "next/script";
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { track } from "@/lib/analytics";
+import { recordPageView } from "@/lib/attribution";
 
 const GA = process.env.NEXT_PUBLIC_GA_ID;
 const PIXEL = process.env.NEXT_PUBLIC_META_PIXEL_ID;
@@ -13,6 +15,34 @@ const LINKEDIN = process.env.NEXT_PUBLIC_LINKEDIN_PARTNER_ID;
  * site-wide through a single delegated listener (no per-button client components required).
  */
 export function Analytics() {
+  const pathname = usePathname();
+
+  // Engagement: page views (for lead scoring), service/hire page views and scroll depth per page.
+  useEffect(() => {
+    recordPageView(pathname);
+    if (pathname.startsWith("/services/") || pathname.startsWith("/hire-")) track("service_page_view", { path: pathname });
+    const marks = [25, 50, 75, 100];
+    const seen = new Set<number>();
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const h = document.documentElement.scrollHeight - window.innerHeight;
+        if (h <= 0) return;
+        const pct = (window.scrollY / h) * 100;
+        for (const m of marks) if (pct >= m - 2 && !seen.has(m)) {
+          seen.add(m);
+          track("scroll_depth", { percent: m, path: pathname });
+        }
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [pathname]);
+
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       const a = (e.target as HTMLElement).closest("a,button") as HTMLAnchorElement | null;
@@ -24,6 +54,7 @@ export function Analytics() {
       else if (href.includes("wa.me")) track("whatsapp_click", { href });
       if (!tag) return;
       if (tag.startsWith("demo")) track("demo_click", { label: tag, href });
+      else if (tag.startsWith("case_study_cta")) track("case_study_cta", { label: tag, path: window.location.pathname });
       else track("cta_click", { label: tag, href, path: window.location.pathname });
     };
     document.addEventListener("click", onClick);

@@ -143,14 +143,16 @@ All other forms (contact, demo, meeting, hire, resource) use the same pipeline. 
    3. *Deploy → New deployment → Web app*, *Execute as: Me*, *Who has access: Anyone* → copy the `/exec` URL.
    4. On the server set `GOOGLE_SHEETS_WEBHOOK_URL` (the URL) and `GOOGLE_SHEETS_WEBHOOK_SECRET` (the same secret). Requests without the secret are rejected.
 
-   The sheet gets the header row, frozen columns and a **Lead Status** dropdown (New, Contacted, Qualified, Proposal Sent, Negotiation, Won, Lost, Follow-up). Sales update *Assigned Sales Person*, *Notes*, *Last Contacted* and *Next Follow-up* directly in the sheet; the *View Lead* button in each notification opens the row. `npm run check:content` fails if the script's columns drift from `lib/leads/columns.ts`.
+   The sheet gets the header row, frozen columns and a **Lead Status** dropdown (New, Contacted, Qualified, Meeting, Proposal, Negotiation, Won, Lost, Nurture). If your sheet was created with the earlier statuses, paste the latest script and run `updateStatuses` once. Sales update *Assigned Sales Person*, *Notes*, *Last Contacted* and *Next Follow-up* directly in the sheet; the *View Lead* button in each notification opens the row. `npm run check:content` fails if the script's columns drift from `lib/leads/columns.ts`.
    - Alternative: Sheets API with a service account (`GOOGLE_SHEETS_LEADS_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, then `npm run leads:setup-sheet`).
    - Self-hosted servers can use `LEAD_STORE=file` (JSON Lines, file mode 600, path `LEADS_FILE`, default `.data/leads.jsonl` — git-ignored). Serverless hosts need a Sheet.
 4. Optional: `CRM_WEBHOOK_URL` / `CRM_WEBHOOK_SECRET` to forward every lead (HMAC-signed) to a CRM; `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` to add a CAPTCHA if spam appears.
 
 **Reliability:** a lead is accepted when it is saved **or** the sales email is sent, so neither a mail outage nor a storage outage loses it; if both fail the visitor is asked to email sales@ or use WhatsApp. The visitor confirmation and webhook run after the response (`after()`).
 
-**Lead score (0–100):** budget (up to 35), service (high-value services 15), work email (15), phone (10), company (10), description length (up to 15). ≥70 Hot, ≥45 Warm, otherwise Cold. Budgets never reject a lead.
+**Lead score (0–100):** budget (up to 35), service (high-value services 15), work email (15), phone (10), company (10), description length (up to 15). engagement (return visit, 5+ pages, high-intent pages such as the estimator or hire pages, paid campaign; capped at 15). ≥70 Hot, ≥45 Warm, otherwise Nurture. Budgets never reject a lead. The same email or phone within 30 days is flagged as a possible duplicate in the email and Extra Details, never rejected.
+
+**Attribution:** latest touch (UTM source/medium/campaign/term/content, landing page, referrer) plus first touch, device, visit count, pages viewed and high-intent pages are sent with every lead; the extra fields appear in *Extra Details* so sheet column positions are unchanged.
 
 **Follow-up:** each lead gets *Next Follow-up* = next business day, 10:00 IST, stored with the lead and attached to the sales email as a calendar reminder (`.ics`).
 
