@@ -34,7 +34,33 @@ export interface RunInput {
   parentId?: string | null;
   /** Dependency injection for tests only; production always uses the configured provider. */
   provider?: AIProvider | null;
+  /** AI employee task execution: links approvals to the task, adds task tools and reports every tool call. */
+  task?: TaskHooks;
 }
+
+/** A tool that only touches the running task (plan, progress, memory). No data permissions are involved. */
+export interface VirtualTool {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  run: (input: unknown) => Promise<AIToolOutcome>;
+}
+
+export interface TaskHooks {
+  taskId: string;
+  /** Extra system instructions (task brief, procedure, scoped employee memory). */
+  system: string;
+  tools: VirtualTool[];
+  /** Called after every real tool call. */
+  onTool: (e: { tool: string; ok: boolean; ms: number; error?: string; action?: ProposedAction; records?: string[] }) => Promise<void>;
+  /** Checked before every model call; a returned reason stops the run (task paused or cancelled). */
+  shouldStop: () => Promise<string | null>;
+  /** Tasks run longer tool loops than chat requests. */
+  maxIterations?: number;
+  requestTokens?: number;
+}
+
+class StopRequested extends Error {}
 
 export interface ProposedAction {
   approvalId?: string;
@@ -46,7 +72,7 @@ export interface ProposedAction {
 export interface RunOutput {
   executionId: string | null;
   agent: string;
-  status: "SUCCEEDED" | "FAILED" | "AWAITING_APPROVAL" | "BLOCKED";
+  status: "SUCCEEDED" | "FAILED" | "AWAITING_APPROVAL" | "BLOCKED" | "CANCELLED";
   text: string;
   provider: string;
   drafts: { tool: string; draft: unknown }[];
@@ -185,8 +211,13 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
   /** Policy gate for every tool call (model-driven or fallback). */
   const callTool = async (name: string, raw: unknown): Promise<AIToolOutcome> => {
     const t0 = Date.now();
-    const done = (ok: boolean, out: AIToolOutcome, error?: string) => {
+    const virtual = input.task?.tools.find((v) => v.name === name);
+    if (virtual) return virtual.run(raw ?? {});
+    let lastAction: ProposedAction | undefined;
+    let lastRecords: string[] | undefined;
+    const done = async (ok: boolean, out: AIToolOutcome, error?: string) => {
       toolsUsed.push({ tool: name, ok, ms: Date.now() - t0, error });
+      if (input.task) await input.task.onTool({ tool: name, ok, ms: Date.now() - t0, error, action: lastAction, records: lastRecords }).catch(() => null);
       return out;
     };
     const tool = getTool(name);
@@ -202,6 +233,7 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
       if (tool.kind === "read") {
         const r = await tool.run(ctx, parsed.data);
         r.records?.forEach((x) => records.add(x));
+        lastRecords = r.records;
         return done(true, { content: clip(r.data) });
       }
       if (tool.kind === "draft") {
@@ -213,19 +245,20 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
       // write
       const preview = tool.preview ? await tool.preview(parsed.data) : { summary: name, affected: [] };
       if (mode === "OBSERVE") {
-        actions.push({ tool: name, summary: preview.summary, status: "BLOCKED" });
+        actions.push((lastAction = { tool: name, summary: preview.summary, status: "BLOCKED" }));
         return done(true, { content: "Not executed: this agent is in OBSERVE mode. Present it to the user as a recommendation." });
       }
       const autonomous = mode === "AUTONOMOUS" && !isSystem(user) && tool.risk === "LOW" && !tool.alwaysApprove && cfg.tools.get(name) === true && !cfg.approvalActions.includes(name);
       if (autonomous) {
         const r = await tool.run(ctx, parsed.data);
         r.records?.forEach((x) => records.add(x));
-        actions.push({ tool: name, summary: preview.summary, status: "EXECUTED" });
+        lastRecords = r.records;
+        actions.push((lastAction = { tool: name, summary: preview.summary, status: "EXECUTED" }));
         await audit({ userId: user.id, action: "ai.action.autonomous", entity: "AIExecution", entityId: exec.id, metadata: { tool: name, summary: preview.summary } });
         return done(true, { content: clip({ executed: true, result: r.data }) });
       }
-      const approval = await createApproval({ executionId: exec.id, agentSlug: cfg.spec.slug, tool, input: parsed.data, preview, requestedById: isSystem(user) ? null : user.id, reason: `${cfg.name}: ${routed.request.slice(0, 400)}` });
-      actions.push({ approvalId: approval.id, tool: name, summary: preview.summary, status: "PENDING_APPROVAL" });
+      const approval = await createApproval({ executionId: exec.id, agentSlug: cfg.spec.slug, tool, input: parsed.data, preview, requestedById: isSystem(user) ? null : user.id, reason: `${cfg.name}: ${routed.request.slice(0, 400)}`, taskId: input.task?.taskId });
+      actions.push((lastAction = { approvalId: approval.id, tool: name, summary: preview.summary, status: "PENDING_APPROVAL" }));
       return done(true, { content: `Queued for human approval (request ${approval.id}): ${preview.summary}. It will not run until approved.` });
     } catch (e) {
       return done(false, { content: `Tool error: ${(e as Error).message}`.slice(0, 500), isError: true }, (e as Error).message.slice(0, 200));
@@ -252,19 +285,22 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
         ? (await db.aIMessage.findMany({ where: { conversationId }, orderBy: { createdAt: "desc" }, take: 10, select: { role: true, content: true } })).reverse().filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role as "user" | "assistant", content: m.content.slice(0, 4000) }))
         : [];
       const memory = context ? (await db.aIMemory.findFirst({ where: { scope: "entity", entity: context.entity, entityId: context.id, key: "last-summary", OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } }))?.value ?? null : null;
-      const allowed = [...cfg.tools.keys()].map((n) => getTool(n)!).filter((t: ToolDef) => !(t.name === "webResearch" && webSearchEnabled())).filter((t) => isSystem(user) || t.permissions.every((p: Permission) => can(user.role, p)));
+      const allowed: ToolDef[] = [...cfg.tools.keys()].map((n) => getTool(n)!).filter((t: ToolDef) => !(t.name === "webResearch" && webSearchEnabled())).filter((t) => isSystem(user) || t.permissions.every((p: Permission) => can(user.role, p)));
       const r = await provider.run({
-        system: systemPrompt(cfg, user, mode, context, memory),
+        system: [systemPrompt(cfg, user, mode, context, memory), input.task?.system].filter(Boolean).join("\n\n"),
         history: history.filter((h, i, a) => i === 0 || h.role !== a[i - 1].role).filter((h, i) => !(i === 0 && h.role === "assistant")),
         prompt: routed.request,
-        tools: allowed.map((t) => ({ name: t.name, description: t.description, inputSchema: toolSchema(t) })),
+        tools: [...allowed.map((t) => ({ name: t.name, description: t.description, inputSchema: toolSchema(t) })), ...(input.task?.tools ?? []).map((v) => ({ name: v.name, description: v.description, inputSchema: v.inputSchema }))],
         model,
         maxTokens: limits.callMaxTokens,
-        maxIterations: limits.maxIterations,
+        maxIterations: input.task?.maxIterations ?? limits.maxIterations,
         webSearch: cfg.tools.has("webResearch") && webSearchEnabled(),
         executeTool: callTool,
         beforeCall: async () => {
-          if (tokens >= limits.requestTokens) throw new BudgetError(`Request token limit reached (${limits.requestTokens.toLocaleString()} tokens).`);
+          const stop = input.task ? await input.task.shouldStop() : null;
+          if (stop) throw new StopRequested(stop);
+          const tokenLimit = input.task?.requestTokens ?? limits.requestTokens;
+          if (tokens >= tokenLimit) throw new BudgetError(`Request token limit reached (${tokenLimit.toLocaleString()} tokens).`);
           await assertBudget(cfg.spec.slug, cfg.dailyCostLimit);
         },
         onUsage: async (u) => {
@@ -285,10 +321,10 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
     }
     if (status === "SUCCEEDED" && actions.some((a) => a.status === "PENDING_APPROVAL")) status = "AWAITING_APPROVAL";
   } catch (e) {
-    status = e instanceof BudgetError ? "BLOCKED" : "FAILED";
-    error = e instanceof BudgetError ? e.message : providerError(e);
+    status = e instanceof StopRequested ? "CANCELLED" : e instanceof BudgetError ? "BLOCKED" : "FAILED";
+    error = e instanceof StopRequested || e instanceof BudgetError ? e.message : providerError(e);
     text = [text, error].filter(Boolean).join("\n\n");
-    if (!(e instanceof BudgetError)) console.error("[ai] execution failed", exec.id, (e as Error)?.message);
+    if (!(e instanceof BudgetError) && !(e instanceof StopRequested)) console.error("[ai] execution failed", exec.id, (e as Error)?.message);
   }
 
   await db.aIExecution.update({
@@ -306,7 +342,7 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
 
 /* ───────────────────────── approvals ───────────────────────── */
 
-export async function createApproval(a: { executionId: string | null; agentSlug: string; tool: ToolDef; input: unknown; preview: { summary: string; affected: { entity: string; id: string }[]; content?: string; changes?: Record<string, unknown> }; requestedById: string | null; reason: string }) {
+export async function createApproval(a: { executionId: string | null; agentSlug: string; tool: ToolDef; input: unknown; preview: { summary: string; affected: { entity: string; id: string }[]; content?: string; changes?: Record<string, unknown> }; requestedById: string | null; reason: string; taskId?: string | null }) {
   const perms = toolPermissions(a.tool, a.input);
   const approval = await db.aIApproval.create({
     data: {
@@ -322,6 +358,7 @@ export async function createApproval(a: { executionId: string | null; agentSlug:
       risk: a.tool.risk,
       requiredPermission: (perms.length ? perms : ["ai:approve"]).join(","),
       requestedById: a.requestedById,
+      taskId: a.taskId ?? null,
       expiresAt: new Date(Date.now() + 7 * 86400_000),
     },
   });

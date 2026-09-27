@@ -138,6 +138,7 @@ model User {
   aiConversations    AIConversation[]
   aiApprovalsAsked   AIApproval[]             @relation("AIApprovalRequester")
   aiApprovalsDecided AIApproval[]             @relation("AIApprovalDecider")
+  aiEmployeesManaged AIAgent[]                @relation("AIEmployeeManager")
   kbArticles         KnowledgeArticle[]
   securityEvents     SecurityEvent[]
   twoFactor          TwoFactorMethod?
@@ -919,6 +920,11 @@ enum AutomationTrigger {
   TICKET_CREATED
   PROJECT_DELAYED
   FOLLOW_UP_DUE
+  /// Time-based triggers for AI employees' recurring responsibilities (emitted by the workforce scheduler).
+  SCHEDULE_MORNING
+  SCHEDULE_EVENING
+  SCHEDULE_WEEKLY_MONDAY
+  SCHEDULE_CONTINUOUS
 }
 
 enum RunStatus {
@@ -966,6 +972,8 @@ enum AITaskStatus {
   DONE
   FAILED
   CANCELLED
+  PAUSED
+  AWAITING_APPROVAL
 }
 
 enum RecommendationStatus {
@@ -2032,9 +2040,22 @@ model AIAgent {
   /// Actions that always need human approval for this agent (in addition to the platform defaults).
   approvalActions String[]      @default([])
   config          Json?
+  // Digital employee profile (additive, all optional)
+  personaName      String?
+  jobTitle         String?
+  department       String?
+  /// Slug of the AI employee this one reports to (e.g. "ceo").
+  reportsToSlug    String?
+  /// Human manager accountable for this AI employee.
+  managerUserId    String?
+  responsibilities String[]      @default([])
+  /// false = clocked out: the employee takes no new work until switched back on.
+  available        Boolean       @default(true)
+  lastActivityAt   DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   tools           AIAgentTool[]
+  managerUser     User?         @relation("AIEmployeeManager", fields: [managerUserId], references: [id], onDelete: SetNull)
 
   @@index([enabled])
 }
@@ -2133,6 +2154,8 @@ model AIApproval {
   executedAt         DateTime?
   executionResult    Json?
   expiresAt          DateTime?
+  /// AI employee task that raised this request (when it came from task execution).
+  taskId             String?
   createdAt          DateTime         @default(now())
   execution          AIExecution?     @relation(fields: [executionId], references: [id], onDelete: SetNull)
   requestedBy        User?            @relation("AIApprovalRequester", fields: [requestedById], references: [id], onDelete: SetNull)
@@ -2140,6 +2163,7 @@ model AIApproval {
 
   @@index([status, createdAt])
   @@index([agentSlug, status])
+  @@index([taskId])
 }
 
 model AITask {
@@ -2155,11 +2179,31 @@ model AITask {
   executionId   String?
   error         String?
   runAfter      DateTime     @default(now())
+  // Digital employee task management (additive)
+  /// TASK (assigned by a person) | INSTRUCTION (CEO instruction) | RECURRING (automation responsibility)
+  kind            String       @default("TASK")
+  /// LOW | MEDIUM | HIGH | URGENT
+  priority        String       @default("MEDIUM")
+  instructions    String?      @db.Text
+  deadline        DateTime?
+  progress        Int          @default(0)
+  currentStep     String?
+  /// [{ title, status: pending|running|done|failed|skipped, note? }]
+  subtasks        Json?
+  toolsUsed       Json?
+  recordsAffected Json?
+  result          String?      @db.Text
+  startedAt       DateTime?
+  completedAt     DateTime?
+  attempts        Int          @default(0)
+  automationId    String?
+  reassignedFrom  String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
   @@index([status, runAfter])
   @@index([agentSlug, createdAt])
+  @@index([agentSlug, status])
 }
 
 model AIRecommendation {
@@ -2271,4 +2315,77 @@ model TwoFactorMethod {
   lastUsedStep    Int?
   createdAt       DateTime  @default(now())
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Timeline of real system events for each AI employee (task lifecycle, tool calls, approvals, reports).
+model AIActivity {
+  id        String   @id @default(cuid())
+  agentSlug String
+  taskId    String?
+  type      String
+  summary   String
+  data      Json?
+  /// Person who caused the event (assigning, approving …); null for the employee's own work.
+  actorId   String?
+  createdAt DateTime @default(now())
+
+  @@index([agentSlug, createdAt])
+  @@index([taskId, createdAt])
+  @@index([type, createdAt])
+}
+
+/// Goals an AI employee is measured against. Progress is computed from real activity, never entered by hand.
+model AIGoal {
+  id        String   @id @default(cuid())
+  agentSlug String
+  label     String
+  /// tasks_completed | actions:<tool> (executed actions of that tool)
+  metric    String
+  target    Int
+  /// DAILY | WEEKLY | MONTHLY
+  period    String   @default("DAILY")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agentSlug, active])
+}
+
+/// Persistent business memory scoped to one AI employee. `shared` KNOWLEDGE entries are readable by every employee.
+model AIEmployeeMemory {
+  id          String    @id @default(cuid())
+  agentSlug   String
+  /// INSTRUCTION | PREFERENCE | TASK | WORKFLOW_SUCCESS | WORKFLOW_FAILURE | KNOWLEDGE | RECORD
+  kind        String
+  title       String
+  content     String    @db.Text
+  entity      String?
+  entityId    String?
+  shared      Boolean   @default(false)
+  pinned      Boolean   @default(false)
+  taskId      String?
+  createdById String?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([agentSlug, kind, createdAt])
+  @@index([shared, kind])
+}
+
+/// Morning plans, end-of-day reports and the daily CEO briefing, built from live records.
+model AIReport {
+  id        String   @id @default(cuid())
+  /// AI employee slug, or "workforce" for the CEO briefing.
+  agentSlug String
+  /// MORNING_PLAN | END_OF_DAY | CEO_BRIEFING
+  kind      String
+  /// Business day the report covers (yyyy-mm-dd, workforce time zone).
+  day       String
+  title     String
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@unique([agentSlug, kind, day])
+  @@index([kind, createdAt])
 }

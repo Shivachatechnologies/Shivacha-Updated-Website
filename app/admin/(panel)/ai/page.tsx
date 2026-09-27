@@ -16,8 +16,9 @@ import { Markdown } from "@/components/admin/ai/markdown";
 import { agentWorkforce, aiOperations } from "@/lib/admin/command";
 import { AgentGrid, AIOperationsFlow } from "@/components/admin/command/workforce";
 import { OpsPanel } from "@/components/admin/command/section";
+import { WorkforceNav } from "@/components/admin/ai/workforce";
 
-export const metadata = { title: "AI Command Center" };
+export const metadata = { title: "Ask an AI Employee" };
 
 export default async function AICommandCenter({ searchParams }: { searchParams: Promise<SP> }) {
   const user = await requireAccess("ai:view", "AI_WORKFORCE");
@@ -42,7 +43,8 @@ export default async function AICommandCenter({ searchParams }: { searchParams: 
 
   return (
     <>
-      <PageHeader title="AI Command Center" description="Ask the AI workforce about your business. Agents only see what you are allowed to see, work from live records and send every sensitive action to the Human Approval Center." crumbs={[{ label: "AI" }]} actions={<Link href="/admin/ai/approvals" className="btn-secondary h-9 px-3 text-[13px]">Approvals{pending ? ` (${pending})` : ""}</Link>} />
+      <PageHeader title="Ask an Employee" description="A secondary channel for quick questions. To give an AI employee work, assign a task or an instruction from the CEO Command Center so it is planned, tracked and reported." crumbs={[{ label: "AI", href: "/admin/ai/command-center" }, { label: "Ask" }]} actions={<><Link href="/admin/ai/command-center" className="btn-primary h-9 px-3 text-[13px]">CEO Command Center</Link><Link href="/admin/ai/approvals" className="btn-secondary h-9 px-3 text-[13px]">Approvals{pending ? ` (${pending})` : ""}</Link></>} />
+      <WorkforceNav active="ask" counts={{ approvals: pending }} />
       {!provider.connected && (
         <div className="mb-4">
           <NotConnected name="AI provider" env={["ANTHROPIC_API_KEY"]}>AI provider not connected. Agents still run their tools and show live data, but no AI analysis, drafting or briefing narrative is generated.</NotConnected>
