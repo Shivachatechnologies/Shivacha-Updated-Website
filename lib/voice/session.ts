@@ -11,7 +11,7 @@ import { canRunAgent } from "@/lib/ai/agents";
 import { runAgent, type EntityRef } from "@/lib/ai/runner";
 import { createEmployeeTask } from "@/lib/ai/workforce/engine";
 import { VOICE_LANGUAGES, toSpeech, voiceChannelHint, wantsBackground, type VoiceLanguage } from "./languages";
-import { estimateVoiceCost, voiceProvider } from "./provider";
+import { estimateVoiceCost, VOICE_PROVIDERS, voiceProvider } from "./provider";
 
 /** A voice call is abandoned after this long without a turn (ended on next access). */
 export const VOICE_IDLE_MS = 30 * 60_000;
@@ -37,6 +37,23 @@ async function assertCanTalk(user: SessionUser, agentSlug: string) {
   // The AI employee can only do what BOTH it and you are allowed to do; runAgent enforces this per tool call.
   if (!canRunAgent(user.role, spec)) throw new UserError(`You do not have permission to use the ${spec.name}.`);
   return spec;
+}
+
+/** Readiness of the server side of a voice call, for diagnostics. Reports configuration only, never secrets. */
+export async function voiceReadiness(user: SessionUser, agentSlug: string, providerId: string) {
+  const provider = VOICE_PROVIDERS[providerId] ?? voiceProvider("browser");
+  let employee: { ok: boolean; detail: string };
+  try {
+    const spec = await assertCanTalk(user, agentSlug);
+    employee = { ok: true, detail: `${spec.name} ready` };
+  } catch (e) {
+    employee = { ok: false, detail: (e as Error).message };
+  }
+  return {
+    provider: { id: provider.id, ok: provider.configured(), detail: provider.configured() ? `${provider.label} configured` : `${provider.label} is not configured on the server` },
+    employee,
+    aiConnected: !!process.env.ANTHROPIC_API_KEY,
+  };
 }
 
 export async function startVoiceSession(user: SessionUser, input: { agentSlug: string; language: VoiceLanguage; provider: string; context: EntityRef | null }) {

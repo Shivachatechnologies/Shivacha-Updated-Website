@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { Loader2, Mic, MicOff, PhoneOff, Send, Square, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { endVoiceAction, interruptVoiceAction, startVoiceAction, voiceTurnAction } from "@/lib/voice/actions";
+import { classifySpeechError, describeError, openMicrophone, pickRecorderType, policyAllowsMicrophone, recordingExtension, VOICE_MESSAGES, type VoiceFailure, type VoiceStage } from "@/lib/voice/mic";
+import { VoiceDiagnostics } from "./diagnostics";
 
 export interface VoiceAgent {
   slug: string;
@@ -64,7 +66,8 @@ export function VoiceConsole({ agents, initialAgent, context = null, contextLabe
   const [muted, setMuted] = useState(false);
   const [handsFree, setHandsFree] = useState(false);
   const [background, setBackground] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setFailure] = useState<VoiceFailure | null>(null);
+  const setError = (message: string | null, stage: VoiceStage = "AI_EMPLOYEE") => setFailure(message ? { stage, message } : null);
   const recRef = useRef<SpeechRec | null>(null);
   const mediaRef = useRef<{ rec: MediaRecorder; stream: MediaStream; started: number } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -77,6 +80,7 @@ export function VoiceConsole({ agents, initialAgent, context = null, contextLabe
   // Browser capabilities are only known on the client; the server render assumes none (no hydration mismatch).
   const browserStt = useSyncExternalStore(noSubscribe, () => !!recognitionCtor(), () => false);
   const hasMic = useSyncExternalStore(noSubscribe, () => !!navigator.mediaDevices?.getUserMedia, () => false);
+  const isDev = process.env.NODE_ENV !== "production";
   const serverAudio = session?.serverAudio ?? providers.find((p) => p.id === provider)?.serverAudio ?? false;
   const canListen = serverAudio ? hasMic : browserStt;
 
@@ -194,52 +198,74 @@ export function VoiceConsole({ agents, initialAgent, context = null, contextLabe
     });
   };
 
+  // Order matters: A. microphone (straight from the click) → C/E. voice session and AI employee → F. speech recognition.
+  // Each stage reports its own failure, so a provider or recorder problem is never shown as "permission denied".
   const listen = async () => {
     setError(null);
     stopSpeaking(true);
-    const s = await ensureSession();
-    if (!s) return;
-    if (s.serverAudio) {
-      if (mediaRef.current) {
-        mediaRef.current.rec.stop();
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const rec = new MediaRecorder(stream);
-        const chunks: Blob[] = [];
-        rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-        rec.onstop = async () => {
-          stream.getTracks().forEach((t) => t.stop());
-          const secs = (new Date().getTime() - (mediaRef.current?.started ?? new Date().getTime())) / 1000;
-          mediaRef.current = null;
-          setListening(false);
-          const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
-          if (blob.size < 1000) return;
-          const fd = new FormData();
-          fd.set("audio", blob, "speech.webm");
-          fd.set("sessionId", s.id);
-          setInterim("Transcribing…");
-          const t0 = new Date().getTime();
-          const tr = await fetch("/api/voice/transcribe", { method: "POST", body: fd }).then((x) => x.json()).catch(() => ({ error: "Transcription failed." }));
-          setInterim("");
-          if (tr.error || !tr.text) return setError(tr.error ?? "I didn't catch that. Try again or type.");
-          void send(tr.text, { audioSec: tr.seconds ?? secs, sttLatencyMs: new Date().getTime() - t0 });
-        };
-        mediaRef.current = { rec, stream, started: new Date().getTime() };
-        rec.start();
-        setListening(true);
-      } catch {
-        setError("Microphone permission was denied. You can type instead.");
-      }
+    if (mediaRef.current) {
+      mediaRef.current.rec.stop();
       return;
     }
-    const Ctor = recognitionCtor();
-    if (!Ctor) return setError("Voice input isn't supported in this browser. Type instead.");
     if (recRef.current) {
       recRef.current.stop();
       return;
     }
+    const wantsServer = sessionRef.current?.serverAudio ?? providers.find((p) => p.id === provider)?.serverAudio ?? false;
+    if (!wantsServer && !recognitionCtor()) return setFailure({ stage: "SPEECH_RECOGNITION", message: VOICE_MESSAGES.unsupported });
+    const mic = await openMicrophone();
+    if ("failure" in mic) return setFailure(mic.failure);
+    const release = () => mic.stream.getTracks().forEach((t) => t.stop());
+    const s = await ensureSession();
+    if (!s) return release();
+    if (s.serverAudio) {
+      const type = pickRecorderType(typeof MediaRecorder === "undefined" ? null : (t) => MediaRecorder.isTypeSupported(t));
+      let rec: MediaRecorder;
+      try {
+        if (type === null) throw new Error("MediaRecorder is not supported");
+        rec = new MediaRecorder(mic.stream, type ? { mimeType: type } : undefined);
+      } catch (e) {
+        release();
+        return setFailure({ stage: "AUDIO_INITIALIZATION", message: VOICE_MESSAGES.recorder, detail: describeError(e) });
+      }
+      const chunks: Blob[] = [];
+      rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+      rec.onerror = (e) => setFailure({ stage: "AUDIO_INITIALIZATION", message: VOICE_MESSAGES.recorder, detail: describeError((e as unknown as { error?: unknown }).error ?? e) });
+      rec.onstop = async () => {
+        release();
+        const secs = (new Date().getTime() - (mediaRef.current?.started ?? new Date().getTime())) / 1000;
+        mediaRef.current = null;
+        setListening(false);
+        const mime = rec.mimeType || type || "audio/webm";
+        const blob = new Blob(chunks, { type: mime });
+        if (blob.size < 1000) return;
+        const fd = new FormData();
+        fd.set("audio", blob, `speech.${recordingExtension(mime)}`);
+        fd.set("sessionId", s.id);
+        setInterim("Transcribing…");
+        const t0 = new Date().getTime();
+        const tr = await fetch("/api/voice/transcribe", { method: "POST", body: fd })
+          .then((x) => x.json())
+          .catch((e) => ({ error: `${VOICE_MESSAGES.provider} (${describeError(e)})` }));
+        setInterim("");
+        if (tr.error) return setError(tr.error, "VOICE_PROVIDER");
+        if (!tr.text) return setError("I didn't catch that. Try again or type.", "SPEECH_RECOGNITION");
+        void send(tr.text, { audioSec: tr.seconds ?? secs, sttLatencyMs: new Date().getTime() - t0 });
+      };
+      try {
+        rec.start();
+      } catch (e) {
+        release();
+        return setFailure({ stage: "AUDIO_INITIALIZATION", message: VOICE_MESSAGES.recorder, detail: describeError(e) });
+      }
+      mediaRef.current = { rec, stream: mic.stream, started: new Date().getTime() };
+      setListening(true);
+      return;
+    }
+    // Browser speech recognition opens the microphone itself; the check above proved access works, so release it.
+    release();
+    const Ctor = recognitionCtor();
+    if (!Ctor) return setFailure({ stage: "SPEECH_RECOGNITION", message: VOICE_MESSAGES.unsupported });
     const rec = new Ctor();
     rec.lang = LANGS[lang].rec;
     rec.interimResults = true;
@@ -257,8 +283,10 @@ export function VoiceConsole({ agents, initialAgent, context = null, contextLabe
       setInterim(finalText + live);
     };
     rec.onerror = (e) => {
-      if (e.error === "not-allowed") setError("Microphone permission was denied. You can type instead.");
-      else if (e.error !== "no-speech" && e.error !== "aborted") setError(`Voice input error: ${e.error}`);
+      console.error("SPEECH_RECOGNITION_ERROR", e.error);
+      // getUserMedia just succeeded, so the browser permission itself is granted.
+      const f = classifySpeechError(e.error, { policyAllows: policyAllowsMicrophone(), permission: "granted", micOpened: true });
+      if (f) setFailure(f);
     };
     rec.onend = () => {
       recRef.current = null;
@@ -266,8 +294,12 @@ export function VoiceConsole({ agents, initialAgent, context = null, contextLabe
       if (finalText.trim()) void send(finalText, { audioSec: (new Date().getTime() - t0) / 1000 });
       else setInterim("");
     };
+    try {
+      rec.start();
+    } catch (e) {
+      return setFailure({ stage: "SPEECH_RECOGNITION", message: "Speech recognition could not start. Try again.", detail: describeError(e) });
+    }
     recRef.current = rec;
-    rec.start();
     setListening(true);
   };
 
@@ -338,13 +370,19 @@ export function VoiceConsole({ agents, initialAgent, context = null, contextLabe
         {interim && <p className="ml-auto max-w-[90%] text-right text-sm italic text-muted">{interim}</p>}
       </div>
 
-      {error && <p role="alert" className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && (
+        <div role="alert" className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-700">
+          <p>{error.message}</p>
+          {error.detail && <p className="mt-1 font-mono text-xs opacity-80">{error.stage}: {error.detail}</p>}
+        </div>
+      )}
+      {(isDev || error) && <VoiceDiagnostics key={error ? "err" : "dev"} agent={agent} provider={session ? (session.serverAudio ? "openai" : "browser") : provider} serverAudio={serverAudio} open={!!error && error.stage !== "AI_EMPLOYEE"} />}
 
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => void listen()}
-          disabled={!canListen || thinking}
+          disabled={thinking}
           aria-pressed={listening}
           aria-label={listening ? "Stop listening" : "Start talking"}
           title={canListen ? undefined : "Voice input isn't available in this browser"}
