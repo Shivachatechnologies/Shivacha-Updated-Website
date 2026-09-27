@@ -147,7 +147,8 @@ async function evaluateRules(v: { id: string; intentScore: number; country: stri
     if (!c.success || !matchRule(c.data, { intentScore: v.intentScore, country: v.country, sessionsCount: v.sessionsCount, paths, company: v.company })) continue;
     const who = v.company?.name ?? "A visitor";
     const summary = `${who}${v.city || v.country ? ` from ${[v.city, v.country].filter(Boolean).join(", ")}` : ""} matched “${rule.name}” (${describeRule(c.data)}; intent ${v.intentScore}).`;
-    const created = await db.visitorAlert.create({ data: { ruleId: rule.id, visitorId: v.id, day, summary } }).then(() => true).catch(() => false); // unique per rule/visitor/day
+    // One alert per rule, visitor and day (unique index); a duplicate is skipped silently.
+    const created = (await db.visitorAlert.createMany({ data: [{ ruleId: rule.id, visitorId: v.id, day, summary }], skipDuplicates: true })).count > 0;
     if (!created) continue;
     await notify({ type: "visitor.alert", title: `Visitor alert: ${rule.name}`, body: summary, href: `/admin/visitors/${v.id}`, entity: "Visitor", entityId: v.id, userIds: [rule.assigneeId], permission: rule.assigneeId ? undefined : ((rule.notifyPermission as "visitors:view" | null) ?? "visitors:view") });
     if (rule.action === "CREATE_TASK" && v.leadId) await db.followUp.create({ data: { leadId: v.leadId, assignedToId: rule.assigneeId, dueAt: new Date(now.getTime() + 24 * 3600_000), note: `Website activity: ${summary}` } });

@@ -14,7 +14,7 @@ export const metadata = { title: "Live visitors" };
 export default async function LiveVisitorsPage() {
   const user = await requireAccess("visitors:view");
   const policy = await getVisitorPolicy();
-  const since = new Date(Date.now() - policy.liveWindowMinutes * 60_000);
+  const since = new Date(new Date().getTime() - policy.liveWindowMinutes * 60_000);
   const sessions = await db.visitorSession.findMany({ where: { lastSeenAt: { gte: since }, visitor: { isBot: false } }, orderBy: { lastSeenAt: "desc" }, take: 200, include: { visitor: { include: { company: { select: { name: true, domain: true } }, lead: { select: { id: true, name: true } } } } } });
   const high = sessions.filter((s) => s.visitor.intentLabel === "HIGH").length;
   return (

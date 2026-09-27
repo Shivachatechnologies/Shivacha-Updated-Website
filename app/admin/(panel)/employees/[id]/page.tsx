@@ -231,7 +231,7 @@ async function TasksTab({ userId }: { userId: string | null }) {
 }
 
 async function PerformanceTab({ emp }: { emp: Emp }) {
-  const from = new Date(Date.now() - 90 * 86_400_000);
+  const from = new Date(new Date().getTime() - 90 * 86_400_000);
   const [m, goals, reviews] = await Promise.all([employeeMetrics(emp, from), db.performanceGoal.findMany({ where: { employeeId: emp.id }, orderBy: { createdAt: "desc" } }), db.performanceReview.findMany({ where: { employeeId: emp.id }, orderBy: { periodStart: "desc" } })]);
   return (
     <div className="space-y-4">

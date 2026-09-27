@@ -26,7 +26,9 @@
     "test:admin:e2e": "node tests/admin/e2e.mjs",
     "test:os": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/unit.test.ts",
     "test:ai": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/ai.test.ts",
-    "test:workforce": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/workforce.test.ts"
+    "test:workforce": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/workforce.test.ts",
+    "test:unified": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/unified.test.ts",
+    "test:unified:db": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/unified-db.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

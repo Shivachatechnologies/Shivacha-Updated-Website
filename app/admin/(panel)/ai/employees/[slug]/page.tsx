@@ -48,7 +48,7 @@ export default async function EmployeeProfile({ params, searchParams }: { params
 
   return (
     <>
-      <PageHeader title={e.name} description={`${e.jobTitle} · ${e.department}`} crumbs={[{ label: "AI", href: "/admin/ai/command-center" }, { label: "Employees", href: "/admin/ai/employees" }, { label: e.name }]} actions={direct && can(user.role, "ai:execute") ? <Link href={`/admin/ai/tasks?new=1&agent=${slug}`} className="btn-primary h-9 px-3.5 text-[13px]">Assign task</Link> : undefined} />
+      <PageHeader title={e.name} description={`${e.jobTitle} · ${e.department}`} crumbs={[{ label: "AI", href: "/admin/ai/command-center" }, { label: "Employees", href: "/admin/ai/employees" }, { label: e.name }]} actions={<>{canRunAgent(user.role, spec) && can(user.role, "voice:use") && <Link href={`/admin/ai/voice/${slug}`} className="btn-secondary h-9 px-3.5 text-[13px]">Talk</Link>}{direct && can(user.role, "ai:execute") && <Link href={`/admin/ai/tasks?new=1&agent=${slug}`} className="btn-primary h-9 px-3.5 text-[13px]">Assign task</Link>}</>} />
       <WorkforceNav active="employees" counts={{ approvals: pendingApprovals }} />
       <AutoRefresh active={e.status === "WORKING"} every={5000} />
 

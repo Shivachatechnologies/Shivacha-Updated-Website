@@ -14,7 +14,7 @@ export const metadata = { title: "Performance" };
 export default async function MyPerformancePage() {
   const { me } = await requireSelf();
   if (!me) return null;
-  const from = new Date(Date.now() - 90 * 86_400_000);
+  const from = new Date(new Date().getTime() - 90 * 86_400_000);
   const [goals, reviews, m] = await Promise.all([
     db.performanceGoal.findMany({ where: { employeeId: me.id }, orderBy: [{ status: "asc" }, { dueDate: "asc" }] }),
     db.performanceReview.findMany({ where: { employeeId: me.id }, orderBy: { periodStart: "desc" }, take: 12 }),

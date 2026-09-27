@@ -12,7 +12,7 @@ const key = (s: string | null, m: string | null) => `${s ?? "direct"} / ${m ?? "
 export default async function AttributionPage({ searchParams }: { searchParams: Promise<SP> }) {
   await requireAccess("visitors:view");
   const days = Number(pick(await searchParams, "days", ["7", "30", "90"] as const) ?? 30);
-  const since = new Date(Date.now() - days * 86_400_000);
+  const since = new Date(new Date().getTime() - days * 86_400_000);
   const sw = { startedAt: { gte: since }, visitor: { isBot: false } };
   const [channels, campaigns, landing, leads, sessions, visitors] = await Promise.all([
     db.visitorSession.groupBy({ by: ["source", "medium"], where: sw, _count: true, orderBy: { _count: { source: "desc" } }, take: 20 }),

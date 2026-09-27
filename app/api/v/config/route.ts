@@ -3,7 +3,7 @@ import { hasDatabase } from "@/lib/db/client";
 import { getVisitorPolicy } from "@/lib/visitors/settings";
 
 export const runtime = "nodejs";
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 /** Public, non-sensitive tracker configuration: whether tracking is on and whether a consent banner is needed. */
 export async function GET() {

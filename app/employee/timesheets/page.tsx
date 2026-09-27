@@ -12,7 +12,7 @@ export const metadata = { title: "Timesheets" };
 export default async function MyTimesheetsPage() {
   const { user, me } = await requireSelf();
   if (!me) return null;
-  const since = new Date(Date.now() - 30 * 86_400_000);
+  const since = new Date(new Date().getTime() - 30 * 86_400_000);
   const [projects, tasks, rows] = await Promise.all([
     db.project.findMany({ where: { deletedAt: null, OR: [{ managerId: user.id }, { members: { some: { userId: user.id } } }, { tasks: { some: { assigneeId: user.id } } }] }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     db.task.findMany({ where: { assigneeId: user.id, status: { not: "DONE" } }, orderBy: { updatedAt: "desc" }, take: 50, select: { id: true, title: true } }),

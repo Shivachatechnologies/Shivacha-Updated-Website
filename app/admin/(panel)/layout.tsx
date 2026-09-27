@@ -8,6 +8,8 @@ import { shellStatus } from "@/lib/admin/shell";
 import { AdminShell } from "@/components/admin/shell";
 import { hasDatabase } from "@/lib/db/client";
 import { getFlags } from "@/lib/os/flags";
+import { voiceConsoleOptions } from "@/lib/voice/options";
+import { TalkButton } from "@/components/admin/voice/talk-button";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +18,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const user = await requireUser();
   const flags = await getFlags();
   const ai = flags.AI_WORKFORCE && can(user.role, "ai:view");
-  const [status, jar] = await Promise.all([shellStatus(user.id, { ai }), cookies()]);
+  const talk = flags.AI_WORKFORCE && can(user.role, "voice:use") && can(user.role, "ai:execute");
+  const [status, jar, voice] = await Promise.all([shellStatus(user.id, { ai }), cookies(), talk ? voiceConsoleOptions(user.role).catch(() => null) : null]);
   const groups = ADMIN_NAV.filter((g) => !g.flag || flags[g.flag])
     .map((g) => ({ title: g.title, icon: g.icon, items: g.items.filter((i) => can(user.role, i.permission) && (!i.flag || flags[i.flag])).map(({ label, href, icon }) => ({ label, href, icon })) }))
     .filter((g) => g.items.length);
@@ -36,6 +39,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       logout={logoutAction}
     >
       {children}
+      {voice && <TalkButton agents={voice.agents} providers={voice.providers} profiles={voice.profiles} />}
     </AdminShell>
   );
 }

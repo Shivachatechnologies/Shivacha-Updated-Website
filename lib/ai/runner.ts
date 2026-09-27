@@ -36,6 +36,8 @@ export interface RunInput {
   provider?: AIProvider | null;
   /** AI employee task execution: links approvals to the task, adds task tools and reports every tool call. */
   task?: TaskHooks;
+  /** Channel-specific instructions (e.g. voice: short spoken answers). Never widens tools or permissions. */
+  channelHint?: string;
 }
 
 /** A tool that only touches the running task (plan, progress, memory). No data permissions are involved. */
@@ -287,7 +289,7 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
       const memory = context ? (await db.aIMemory.findFirst({ where: { scope: "entity", entity: context.entity, entityId: context.id, key: "last-summary", OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } }))?.value ?? null : null;
       const allowed: ToolDef[] = [...cfg.tools.keys()].map((n) => getTool(n)!).filter((t: ToolDef) => !(t.name === "webResearch" && webSearchEnabled())).filter((t) => isSystem(user) || t.permissions.every((p: Permission) => can(user.role, p)));
       const r = await provider.run({
-        system: [systemPrompt(cfg, user, mode, context, memory), input.task?.system].filter(Boolean).join("\n\n"),
+        system: [systemPrompt(cfg, user, mode, context, memory), input.task?.system, input.channelHint].filter(Boolean).join("\n\n"),
         history: history.filter((h, i, a) => i === 0 || h.role !== a[i - 1].role).filter((h, i) => !(i === 0 && h.role === "assistant")),
         prompt: routed.request,
         tools: [...allowed.map((t) => ({ name: t.name, description: t.description, inputSchema: toolSchema(t) })), ...(input.task?.tools ?? []).map((v) => ({ name: v.name, description: v.description, inputSchema: v.inputSchema }))],

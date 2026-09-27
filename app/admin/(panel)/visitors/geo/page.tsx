@@ -10,7 +10,7 @@ export const metadata = { title: "Visitor geography" };
 export default async function VisitorGeoPage({ searchParams }: { searchParams: Promise<SP> }) {
   await requireAccess("visitors:view");
   const days = Number(pick(await searchParams, "days", ["7", "30", "90"] as const) ?? 30);
-  const since = new Date(Date.now() - days * 86_400_000);
+  const since = new Date(new Date().getTime() - days * 86_400_000);
   const where = { startedAt: { gte: since }, visitor: { isBot: false } };
   const [countries, cities, high] = await Promise.all([
     db.visitorSession.groupBy({ by: ["country"], where, _count: true, orderBy: { _count: { country: "desc" } }, take: 30 }),

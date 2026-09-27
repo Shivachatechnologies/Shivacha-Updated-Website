@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/lib/db/client";
 import { ROLE_LABELS, type RoleName } from "@/lib/auth/permissions";
 import { requireAccess } from "@/lib/os/guard";
@@ -52,7 +53,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
   const active = rows.filter((r) => r.leads || r.contacted || r.followDone || r.followOverdue || r.won || r.tasksDone || r.tickets);
   return (
     <>
-      <PageHeader title="Team performance" description="Activity and outcomes per person from real records. Overdue follow-ups are shown as of today; everything else for the selected period." crumbs={[{ label: "Reports", href: "/admin/reports" }, { label: "Performance" }]} actions={<><a href="/admin/performance/goals" className="btn-secondary h-9 px-3 text-[13px]">Goals & OKRs</a><a href="/admin/performance/reviews" className="btn-secondary h-9 px-3 text-[13px]">Reviews</a></>} />
+      <PageHeader title="Team performance" description="Activity and outcomes per person from real records. Overdue follow-ups are shown as of today; everything else for the selected period." crumbs={[{ label: "Reports", href: "/admin/reports" }, { label: "Performance" }]} actions={<><Link href="/admin/performance/goals" className="btn-secondary h-9 px-3 text-[13px]">Goals & OKRs</Link><Link href="/admin/performance/reviews" className="btn-secondary h-9 px-3 text-[13px]">Reviews</Link></>} />
       <RangePicker active={range.key} basePath="/admin/performance" from={str(sp, "from", 10)} to={str(sp, "to", 10)} />
       {active.length === 0 ? <p className="text-sm text-muted">No recorded activity for this period.</p> : (
         <DataTable rows={active} columns={[

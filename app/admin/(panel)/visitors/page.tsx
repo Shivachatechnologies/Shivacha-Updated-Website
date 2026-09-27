@@ -26,8 +26,8 @@ export default async function VisitorsPage({ searchParams }: { searchParams: Pro
     ...(values.returning && { sessionsCount: { gte: 2 } }),
   };
   const page = pageOf(sp);
-  const dayAgo = new Date(Date.now() - 86_400_000);
-  const weekAgo = new Date(Date.now() - 7 * 86_400_000);
+  const dayAgo = new Date(new Date().getTime() - 86_400_000);
+  const weekAgo = new Date(new Date().getTime() - 7 * 86_400_000);
   const [policy, total, rows, countries, sources, today, sessionsToday, high, identified, leads] = await Promise.all([
     getVisitorPolicy(),
     db.visitor.count({ where }),

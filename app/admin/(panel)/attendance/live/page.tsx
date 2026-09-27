@@ -22,7 +22,7 @@ export default async function LiveWorkforcePage() {
   const s = summarize(rows);
   const offices = loc ? await db.officeLocation.findMany({ where: { active: true, remote: false } }) : [];
   if (loc) await audit({ userId: user.id, action: "attendance.location.viewed", metadata: { employees: rows.filter((r) => r.lastLocationAt).length } });
-  const since = (d: Date | null) => (d ? fmtMinutes(Math.round((Date.now() - d.getTime()) / 60_000)) + " ago" : "—");
+  const since = (d: Date | null) => (d ? fmtMinutes(Math.round((new Date().getTime() - d.getTime()) / 60_000)) + " ago" : "—");
   return (
     <>
       <AutoRefresh active every={30_000} />
