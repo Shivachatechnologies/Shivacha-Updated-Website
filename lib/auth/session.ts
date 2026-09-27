@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db/client";
 import { hashToken, newToken } from "./tokens";
 import { can, type Permission, type RoleName } from "./permissions";
+import { ensurePermissionOverrides } from "./overrides";
 
 const IDLE_MS = 8 * 60 * 60 * 1000; // sliding idle timeout
 const ABSOLUTE_MS = 7 * 24 * 60 * 60 * 1000; // hard cap regardless of activity
@@ -67,6 +68,7 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
     await db.session.update({ where: { id }, data: { lastSeenAt: new Date(now), expiresAt } }).catch(() => {});
     await setCookie(token, expiresAt).catch(() => {}); // cookies are read-only while rendering; fine to skip
   }
+  await ensurePermissionOverrides();
   return { id: u.id, email: u.email, name: u.name, role: u.role as RoleName };
 });
 
@@ -86,7 +88,11 @@ export class AuthError extends Error {
 /** For pages: redirect to login, or to the forbidden page when the role lacks the permission. */
 export async function requirePermission(p: Permission): Promise<SessionUser> {
   const user = await requireUser();
-  if (!can(user.role, p)) redirect(`/admin/forbidden?need=${encodeURIComponent(p)}`);
+  if (!can(user.role, p)) {
+    // Staff whose role only grants self-service land on the employee portal instead of a dead end.
+    if (p === "dashboard:view" && can(user.role, "selfservice:use")) redirect("/employee");
+    redirect(`/admin/forbidden?need=${encodeURIComponent(p)}`);
+  }
   return user;
 }
 

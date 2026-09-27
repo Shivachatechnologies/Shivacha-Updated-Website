@@ -23,6 +23,13 @@ export const NOTIFICATION_TYPES = {
   "ai.approval": "AI approval required",
   "ai.briefing": "CEO briefing ready",
   "ai.task": "AI employee task update",
+  "leave.requested": "Leave request awaiting approval",
+  "leave.decided": "Leave request decided",
+  "timesheet.decided": "Timesheet decided",
+  "review.stage": "Performance review needs your input",
+  "attendance.exception": "Attendance exception",
+  "announcement": "Announcement",
+  "visitor.alert": "Website visitor alert",
 } as const;
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
 

@@ -22,6 +22,14 @@ enum Role {
   FINANCE_MANAGER
   PROJECT_MANAGER
   SUPPORT_MANAGER
+  // Human workforce (additive)
+  HR_ADMIN
+  HR_MANAGER
+  DEPARTMENT_HEAD
+  TEAM_MANAGER
+  EMPLOYEE
+  CONTRACTOR
+  INTERN
 }
 
 enum LeadStatus {
@@ -144,6 +152,9 @@ model User {
   twoFactor          TwoFactorMethod?
   activities         Activity[]
   documents          Document[]
+  // Human workforce: the person's employee record when they are staff
+  employee           Employee?
+  voiceSessions      VoiceSession[]
 
   @@index([role])
   @@index([active])
@@ -245,6 +256,7 @@ model Lead {
   communications Communication[]
   calls          Call[]
   tasks          Task[]
+  visitors       Visitor[]
 
   @@index([email])
   @@index([status])
@@ -1478,6 +1490,7 @@ model Project {
   expenses       Expense[]
   tickets        Ticket[]
   communications Communication[]
+  timesheets     Timesheet[]
 
   @@index([clientId, status])
   @@index([status, deletedAt])
@@ -1546,6 +1559,7 @@ model Task {
   assignee    User?         @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   createdBy   User?         @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
   comments    TaskComment[]
+  timesheets  Timesheet[]
 
   @@index([projectId, status, sortOrder])
   @@index([assigneeId, status])
@@ -2388,4 +2402,714 @@ model AIReport {
 
   @@unique([agentSlug, kind, day])
   @@index([kind, createdAt])
+}
+
+// ═════════════════════════ HUMAN WORKFORCE (additive) ═════════════════════════
+// People are real staff. AI employees live in AIAgent and never have attendance, leave or payroll.
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  INTERN
+  FREELANCER
+  CONTRACTOR
+  CONSULTANT
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  PROBATION
+  ON_LEAVE
+  NOTICE_PERIOD
+  SUSPENDED
+  RESIGNED
+  TERMINATED
+  INACTIVE
+}
+
+enum WorkMode {
+  OFFICE
+  REMOTE
+  HYBRID
+}
+
+enum AttendanceStatus {
+  NOT_CHECKED_IN
+  WORKING
+  ON_BREAK
+  AWAY
+  CHECKED_OUT
+  ON_LEAVE
+  ABSENT
+  HALF_DAY
+  HOLIDAY
+}
+
+enum LeaveStatus {
+  PENDING_MANAGER
+  PENDING_HR
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum TimesheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum ReviewStatus {
+  SELF_REVIEW
+  MANAGER_REVIEW
+  HR_REVIEW
+  FINALIZED
+}
+
+model Department {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  code      String?      @unique
+  /// Employee who heads the department.
+  headId    String?
+  active    Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  head      Employee?    @relation("DepartmentHead", fields: [headId], references: [id], onDelete: SetNull)
+  teams     Team[]
+  employees Employee[]   @relation("EmployeeDepartment")
+}
+
+model Team {
+  id           String     @id @default(cuid())
+  name         String
+  departmentId String?
+  leadId       String?
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  lead         Employee?  @relation("TeamLead", fields: [leadId], references: [id], onDelete: SetNull)
+  employees    Employee[] @relation("EmployeeTeam")
+
+  @@unique([departmentId, name])
+}
+
+/// Office with a geofence used to evaluate check-in location (only when the attendance policy collects location).
+model OfficeLocation {
+  id          String            @id @default(cuid())
+  name        String            @unique
+  address     String?
+  latitude    Decimal?          @db.Decimal(9, 6)
+  longitude   Decimal?          @db.Decimal(9, 6)
+  /// Geofence radius in metres.
+  radiusM     Int               @default(200)
+  timezone    String            @default("Asia/Kolkata")
+  /// A "Remote" location: no geofence.
+  remote      Boolean           @default(false)
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  employees   Employee[]
+  shifts      Shift[]
+  attendance  AttendanceDay[]
+  holidays    Holiday[]
+}
+
+model Shift {
+  id              String          @id @default(cuid())
+  name            String          @unique
+  /// Local wall-clock "HH:MM" in the shift's time zone.
+  startTime       String
+  endTime         String
+  graceMinutes    Int             @default(10)
+  breakMinutes    Int             @default(60)
+  /// ISO weekdays 1 (Mon) … 7 (Sun).
+  weekDays        Int[]           @default([1, 2, 3, 4, 5])
+  timezone        String          @default("Asia/Kolkata")
+  officeId        String?
+  remoteEligible  Boolean         @default(true)
+  active          Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  office          OfficeLocation? @relation(fields: [officeId], references: [id], onDelete: SetNull)
+  employees       Employee[]
+}
+
+model Employee {
+  id                  String           @id @default(cuid())
+  /// Human-readable id, e.g. SHV-E-0001.
+  employeeCode        String           @unique
+  /// Login account (optional: not every employee signs in).
+  userId              String?          @unique
+  fullName            String
+  photoUrl            String?
+  gender              String?
+  dateOfBirth         DateTime?        @db.Date
+  personalEmail       String?
+  workEmail           String?          @unique
+  personalPhone       String?
+  emergencyName       String?
+  emergencyPhone      String?
+  emergencyRelation   String?
+  departmentId        String?
+  teamId              String?
+  designation         String?
+  jobTitle            String?
+  employmentType      EmploymentType   @default(FULL_TIME)
+  status              EmploymentStatus @default(ACTIVE)
+  joiningDate         DateTime?        @db.Date
+  probationStart      DateTime?        @db.Date
+  probationEnd        DateTime?        @db.Date
+  exitDate            DateTime?        @db.Date
+  managerId           String?
+  officeId            String?
+  workMode            WorkMode         @default(OFFICE)
+  shiftId             String?
+  timezone            String?
+  /// Weekly working days (ISO 1–7) when no shift is set.
+  workingDays         Int[]            @default([1, 2, 3, 4, 5])
+  archivedAt          DateTime?
+  createdById         String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  user                User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  department          Department?      @relation("EmployeeDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
+  team                Team?            @relation("EmployeeTeam", fields: [teamId], references: [id], onDelete: SetNull)
+  manager             Employee?        @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
+  reports             Employee[]       @relation("EmployeeManager")
+  office              OfficeLocation?  @relation(fields: [officeId], references: [id], onDelete: SetNull)
+  shift               Shift?           @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  headOf              Department[]     @relation("DepartmentHead")
+  leads               Team[]           @relation("TeamLead")
+  compensation        EmployeeCompensation[]
+  documents           EmployeeDocument[]
+  attendance          AttendanceDay[]
+  attendanceEvents    AttendanceEvent[]
+  locationPings       LocationPing[]
+  leaveBalances       LeaveBalance[]
+  leaveRequests       LeaveRequest[]
+  timesheets          Timesheet[]
+  goals               PerformanceGoal[]
+  reviews             PerformanceReview[]
+
+  @@index([status])
+  @@index([departmentId])
+  @@index([teamId])
+  @@index([managerId])
+  @@index([officeId])
+  @@index([archivedAt, status])
+}
+
+/// Compensation history. Readable only with compensation:view; every read is audited.
+model EmployeeCompensation {
+  id              String    @id @default(cuid())
+  employeeId      String
+  salary          Decimal   @db.Decimal(14, 2)
+  /// ANNUAL | MONTHLY | HOURLY | DAILY
+  salaryType      String    @default("ANNUAL")
+  currency        Currency  @default(INR)
+  /// MONTHLY | BIWEEKLY | WEEKLY
+  payFrequency    String    @default("MONTHLY")
+  bonus           Decimal?  @db.Decimal(14, 2)
+  commission      String?
+  joiningBonus    Decimal?  @db.Decimal(14, 2)
+  effectiveFrom   DateTime  @db.Date
+  notes           String?
+  createdById     String?
+  createdAt       DateTime  @default(now())
+  employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, effectiveFrom])
+}
+
+/// HR documents. Files are stored privately and only served through an authorised, audited route.
+model EmployeeDocument {
+  id           String    @id @default(cuid())
+  employeeId   String
+  /// OFFER_LETTER | EMPLOYMENT_AGREEMENT | NDA | ID_DOCUMENT | CERTIFICATE | PAYSLIP | OTHER
+  kind         String
+  name         String
+  storageKey   String
+  mimeType     String
+  size         Int
+  /// Visible to the employee in self-service.
+  employeeVisible Boolean @default(true)
+  uploadedById String?
+  createdAt    DateTime  @default(now())
+  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, kind])
+}
+
+/// One row per employee per local work date.
+model AttendanceDay {
+  id            String           @id @default(cuid())
+  employeeId    String
+  /// Local work date (employee's time zone) at 00:00 UTC.
+  date          DateTime         @db.Date
+  status        AttendanceStatus @default(NOT_CHECKED_IN)
+  checkInAt     DateTime?
+  checkOutAt    DateTime?
+  breakMinutes  Int              @default(0)
+  workMinutes   Int              @default(0)
+  lateMinutes   Int              @default(0)
+  earlyCheckout Boolean          @default(false)
+  halfDay       Boolean          @default(false)
+  workMode      WorkMode?
+  officeId      String?
+  /// INSIDE | OUTSIDE | NO_LOCATION | NOT_REQUIRED (at check-in)
+  geofence      String?
+  source        String?
+  lastActivityAt DateTime?
+  note          String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  employee      Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  office        OfficeLocation?  @relation(fields: [officeId], references: [id], onDelete: SetNull)
+  events        AttendanceEvent[]
+
+  @@unique([employeeId, date])
+  @@index([date, status])
+}
+
+model AttendanceEvent {
+  id          String         @id @default(cuid())
+  employeeId  String
+  dayId       String
+  /// CHECK_IN | BREAK_START | BREAK_END | CHECK_OUT | OVERRIDE
+  type        String
+  at          DateTime       @default(now())
+  /// WEB | MOBILE | QR | ADMIN_OVERRIDE
+  method      String         @default("WEB")
+  ip          String?
+  device      String?
+  browser     String?
+  os          String?
+  latitude    Decimal?       @db.Decimal(9, 6)
+  longitude   Decimal?       @db.Decimal(9, 6)
+  accuracyM   Int?
+  distanceM   Int?
+  geofence    String?
+  actorId     String?
+  note        String?
+  employee    Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  day         AttendanceDay  @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, at])
+  @@index([dayId, at])
+}
+
+/// Periodic work-location updates, only while checked in, only under the PERIODIC policy, always visible to the employee.
+model LocationPing {
+  id          String   @id @default(cuid())
+  employeeId  String
+  at          DateTime @default(now())
+  latitude    Decimal  @db.Decimal(9, 6)
+  longitude   Decimal  @db.Decimal(9, 6)
+  accuracyM   Int?
+  distanceM   Int?
+  geofence    String?
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, at])
+  @@index([at])
+}
+
+model LeaveType {
+  id                 String         @id @default(cuid())
+  name               String         @unique
+  code               String         @unique
+  /// Days granted per calendar year.
+  annualQuota        Decimal        @default(0) @db.Decimal(5, 1)
+  paid               Boolean        @default(true)
+  requiresHrApproval Boolean        @default(false)
+  active             Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  balances           LeaveBalance[]
+  requests           LeaveRequest[]
+}
+
+model LeaveBalance {
+  id          String    @id @default(cuid())
+  employeeId  String
+  leaveTypeId String
+  year        Int
+  allocated   Decimal   @db.Decimal(5, 1)
+  used        Decimal   @default(0) @db.Decimal(5, 1)
+  updatedAt   DateTime  @updatedAt
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, leaveTypeId, year])
+}
+
+model LeaveRequest {
+  id              String      @id @default(cuid())
+  employeeId      String
+  leaveTypeId     String
+  startDate       DateTime    @db.Date
+  endDate         DateTime    @db.Date
+  halfDay         Boolean     @default(false)
+  days            Decimal     @db.Decimal(5, 1)
+  reason          String?
+  status          LeaveStatus @default(PENDING_MANAGER)
+  managerId       String?
+  managerDecidedAt DateTime?
+  managerNote     String?
+  hrId            String?
+  hrDecidedAt     DateTime?
+  hrNote          String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  employee        Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType       LeaveType   @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict)
+
+  @@index([employeeId, startDate])
+  @@index([status, startDate])
+}
+
+model Holiday {
+  id        String          @id @default(cuid())
+  date      DateTime        @db.Date
+  name      String
+  /// null = every office.
+  officeId  String?
+  optional  Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  office    OfficeLocation? @relation(fields: [officeId], references: [id], onDelete: Cascade)
+
+  @@unique([date, officeId])
+  @@index([date])
+}
+
+model Timesheet {
+  id          String          @id @default(cuid())
+  employeeId  String
+  projectId   String?
+  taskId      String?
+  date        DateTime        @db.Date
+  startAt     DateTime?
+  endAt       DateTime?
+  minutes     Int
+  billable    Boolean         @default(true)
+  notes       String?
+  status      TimesheetStatus @default(SUBMITTED)
+  decidedById String?
+  decidedAt   DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  employee    Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  project     Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  task        Task?           @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([employeeId, date])
+  @@index([projectId, date])
+  @@index([status, date])
+}
+
+model PerformanceGoal {
+  id          String    @id @default(cuid())
+  employeeId  String
+  objective   String
+  keyResult   String?
+  target      Decimal?  @db.Decimal(14, 2)
+  current     Decimal   @default(0) @db.Decimal(14, 2)
+  unit        String?
+  dueDate     DateTime? @db.Date
+  /// NOT_STARTED | ON_TRACK | AT_RISK | OFF_TRACK | ACHIEVED | CANCELLED
+  status      String    @default("NOT_STARTED")
+  managerId   String?
+  projectId   String?
+  dealId      String?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, status])
+}
+
+model PerformanceReview {
+  id               String       @id @default(cuid())
+  employeeId       String
+  /// MONTHLY | QUARTERLY | HALF_YEAR | ANNUAL
+  period           String
+  periodStart      DateTime     @db.Date
+  periodEnd        DateTime     @db.Date
+  status           ReviewStatus @default(SELF_REVIEW)
+  achievements     String?      @db.Text
+  selfComments     String?      @db.Text
+  managerComments  String?      @db.Text
+  developmentAreas String?      @db.Text
+  hrComments       String?      @db.Text
+  /// Optional 1–5 rating set by the manager; never computed automatically.
+  rating           Int?
+  reviewerId       String?
+  finalizedAt      DateTime?
+  createdById      String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  employee         Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, period, periodStart])
+  @@index([status])
+}
+
+model Announcement {
+  id          String    @id @default(cuid())
+  title       String
+  body        String    @db.Text
+  departmentId String?
+  publishedAt DateTime  @default(now())
+  expiresAt   DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+
+  @@index([publishedAt])
+}
+
+/// Explicit role → permission grants/revocations layered on the code defaults (Super Admin is never overridable).
+model RolePermission {
+  id         String   @id @default(cuid())
+  role       Role
+  permission String
+  granted    Boolean
+  updatedById String?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([role, permission])
+}
+
+// ═════════════════════════ WEBSITE VISITOR INTELLIGENCE (additive) ═════════════════════════
+// First-party, consent-aware. No names, emails or phones are ever inferred from anonymous browsing.
+
+model Visitor {
+  id              String    @id @default(cuid())
+  /// Random first-party id from the shivacha_visitor_id cookie (never contains personal data).
+  anonId          String    @unique
+  firstSeenAt     DateTime  @default(now())
+  lastSeenAt      DateTime  @default(now())
+  sessionsCount   Int       @default(0)
+  pageViews       Int       @default(0)
+  totalSeconds    Int       @default(0)
+  firstPage       String?
+  lastPage        String?
+  /// Approximate, IP-derived (city-level at most).
+  country         String?
+  region          String?
+  city            String?
+  device          String?
+  browser         String?
+  os              String?
+  language        String?
+  timezone        String?
+  firstSource     String?
+  firstMedium     String?
+  firstCampaign   String?
+  lastSource      String?
+  lastMedium      String?
+  lastCampaign    String?
+  companyId       String?
+  intentScore     Int       @default(0)
+  /// LOW | MEDIUM | HIGH
+  intentLabel     String    @default("LOW")
+  /// [{ signal, points, detail }] — why the score is what it is.
+  intentSignals   Json?
+  /// Set only after the visitor voluntarily submits a first-party form.
+  leadId          String?
+  identifiedAt    DateTime?
+  isBot           Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  company         VisitorCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  lead            Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  sessions        VisitorSession[]
+  events          VisitorEvent[]
+  alerts          VisitorAlert[]
+
+  @@index([lastSeenAt])
+  @@index([intentScore])
+  @@index([leadId])
+  @@index([companyId])
+  @@index([country])
+}
+
+model VisitorSession {
+  id           String    @id @default(cuid())
+  /// Random id from the shivacha_session_id cookie.
+  sessionKey   String    @unique
+  visitorId    String
+  startedAt    DateTime  @default(now())
+  lastSeenAt   DateTime  @default(now())
+  endedAt      DateTime?
+  landingPage  String?
+  currentPage  String?
+  previousPage String?
+  referrer     String?
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  utmTerm      String?
+  utmContent   String?
+  /// Derived channel: source/medium (utm, referrer host or "direct").
+  source       String?
+  medium       String?
+  device       String?
+  browser      String?
+  os           String?
+  screen       String?
+  language     String?
+  timezone     String?
+  country      String?
+  region       String?
+  city         String?
+  pageViews    Int       @default(0)
+  events       Int       @default(0)
+  visitor      Visitor   @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  eventRows    VisitorEvent[]
+
+  @@index([visitorId, startedAt])
+  @@index([lastSeenAt])
+  @@index([startedAt])
+  @@index([source, medium])
+  @@index([utmCampaign])
+}
+
+model VisitorEvent {
+  id        String         @id @default(cuid())
+  visitorId String
+  sessionId String
+  /// page_view | cta_click | form_start | form_submit | calendly_click | whatsapp_click | phone_click | email_click | download | search | interaction
+  type      String
+  path      String?
+  title     String?
+  label     String?
+  data      Json?
+  at        DateTime       @default(now())
+  visitor   Visitor        @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  session   VisitorSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([visitorId, at])
+  @@index([sessionId, at])
+  @@index([type, at])
+  @@index([path, at])
+  @@index([at])
+}
+
+/// Organisation match returned by an approved intelligence provider. Never fabricated; absent when there is no reliable match.
+model VisitorCompany {
+  id          String    @id @default(cuid())
+  /// provider:key (e.g. ipinfo:acme.com)
+  providerKey String    @unique
+  provider    String
+  name        String
+  domain      String?
+  industry    String?
+  country     String?
+  city        String?
+  asn         String?
+  sizeRange   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  visitors    Visitor[]
+
+  @@index([name])
+}
+
+model VisitorAlertRule {
+  id          String    @id @default(cuid())
+  name        String
+  active      Boolean   @default(true)
+  /// { countries?, industries?, pathContains?, minIntent?, returning?, identifiedCompany? }
+  conditions  Json
+  /// NOTIFY | CREATE_TASK
+  action      String    @default("NOTIFY")
+  /// Permission whose holders are notified (e.g. leads:view).
+  notifyPermission String? 
+  assigneeId  String?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  alerts      VisitorAlert[]
+}
+
+model VisitorAlert {
+  id        String           @id @default(cuid())
+  ruleId    String
+  visitorId String
+  /// yyyy-mm-dd — one alert per rule, visitor and day.
+  day       String
+  summary   String
+  createdAt DateTime         @default(now())
+  rule      VisitorAlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  visitor   Visitor          @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
+  @@unique([ruleId, visitorId, day])
+  @@index([createdAt])
+}
+
+// ═════════════════════════ VOICE (additive) ═════════════════════════
+// Voice is an interface over the existing orchestrator (runAgent). Raw audio is never stored.
+
+model VoiceSession {
+  id              String    @id @default(cuid())
+  userId          String
+  agentSlug       String
+  /// browser | openai
+  provider        String
+  /// CONNECTING | ACTIVE | ENDED | ERROR
+  status          String    @default("ACTIVE")
+  language        String?
+  conversationId  String?
+  /// Page/record the call started from, e.g. { entity: "Lead", id }.
+  context         Json?
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  durationSec     Int       @default(0)
+  audioInSec      Int       @default(0)
+  audioOutChars   Int       @default(0)
+  inputTokens     Int       @default(0)
+  outputTokens    Int       @default(0)
+  costUsd         Decimal   @default(0) @db.Decimal(12, 6)
+  voiceCostUsd    Decimal   @default(0) @db.Decimal(12, 6)
+  summary         String?   @db.Text
+  error           String?
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages        VoiceMessage[]
+
+  @@index([userId, startedAt])
+  @@index([agentSlug, startedAt])
+  @@index([startedAt])
+}
+
+model VoiceMessage {
+  id           String       @id @default(cuid())
+  sessionId    String
+  /// user | assistant | system
+  role         String
+  text         String       @db.Text
+  executionId  String?
+  /// Tools, approvals and tasks this turn produced.
+  data         Json?
+  latencyMs    Int?
+  interrupted  Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  session      VoiceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+/// Per-AI-employee voice identity. Only stock provider voices; no voice cloning.
+model AIEmployeeVoiceProfile {
+  id        String   @id @default(cuid())
+  agentSlug String   @unique
+  provider  String   @default("browser")
+  voiceId   String?
+  language  String   @default("en-IN")
+  accent    String?
+  rate      Decimal  @default(1) @db.Decimal(3, 2)
+  style     String?
+  updatedAt DateTime @updatedAt
 }

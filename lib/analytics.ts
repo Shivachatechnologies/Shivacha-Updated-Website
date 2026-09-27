@@ -52,6 +52,8 @@ export function track(event: AnalyticsEvent, props: Props = {}) {
   try {
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({ event, ...props });
+    // First-party visitor intelligence (components/layout/VisitorTracker) listens for this; it records nothing without consent.
+    window.dispatchEvent(new CustomEvent("shv:track", { detail: { event, props } }));
     window.gtag?.("event", event, props);
     if (event === "generate_lead" || event === "contact_submit" || event === "demo_request") {
       window.fbq?.("track", "Lead", props);

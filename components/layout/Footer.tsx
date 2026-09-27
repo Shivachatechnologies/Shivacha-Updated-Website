@@ -23,6 +23,7 @@ const legalLinks = [
   ["Privacy", "/privacy-policy"],
   ["Terms", "/terms"],
   ["Cookies", "/cookie-policy"],
+  ["Cookie choices", "/cookie-policy#cookie-choices"],
   ["Security", "/security"],
   ["Disclaimer", "/disclaimer"],
   ["Accessibility", "/accessibility"],
