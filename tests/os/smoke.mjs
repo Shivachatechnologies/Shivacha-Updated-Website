@@ -24,7 +24,7 @@ const DEFAULT = [
   "/admin/support", "/admin/support/new", "/admin/knowledge", "/admin/knowledge/new",
   "/admin/ai", "/admin/ai/agents", "/admin/ai/approvals", "/admin/ai/tasks", "/admin/ai/insights", "/admin/ai/costs", "/admin/ai/logs",
   "/admin/automations", "/admin/automations/new", "/admin/automations/runs", "/admin/automations/failures",
-  "/admin/reports", "/admin/performance", "/admin/integrations", "/admin/security", "/admin/system",
+  "/admin/reports", "/admin/reports/leads", "/admin/reports/deals", "/admin/reports/revenue", "/admin/reports/receivables", "/admin/reports/projects", "/admin/reports/support", "/admin/reports/marketing", "/admin/reports/ai-usage", "/admin/performance", "/admin/integrations", "/admin/security", "/admin/security?tab=sessions", "/admin/security?tab=users", "/admin/security?tab=events", "/admin/system", "/admin/account", "/admin/ai/agents/sales", "/help",
   "/admin/settings", "/admin/settings/features", "/admin/users", "/admin/audit-logs",
   "/admin/services", "/admin/products", "/admin/pages", "/admin/blog", "/admin/case-studies", "/admin/industries", "/admin/technologies", "/admin/faqs", "/admin/media", "/admin/navigation", "/admin/seo", "/admin/redirects",
 ];
