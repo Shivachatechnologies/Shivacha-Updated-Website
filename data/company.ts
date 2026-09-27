@@ -31,7 +31,8 @@ export const companyPages: CompanyPage[] = [
       {
         heading: "Who we are",
         body: [
-          "Shivacha Technologies was founded in 2024. The company began with a focus on blockchain engineering and has grown into a technology company organised around five divisions: Shivacha AI, Shivacha Digital, Shivacha FinTech, Shivacha Web3 and Shivacha Cloud.",
+          "Shivacha Technologies was founded in 2024. The company began with a focus on blockchain engineering and has grown into a global product engineering and infrastructure partner organised around five divisions — Shivacha Web3, Shivacha FinTech, Shivacha Digital Assets, Shivacha AI and Shivacha Cloud — supported by a product engineering practice for web, mobile and SaaS.",
+          "Our differentiators are high-end engineering, white-label products, ready-to-launch infrastructure, rapid implementation, custom engineering and dedicated teams: clients can start from a production-ready foundation instead of building an entire platform from scratch.",
           "We work remotely with companies worldwide — startups, scaleups and enterprises — across financial services, SaaS, commerce, real estate, logistics, healthcare and the public sector.",
         ],
       },

@@ -15,6 +15,8 @@ import { divisionTone } from "@/components/ui/division";
 import { HybridFintechDiagram } from "@/components/visuals/HybridFintechDiagram";
 import { serviceSchema } from "@/lib/jsonld";
 import { cn } from "@/lib/cn";
+import { LAUNCH_DISCLAIMER, launchFor } from "@/data/launch";
+import { PlatformCard } from "@/components/sections/Launch";
 import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toIndustryLink, nonNull } from "./mappers";
 
 export function CapabilityTemplate({ cap, division }: { cap: Capability; division: Division }) {
@@ -26,6 +28,10 @@ export function CapabilityTemplate({ cap, division }: { cap: Capability; divisio
   const cases = caseStudiesByDivision(division.id);
   const insights = relatedInsights({ division: division.id, technologies: cap.technologies }, 3);
   const resources = relatedResources({ division: division.id }, 3);
+  const platforms = productsForDivision(division.id)
+    .map((p) => ({ product: p, launch: launchFor(p.slug) }))
+    .filter((x): x is { product: typeof x.product; launch: NonNullable<typeof x.launch> } => !!x.launch)
+    .slice(0, 6);
 
   return (
     <>
@@ -69,6 +75,45 @@ export function CapabilityTemplate({ cap, division }: { cap: Capability; divisio
           </dl>
         </div>
       </Section>
+
+      {/* Flagships & launch timelines */}
+      <Section id="launch">
+        <div className="grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-start">
+          <div>
+            <SectionHeader eyebrow="Flagship offerings" title={`What ${division.name} launches.`} className="mb-6" />
+            <ul className="flex flex-wrap gap-2">
+              {division.flagships.map((f) => (
+                <li key={f} className={cn("rounded-full border px-3 py-1.5 text-sm", tone.border, "text-fg")}>
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="card p-6">
+            <p className="eyebrow mb-4">Typical implementation</p>
+            <dl className="space-y-3">
+              {division.launch.map(([what, range]) => (
+                <div key={what} className="flex items-baseline justify-between gap-4 border-b border-line pb-3 last:border-0 last:pb-0">
+                  <dt className="text-[15px] text-muted">{what}</dt>
+                  <dd className="shrink-0 text-lg font-semibold text-fg tabular-nums">{range}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-5 text-xs leading-relaxed text-dim">{LAUNCH_DISCLAIMER}</p>
+          </div>
+        </div>
+      </Section>
+
+      {platforms.length > 0 && (
+        <Section id="platforms">
+          <SectionHeader eyebrow="White-label platforms" title="Ready-to-launch foundations." action={{ label: "All products", href: `/products?category=${division.id}` }} />
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {platforms.map(({ product, launch }) => (
+              <PlatformCard key={product.slug} product={product} launch={launch} />
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* Problems */}
       <Section>
@@ -149,7 +194,7 @@ export function CapabilityTemplate({ cap, division }: { cap: Capability; divisio
         <ProcessSteps steps={cap.approach} />
       </Section>
 
-      <RelatedSection eyebrow="Products" title={`Ready-to-launch ${division.short} platforms`} items={[...products, ...moreProducts].slice(0, 3).map(toProductItem)} action={{ label: "All products", href: "/products" }} />
+      {platforms.length === 0 && (<RelatedSection eyebrow="Products" title={`Ready-to-launch ${division.short} platforms`} items={[...products, ...moreProducts].slice(0, 3).map(toProductItem)} action={{ label: "All products", href: "/products" }} />)}
 
       <Section>
         <SectionHeader eyebrow="Technology" title="Our stack for this practice" action={{ label: "Technology directory", href: "/technologies" }} />

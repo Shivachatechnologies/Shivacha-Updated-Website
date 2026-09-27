@@ -1,4 +1,5 @@
 import type { Team } from "@/data/types";
+import { lowerName } from "@/lib/cn";
 import { engagementModels, teamPrinciples, teams } from "@/data/teams";
 import { pick } from "@/lib/relations";
 import { serviceSchema } from "@/lib/jsonld";
@@ -106,7 +107,7 @@ export function TeamTemplate({ team }: { team: Team }) {
       <RelatedSection eyebrow="Services" title="What this team delivers" items={services.map(toServiceItem)} />
       <RelatedSection eyebrow="Related teams" title="Often combined with" items={others.map(toTeamItem)} />
       <FAQ items={team.faqs} />
-      <CTABand title="Build your engineering team." lede={`Tell us what your ${team.name.toLowerCase()} should own and we will propose a composition.`} primary={{ label: "Build This Team", href: hireHref }} secondary={{ label: "Talk to an Engineering Advisor", href: "/book-a-meeting?topic=engineering-advisor" }} />
+      <CTABand title="Build your engineering team." lede={`Tell us what your ${lowerName(team.name)} should own and we will propose a composition.`} primary={{ label: "Build This Team", href: hireHref }} secondary={{ label: "Talk to an Engineering Advisor", href: "/book-a-meeting?topic=engineering-advisor" }} />
     </>
   );
 }

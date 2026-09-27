@@ -56,7 +56,7 @@ export const guideInsights: Insight[] = [
         heading: "How to get an estimate you can trust",
         body: [
           "Write down the users, the core flows, the assets involved and the chains you are considering. Separate the must-haves for launch from later phases. Then ask for an estimate expressed as team, duration and assumptions — not just a total — so you can see what is included and challenge it.",
-          "A short paid discovery phase is often the cheapest way to reduce risk: it produces an architecture, a threat model and a phased plan, and the estimate that follows is far more reliable.",
+          "A short discovery phase is often the most effective way to reduce risk: it produces an architecture, a threat model and a phased plan, and the estimate that follows is far more reliable.",
         ],
       },
     ],
@@ -66,7 +66,7 @@ export const guideInsights: Insight[] = [
     cta: { label: "Discuss Your Blockchain Project", service: "Blockchain Development" },
     faqs: faqs([
       ["Is a smart contract audit included in development cost?", "Usually not. Independent audits are performed and invoiced by a separate audit firm. We prepare the code and documentation and fix findings."],
-      ["What is the cheapest way to start?", "A focused MVP on one chain, built on standard contracts, with non-launch features deferred. A discovery phase first keeps scope honest."],
+      ["What is the fastest low-risk way to start?", "A white-label foundation or a focused MVP on one chain, built on standard contracts, with non-launch features deferred. A discovery phase first keeps scope honest."],
     ]),
   },
   {

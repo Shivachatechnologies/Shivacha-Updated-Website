@@ -2,9 +2,63 @@ import { prod } from "./_builder";
 
 export const web3Products = [
   prod({
+    slug: "p2p-trading-platform",
+    name: "Shivacha P2P",
+    division: "digital-assets",
+    category: "Exchange",
+    tagline: "A white-label peer-to-peer crypto trading platform with escrow, disputes and merchant tools.",
+    description:
+      "A production-ready P2P trading platform: buy and sell ads, escrow-backed trades, local payment methods, chat, dispute resolution, merchant tiers, reputation and a complete admin console.",
+    problem:
+      "P2P markets depend on trust. Without reliable escrow, clear dispute workflows, fraud controls and reputation, a P2P platform quickly attracts scams and loses users.",
+    solution:
+      "Shivacha P2P provides escrow-backed trade flows, configurable payment methods per market, in-trade chat with evidence capture, dispute tooling for support teams and risk controls — branded and configured for your markets.",
+    modules: [
+      "Ads & order book|Buy/sell ads with price, limits, payment methods and terms.",
+      "Escrow|Assets locked in escrow from trade start until release or dispute outcome.",
+      "Trade chat|In-trade messaging with attachments and evidence capture.",
+      "Disputes|Case management, evidence review and resolution workflows for support teams.",
+      "Merchants & reputation|Verified merchant tiers, completion rates and feedback.",
+      "Admin & risk|Limits, payment-method rules, fraud signals, reporting and audit trail.",
+    ],
+    features: [
+      "Escrow-backed trades with timeouts",
+      "Configurable local payment methods per country",
+      "In-trade chat with file evidence",
+      "Dispute resolution console",
+      "Merchant verification tiers and badges",
+      "KYC integration and trade limits by tier",
+      "Wallet integration for escrow and balances",
+      "Web and mobile apps",
+    ],
+    useCases: [
+      "Standalone P2P marketplace|Local fiat-to-crypto trading in markets with limited on-ramps.",
+      "Exchange add-on|P2P module alongside spot trading.",
+      "Wallet add-on|Peer-to-peer buy and sell inside a wallet app.",
+      "Merchant networks|Verified merchants serving regional liquidity.",
+    ],
+    architecture: [
+      { name: "Apps", items: ["Web", "iOS", "Android", "Admin"] },
+      { name: "Trade services", items: ["Ads", "Matching", "Escrow", "Chat"] },
+      { name: "Trust & risk", items: ["KYC", "Limits", "Disputes", "Reputation"] },
+      { name: "Wallets & ledger", items: ["Escrow wallets", "Balances", "Reconciliation"] },
+    ],
+    technologies: ["go", "postgresql", "redis", "kafka", "react", "ethereum"],
+    integrations: ["KYC providers", "Custody / wallet infrastructure", "Screening providers", "Notification services"],
+    industries: ["fintech", "payments", "startups"],
+    services: ["p2p-exchange-development", "exchange-wallet-infrastructure", "exchange-admin-platform"],
+    related: ["crypto-exchange", "crypto-wallet", "digital-asset-platform"],
+    faq: [
+      ["Does Shivacha act as the escrow agent?", "No. The platform's escrow logic locks assets in wallets you control or your custody provider holds. The operator is responsible for the service and its regulatory position."],
+      ["Which payment methods are supported?", "Payment methods are configurable per market (bank transfer, mobile money, local wallets). Fiat never moves through the platform; buyers and sellers pay each other directly."],
+      ["Can P2P run alongside our exchange?", "Yes. It can be deployed standalone or as a module sharing users, wallets and KYC with Shivacha Exchange."],
+    ],
+    preview: "exchange",
+  }),
+  prod({
     slug: "crypto-exchange",
     name: "Shivacha Exchange",
-    division: "web3",
+    division: "digital-assets",
     category: "Exchange",
     tagline: "A configurable exchange platform: matching engine, wallets, liquidity and admin.",
     description:
@@ -20,6 +74,9 @@ export const web3Products = [
       "Liquidity engine|Market-maker APIs and external venue connectivity.",
       "Compliance integrations|KYC, wallet screening, travel rule and surveillance hooks.",
       "Admin platform|Users, pairs, withdrawals, treasury, fees and reporting.",
+      "P2P & fiat on/off-ramp|Optional P2P desk and fiat rails via banking or ramp partners.",
+      "Staking & launchpad|Optional staking products and token launchpad modules.",
+      "Security architecture|Hot/cold wallet tiers, withdrawal approvals, rate limits, 2FA and full audit trails.",
     ],
     features: [
       "Spot trading with advanced order types",
@@ -30,6 +87,8 @@ export const web3Products = [
       "Fiat rails via banking partners",
       "Granular admin permissions and audit",
       "Optional P2P and brokerage modules",
+      "Native iOS and Android trading apps",
+      "Staking and launchpad add-ons",
     ],
     useCases: [
       "Regional exchange|Serving a specific market with licensed partners.",
@@ -49,6 +108,7 @@ export const web3Products = [
     services: ["crypto-exchange-development", "exchange-matching-engine", "exchange-wallet-infrastructure", "exchange-admin-platform"],
     related: ["crypto-wallet", "digital-asset-platform", "defi-platform", "web3-neobank"],
     faq: [
+      ["How long does a white-label crypto exchange take?", "White-label implementation typically takes three to four weeks for a defined configuration; advanced custom exchanges take four to eight weeks or more depending on scope. Licensing, banking, custody and liquidity onboarding are separate and can take longer."],
       ["Is this a white-label script?", "No. It is an engineered platform delivered into your environment with documentation and extensibility, and configured for your requirements."],
       ["Does it include licences or liquidity?", "No. Licensing is your responsibility; liquidity is provided by market makers and partners integrated into the platform."],
       ["Can we add derivatives later?", "Yes — derivatives modules can be added with the required risk engines."],
@@ -58,7 +118,7 @@ export const web3Products = [
   prod({
     slug: "crypto-wallet",
     name: "Shivacha Crypto Wallet",
-    division: "web3",
+    division: "digital-assets",
     category: "Wallet",
     tagline: "Custodial or MPC wallets for fintech products and exchanges.",
     description:
@@ -84,6 +144,10 @@ export const web3Products = [
       "Daily reconciliation",
       "Operations console",
       "APIs and webhooks",
+      "Swap, send and receive",
+      "Transaction history and token management",
+      "White-label iOS and Android apps",
+      "Security controls: device binding, 2FA, anti-phishing codes",
     ],
     useCases: [
       "Fintech crypto feature|Digital assets inside a financial app.",
@@ -103,6 +167,7 @@ export const web3Products = [
     services: ["crypto-wallet-fintech", "custodial-wallet-development", "wallet-infrastructure"],
     related: ["web3-wallet", "hybrid-wallet", "crypto-exchange", "digital-asset-platform"],
     faq: [
+      ["How long does a white-label crypto wallet take?", "Typical software implementation is two to three weeks for a defined configuration (branding, chains, custody provider, standard swap). Additional chains, custom modules or new custody providers extend this. Custody and screening provider contracts are arranged separately."],
       ["Does Shivacha hold keys?", "No. Keys are held by custodians, MPC providers or your organisation."],
       ["How many chains are supported?", "Major networks are supported through chain adapters; additional networks can be added."],
       ["Can users self-custody?", "For self-custody, see the Shivacha Web3 Wallet."],
@@ -138,6 +203,10 @@ export const web3Products = [
       "Custodian integration",
       "Cap table and registry",
       "Reporting and exports",
+      "Asset onboarding workflows",
+      "Investor dashboard and ownership records",
+      "Wallet integration and transfers",
+      "Optional secondary marketplace module",
     ],
     useCases: [
       "Fund tokenization|Tokenized fund units.",
@@ -157,7 +226,8 @@ export const web3Products = [
     services: ["rwa-tokenization", "security-token-development", "fund-tokenization", "real-estate-tokenization"],
     related: ["tokenization-platform", "digital-asset-platform", "crypto-exchange"],
     faq: [
-      ["Does the platform make an offering legal?", "No. Legal structuring and regulatory approvals must come from qualified advisors; the platform encodes the rules they define."],
+      ["Does the platform make an offering legal?", "No. Legal structuring and regulatory approvals must come from qualified advisors; the platform encodes the rules they define. Shivacha makes no claim about securities compliance in any jurisdiction."],
+      ["How long does implementation take?", "For a defined platform scope, typical software implementation is three to five weeks. Legal structuring, custody arrangements, regulatory approvals and any smart contract audit run on separate timelines."],
       ["Which networks are supported?", "EVM networks such as Ethereum, Polygon and Base, and permissioned networks on request."],
       ["Can lost tokens be recovered?", "Yes, through issuer-controlled recovery under defined governance."],
     ],
@@ -166,7 +236,7 @@ export const web3Products = [
   prod({
     slug: "digital-asset-platform",
     name: "Shivacha Digital Asset Platform",
-    division: "web3",
+    division: "digital-assets",
     category: "Institutional",
     tagline: "Institutional digital asset operations: custody access, policies, trading and reporting.",
     description:
@@ -597,7 +667,7 @@ export const web3Products = [
   prod({
     slug: "web3-launchpad",
     name: "Shivacha Launchpad",
-    division: "web3",
+    division: "digital-assets",
     category: "Token Infrastructure",
     tagline: "Launch infrastructure for projects: allowlists, sale mechanics, vesting and claims.",
     description:

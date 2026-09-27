@@ -14,15 +14,18 @@ export interface ProductCard {
   category: string;
   tagline: string;
   live: boolean;
+  /** Typical software implementation, for white-label products. */
+  timeline?: string;
 }
 
 const tabs: { id: DivisionId | "all"; label: string }[] = [
   { id: "all", label: "All" },
+  { id: "digital-assets", label: "Digital Assets" },
   { id: "fintech", label: "FinTech" },
   { id: "web3", label: "Web3" },
   { id: "ai", label: "AI" },
-  { id: "digital", label: "Digital" },
   { id: "cloud", label: "Cloud" },
+  { id: "digital", label: "Digital" },
 ];
 
 export function ProductMarketplace({ items }: { items: ProductCard[] }) {
@@ -94,6 +97,12 @@ export function ProductMarketplace({ items }: { items: ProductCard[] }) {
               <span className="text-xs text-dim font-semibold">{p.category}</span>
             </div>
             <h3 className="mt-5 text-lg font-semibold text-fg">{p.name}</h3>
+            {p.timeline && (
+              <p className="mt-2 flex flex-wrap gap-1.5">
+                <span className="rounded-full border border-brand-blue/25 bg-brand-blue/[0.07] px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-brand-blue uppercase">White-label</span>
+                <span className="rounded-full border border-line px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-muted uppercase">{p.timeline} typical</span>
+              </p>
+            )}
             <p className="mt-2 text-sm leading-relaxed text-muted">{p.tagline}</p>
             <div className="mt-auto flex items-center justify-between pt-6 text-sm">
               <span className="text-muted group-hover:text-fg">View product</span>

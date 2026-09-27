@@ -66,7 +66,7 @@ export function TalkToShivacha() {
   return (
     <>
       {!hidden && (
-        <div ref={wrap} className="fixed inset-x-0 bottom-0 z-[60] sm:inset-x-auto sm:right-6 sm:bottom-6">
+        <div ref={wrap} data-floating-actions className="fixed inset-x-0 bottom-0 z-[60] sm:inset-x-auto sm:right-6 sm:bottom-6">
           {menu && (
             <div
               role="menu"

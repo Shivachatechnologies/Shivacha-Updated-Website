@@ -28,6 +28,8 @@ npm run build && npm start   # production build
 | `npm run check:content` | Verifies every slug referenced in `/data` resolves and every slug is unique |
 | `npm run check:demos` | Verifies every configured product demo URL responds (https only) |
 | `BASE_URL=http://localhost:3000 npm run test:routes` | Crawls every route against a running server: status, H1, unique metadata, canonical, breadcrumbs, broken internal links |
+| `BASE_URL=http://localhost:3000 npm run qa:layout` | Visual/layout QA: every route at 1440 / 768 / 390 px and one route per template at 12 viewports (1920 → 360). Flags horizontal overflow (naming the culprit element), overlapping text/controls, floating-widget collisions, missing alt, broken image URLs, H1 count and console errors. `-- --full` runs every route at every viewport. Needs Chromium (`CHROME_PATH`, default `/opt/pw-browsers/chromium`). |
+| `npm run test:clock` | Verifies the footer world clock time-zone maths, including US and UK daylight-saving transitions |
 
 ## Route map
 
@@ -76,7 +78,10 @@ The official logo lives in [`public/brand`](public/brand): the original files (`
 
 ## Visual system
 
-- **3D graphics** in `public/graphics/3d-*.{png,jpg}` are rendered offline with three.js from `scripts/graphics/scenes.js` (blockchain, fintech, AI, cloud, devices, globe with our offices, tokenization, security, exchange, API) — no stock imagery. `components/graphics/DivisionArt.tsx` picks a render by division/topic and adds small UI cards; `GlobeHero` (home, company), `RenderMosaic` (index heroes), `Cover` (insights, work) and `TechOrbit` (technology pages) build on them. The site uses a single light theme.
+- **System visuals** (`components/visuals/SystemVisuals.tsx`) are code-drawn product and architecture views that explain how a system works: platform topology (home hero), AI agent run with human approval, payment flow with a balanced ledger entry, Web3 contract → indexer pipeline, multi-region cloud topology, layered security controls and a web + mobile release view. `DivisionArt` picks one by division/topic, so every service, industry, solution, team and hire hero is covered. They use container queries (adapt to any column), transform-only data-flow animation and respect `prefers-reduced-motion`; sample identifiers are labelled *Illustrative*.
+- **Product UIs** (`components/visuals/DashboardPreview.tsx`) render realistic dashboards per product (exchange, wallet, banking, cards, payments, tokenization, AI agents…) with *Illustrative interface · sample data* captions.
+- **3D renders** in `public/graphics/3d-*.{png,jpg}` (rendered offline from `scripts/graphics/scenes.js`) are used for the office globe (company pages), article covers and the CTA band. The site uses a single light theme.
+- **Footer world clock** (`components/layout/WorldClock.tsx`): analog + digital clocks for New York, London, New Delhi, Dubai and Riyadh from the browser's IANA time-zone data (DST automatic, nothing time-dependent rendered on the server).
 - **Technology logos** come from [simple-icons](https://simpleicons.org) (CC0) via `lib/brand/techLogos.ts`; `TechLogo` falls back to a lettermark when a brand has no icon. Logos identify the technologies we build with and imply no partnership.
 - **Icons on cards** are picked automatically from the card title by `components/graphics/autoIcon.tsx` (keyword → Lucide icon), so new data gets sensible icons without extra fields.
 - **Section bands** alternate automatically (`main > section:nth-of-type(even)`); pass `tone="brand"` to `Section` for a dark navy band.
@@ -85,7 +90,8 @@ The official logo lives in [`public/brand`](public/brand): the original files (`
 
 All content types are defined in [`data/types.ts`](data/types.ts). Highlights:
 
-- **Divisions** (`data/capabilities.ts`) — the five divisions, their tagline, colour token and context-specific CTA (e.g. *Discuss Your Financial Platform*).
+- **Divisions** (`data/capabilities.ts`) — the five headline divisions (Web3, FinTech, Digital Assets, AI, Cloud; `primary: true`) plus the Product Engineering practice (`digital`), each with tagline, flagship offerings, premium CTA and typical implementation ranges (`launch`).
+- **Launch data** (`data/launch.ts`) — white-label metadata per product: typical software implementation range, delivery tier, customization level, key modules, SEO title and the homepage *Ready-to-launch platforms* order. `serviceToProduct` links custom-build service pages to their white-label foundation. Every timeline is shown with `LAUNCH_DISCLAIMER`: it covers software implementation only — never licences, banking/card-issuer onboarding, custody/liquidity agreements or audits. Only give a product a timeline when its white-label foundation genuinely supports it.
 - **Service groups** (`data/serviceGroups.ts`) — 33 service areas holding shared context: intro, reference architecture, delivery process, engineering considerations, FAQs, default technologies/industries/products and the matching dedicated team. FinTech groups carry a `track` (**Web2 FinTech**, **Web3 FinTech**, **Hybrid FinTech**) so the three are never merged.
 - **Services** — authored compactly with the `svc()` helper; each has a unique summary (meta description), overview, use cases, capabilities and FAQs, plus optional explicit relations and regulatory notes.
 - **Products** — the `Product` interface from the brief plus problem/solution, feature modules, use cases, architecture and a `preview` kind used to render an illustrative UI in code.

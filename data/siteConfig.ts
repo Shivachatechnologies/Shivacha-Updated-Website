@@ -20,10 +20,10 @@ export const siteConfig = {
     { name: "Shivacha Technologies Limited", country: "United Kingdom", countryCode: "GB" },
   ],
   url: (process.env.NEXT_PUBLIC_SITE_URL || "https://shivacha.com").replace(/\/$/, ""),
-  tagline: "Technology for companies building what comes next.",
+  tagline: "Build. Customize. Launch. Scale.",
   description:
-    "Shivacha builds AI systems, digital products, financial technology, Web3 infrastructure and cloud platforms for ambitious companies worldwide.",
-  shortDescription: "AI. Digital. FinTech. Web3. Cloud.",
+    "Shivacha is a global product engineering and infrastructure partner: white-label and ready-to-launch Web3, digital asset, FinTech, AI and cloud platforms, customised by dedicated engineering teams.",
+  shortDescription: "Web3. Digital Assets. FinTech. AI. Cloud.",
   founded: "2024",
   contact: {
     email: "info@shivacha.com",

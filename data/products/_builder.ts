@@ -7,6 +7,7 @@ const deploymentDefaults: Record<DivisionId, string[]> = {
   digital: ["Your cloud account", "Managed SaaS-style deployment", "On-premises Kubernetes", "Multi-region for high availability"],
   fintech: ["Your cloud account in your chosen region", "Dedicated single-tenant deployment", "Private cloud / on-premises Kubernetes", "Managed deployment with operational support"],
   web3: ["Your cloud account with self-hosted nodes", "Dedicated single-tenant deployment", "Hybrid with custodian-hosted key management", "Managed deployment with monitoring"],
+  "digital-assets": ["Your cloud account in your chosen region", "Dedicated single-tenant deployment", "Hybrid with custodian or MPC-hosted key management", "Managed deployment with 24/7 monitoring options"],
   cloud: ["AWS", "Microsoft Azure", "Google Cloud", "Hybrid and on-premises Kubernetes"],
 };
 
@@ -15,6 +16,7 @@ const customizationDefaults: Record<DivisionId, string[]> = {
   digital: ["White-label branding and themes", "Custom modules and workflows", "Roles, permissions and approval rules", "Integrations with your existing systems", "Localisation and multi-currency"],
   fintech: ["White-label mobile and web apps", "Product, fee and limit configuration", "Partner and provider adapters", "Custom workflows and back-office tools", "Reporting and data exports"],
   web3: ["Network and asset configuration", "Custom smart contract modules", "Compliance and eligibility rules", "White-label interfaces", "Custody and partner integrations"],
+  "digital-assets": ["White-label web, mobile and admin interfaces", "Assets, chains, pairs and fee configuration", "Custody, liquidity and KYC provider adapters", "Custom trading and wallet modules", "Reporting and back-office workflows"],
   cloud: ["Account and network topology", "Policy and guardrail sets", "Toolchain choices", "Service templates", "Alerting and escalation rules"],
 };
 
@@ -22,6 +24,7 @@ const securityDefaults: Record<DivisionId, string[]> = {
   ai: ["Data stays in your environment where required", "Role-based access and document-level permissions", "Prompt-injection and output guardrails", "Full audit logs of prompts, tool calls and outputs", "Encryption in transit and at rest"],
   digital: ["Role-based access control and SSO", "Encryption in transit and at rest", "Audit logs for sensitive actions", "OWASP-aligned secure development", "Automated dependency and container scanning"],
   fintech: ["Double-entry ledger with immutable journal", "Maker-checker controls for sensitive operations", "Encryption, tokenisation and secrets management", "Strong customer authentication and device binding", "Comprehensive audit trails", "Architecture aligned with PCI DSS where card data is involved"],
+  "digital-assets": ["Hot/cold wallet segregation with withdrawal policies and approval quorums", "Custody integration via MPC, multisig or HSM-backed providers", "Double-entry ledger reconciled against on-chain balances", "Role-based admin with maker-checker controls and full audit trails", "Rate limiting, anti-phishing and device-binding controls"],
   web3: ["Audit-ready smart contracts with documented trust assumptions", "Institutional key management via MPC, multisig or HSM integration", "Transaction policies and approval quorums", "On-chain monitoring and alerting", "Pause and incident response controls"],
   cloud: ["Least-privilege IAM", "Policy as code guardrails", "Centralised, tamper-resistant logging", "Encryption by default", "Continuous posture monitoring"],
 };

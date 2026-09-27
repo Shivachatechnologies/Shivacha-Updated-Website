@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { lowerName } from "@/lib/cn";
 import { CheckCircle2 } from "lucide-react";
 import { landingPages, getLanding } from "@/data/landing";
 import { buildMetadata } from "@/lib/seo";
@@ -46,7 +47,7 @@ export default async function LandingPage({ params }: P) {
             </ul>
             <div className="mt-8 flex flex-wrap gap-3">
               <BookCallButton label="Book a Call" variant="secondary" source={source} />
-              <WhatsAppPicker text={`Hi Shivacha, I'm interested in ${l.service.toLowerCase()}.`} label="WhatsApp" location={source} variant="ghost" placement="down" />
+              <WhatsAppPicker text={`Hi Shivacha, I'm interested in ${lowerName(l.service)}.`} label="WhatsApp" location={source} variant="ghost" placement="down" />
             </div>
             <DivisionArt division={l.division} topic={l.topic} className="mt-10 hidden max-w-lg lg:block" />
           </div>

@@ -790,7 +790,7 @@ export const serviceGroups: ServiceGroup[] = [
   },
   {
     id: "digital-assets",
-    division: "web3",
+    division: "digital-assets",
     name: "Institutional Digital Asset Infrastructure",
     intro:
       "Institutions entering digital assets need the same controls they have in traditional operations: segregation of duties, approval policies, reconciliation, monitoring and reporting. We build and integrate the technology — custody connections, policy engines, compliance tooling integrations and operations platforms — that makes digital assets operable at institutional standards.",
@@ -825,7 +825,7 @@ export const serviceGroups: ServiceGroup[] = [
   },
   {
     id: "wallets",
-    division: "web3",
+    division: "digital-assets",
     name: "Wallet Infrastructure",
     intro:
       "Wallets are where users meet the chain, and where most security and usability failures happen. We build custodial, non-custodial, institutional, multisig and smart-contract wallets — including account abstraction — with key management and recovery designed as carefully as the interface.",
@@ -860,7 +860,7 @@ export const serviceGroups: ServiceGroup[] = [
   },
   {
     id: "exchanges",
-    division: "web3",
+    division: "digital-assets",
     name: "Exchange Infrastructure",
     intro:
       "Exchanges combine low-latency trading systems, custody, risk management and heavy compliance workflows. We engineer centralized, decentralized and hybrid exchanges — matching engines, liquidity connectivity, wallet infrastructure and admin platforms — for operators with licensed partners and serious operational plans.",

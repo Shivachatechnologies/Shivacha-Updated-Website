@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { lowerName } from "@/lib/cn";
 import { Handshake, Info, Layers, Users } from "lucide-react";
 import type { Service } from "@/data/types";
 import { getGroup } from "@/data/serviceGroups";
@@ -27,6 +28,9 @@ import { BookCallButton } from "@/components/leads/BookCall";
 import { LeadPanel } from "@/components/leads/LeadPanel";
 import { QuickAnswers } from "@/components/sections/QuickAnswers";
 import { ctaFor, divisionAnswers, serviceOption } from "@/data/serviceAnswers";
+import { launchFor, serviceToProduct } from "@/data/launch";
+import { getProduct } from "@/data/products";
+import { LaunchPanel } from "@/components/sections/Launch";
 
 export function ServiceTemplate({ service }: { service: Service }) {
   const group = getGroup(service.group)!;
@@ -43,9 +47,12 @@ export function ServiceTemplate({ service }: { service: Service }) {
   const resources = relatedResources({ division: division.id, services: svcSlugs }, 3);
   const faqs = [...service.faqs, ...group.faqs];
   const answers = divisionAnswers[division.id];
+  const wlSlug = serviceToProduct[service.slug];
+  const wlProduct = wlSlug ? getProduct(wlSlug) : undefined;
+  const wlLaunch = wlSlug ? launchFor(wlSlug) : undefined;
   const cta = ctaFor(service.name, group.name, division.id, division.cta);
   const quick = [
-    { q: `What is ${service.name.toLowerCase()}?`, a: service.summary },
+    { q: `What is ${lowerName(service.name)}?`, a: service.summary },
     { q: "Who is it for?", a: `Typically ${answers.whoFor}.` },
     { q: "What does Shivacha provide?", a: service.capabilities.map((c) => c.title) },
     { q: "Which technologies are used?", a: techs.length ? `${techs.slice(0, 6).map((t) => t.name).join(", ")} — chosen to fit your stack and constraints.` : "Chosen to fit your existing stack, team and constraints." },
@@ -122,6 +129,17 @@ export function ServiceTemplate({ service }: { service: Service }) {
         </div>
       </Section>
 
+      {wlProduct && wlLaunch && (
+        <Section id="white-label-option">
+          <SectionHeader
+            eyebrow="Faster route to launch"
+            title={`Start from our white-label ${lowerName(wlLaunch.cardName.replace(/^White-Label /, ""))}.`}
+            lede={`Most ${lowerName(service.name)} projects don't need to begin from zero. ${wlProduct.name} provides a production-ready foundation that we customise to your brand, workflows and integrations — or we engineer a fully custom platform where your requirements demand it.`}
+          />
+          <LaunchPanel launch={wlLaunch} productName={wlProduct.name} productHref={`/products/${wlProduct.slug}`} source={`service:${service.slug}`} />
+        </Section>
+      )}
+
       <QuickAnswers title={`${service.name} at a glance`} items={quick} />
 
       <Section>
@@ -132,7 +150,7 @@ export function ServiceTemplate({ service }: { service: Service }) {
       <Section>
         <div className="grid gap-12 lg:grid-cols-[1fr_1.15fr] lg:items-start">
           <div>
-            <SectionHeader eyebrow="Architecture" title="Engineered right from day one" lede={`The layers we typically design for ${group.name.toLowerCase()}, adapted to your stack and partners.`} className="mb-8" />
+            <SectionHeader eyebrow="Architecture" title="Engineered right from day one" lede={`The layers we typically design for ${lowerName(group.name)}, adapted to your stack and partners.`} className="mb-8" />
             <PointsList points={group.considerations.slice(0, 4)} />
           </div>
           <ArchitectureDiagram layers={group.architecture} division={division.id} title={`${group.name} · reference architecture`} />
@@ -188,10 +206,10 @@ export function ServiceTemplate({ service }: { service: Service }) {
       <FAQ items={faqs} />
       <LeadPanel
         title={`${cta}.`}
-        lede={`Tell us about your ${service.name.toLowerCase()} requirements — goals, timeline and constraints. We will reply with questions, an approach and next steps.`}
+        lede={`Tell us about your ${lowerName(service.name)} requirements — goals, timeline and constraints. We will reply with questions, an approach and next steps.`}
         service={serviceOption(service.name, division.id)}
         source={`service:${service.slug}`}
-        whatsappText={`Hi Shivacha, I'd like to discuss ${service.name.toLowerCase()}.`}
+        whatsappText={`Hi Shivacha, I'd like to discuss ${lowerName(service.name)}.`}
       />
     </>
   );

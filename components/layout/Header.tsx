@@ -40,6 +40,9 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
 
   useEffect(() => {
     document.body.style.overflow = mobile ? "hidden" : "";
+    // Lets floating widgets step aside while the mobile menu is open (see globals.css).
+    if (mobile) document.documentElement.dataset.nav = "open";
+    else delete document.documentElement.dataset.nav;
   }, [mobile]);
 
   useEffect(() => {
@@ -116,7 +119,7 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
             Contact
           </Link>
           <Link href="/start-a-project" className="btn-primary hidden h-9 px-4 text-[13px] sm:inline-flex" data-track="cta:header-discuss-project">
-            Discuss Your Project
+            Discuss Your Launch
           </Link>
           <button
             type="button"
@@ -234,7 +237,7 @@ function TabButton({ tab, active, onSelect }: { tab: NavTab; active: boolean; on
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-semibold text-fg">{tab.label}</span>
-        <span className="block truncate text-xs text-dim">{tab.description}</span>
+        <span className="block text-xs leading-snug text-dim">{tab.description}</span>
       </span>
     </button>
   );
@@ -377,7 +380,7 @@ function MobileMenu({ nav, contact }: { nav: NavItem[]; contact: { email: string
         </ul>
         <div className="mt-8 grid gap-3">
           <Link href="/start-a-project" className="btn-primary">
-            Discuss Your Project
+            Discuss Your Launch
           </Link>
           <BookCallButton label="Book a Call" variant="secondary" source="mobile_menu" />
         </div>

@@ -1,3 +1,4 @@
+import { lowerName } from "@/lib/cn";
 import { notFound } from "next/navigation";
 import { caseStudies, getCaseStudy } from "@/data/caseStudies";
 import { divisions, getDivision } from "@/data/capabilities";
@@ -38,7 +39,7 @@ export default async function Page({ params }: P) {
         <PageHero
           crumbs={[{ name: "Work", href: "/work" }, { name: division ? division.short : "Case studies", href: `/work/${slug}` }]}
           eyebrow={<span className="eyebrow">{division ? division.name : "Case studies"}</span>}
-          title={division ? `${division.short} work: ${division.tagline.toLowerCase()}` : "Case studies and reference implementations."}
+          title={division ? `${division.short} work: ${lowerName(division.tagline)}` : "Case studies and reference implementations."}
           lede={division ? division.description : "Verified client case studies will be published here with client approval. Until then, our reference architectures show how we design and build."}
         />
         <Section className="pt-0">

@@ -6,6 +6,7 @@ export const divisionTone: Record<DivisionId | "product", { text: string; bg: st
   digital: { text: "text-brand-blue", bg: "bg-brand-blue/10", border: "border-brand-blue/30", dot: "bg-brand-blue", hex: "#0195ff" },
   fintech: { text: "text-brand-teal", bg: "bg-brand-teal/10", border: "border-brand-teal/30", dot: "bg-brand-teal", hex: "#14c8b0" },
   web3: { text: "text-brand-cyan", bg: "bg-brand-cyan/10", border: "border-brand-cyan/30", dot: "bg-brand-cyan", hex: "#22d3ee" },
+  "digital-assets": { text: "text-[#a36200]", bg: "bg-[#f5a524]/12", border: "border-[#f5a524]/40", dot: "bg-[#f5a524]", hex: "#f5a524" },
   cloud: { text: "text-brand-sky", bg: "bg-brand-sky/10", border: "border-brand-sky/30", dot: "bg-brand-sky", hex: "#5cc8ff" },
   product: { text: "text-fg", bg: "bg-white/5", border: "border-line-strong", dot: "bg-fg", hex: "#8a97ad" },
 };
@@ -15,6 +16,7 @@ export const divisionLabel: Record<DivisionId | "product", string> = {
   digital: "Shivacha Digital",
   fintech: "Shivacha FinTech",
   web3: "Shivacha Web3",
+  "digital-assets": "Shivacha Digital Assets",
   cloud: "Shivacha Cloud",
   product: "Product & Design",
 };

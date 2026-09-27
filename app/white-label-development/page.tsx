@@ -2,7 +2,7 @@ import { EyeOff, FileSignature, Handshake, Layers, ShieldCheck, Users } from "lu
 import { buildMetadata } from "@/lib/seo";
 import { serviceSchema } from "@/lib/jsonld";
 import { PageHero } from "@/components/sections/PageHero";
-import { RenderStage } from "@/components/graphics/DivisionArt";
+import { ProductBuildVisual } from "@/components/visuals/SystemVisuals";
 import { CheckList, PointsGrid } from "@/components/sections/blocks";
 import { FAQ } from "@/components/sections/FAQ";
 import { LeadPanel } from "@/components/leads/LeadPanel";
@@ -61,7 +61,7 @@ export default function WhiteLabelPage() {
           </>
         }
         lede="White-label Web3, FinTech, AI, web and mobile engineering delivered under your brand. You keep the relationship and the margin; we deliver the code — quietly and to a high standard."
-        aside={<RenderStage k="api" label="White-label engineering illustration" priority />}
+        aside={<ProductBuildVisual />}
       >
         <LinkButton href="#enquire" track="cta:white-label">
           Become a Partner

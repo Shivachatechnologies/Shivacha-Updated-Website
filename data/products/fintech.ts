@@ -10,6 +10,63 @@ const bankArch = [
 
 export const fintechProducts = [
   prod({
+    slug: "crypto-card",
+    name: "Shivacha Crypto Card",
+    division: "fintech",
+    category: "Cards",
+    tagline: "Branded crypto-powered card experiences connecting digital assets, wallets and everyday payments.",
+    description:
+      "Software infrastructure for crypto card programs: virtual and physical card management, wallet integration, crypto-to-fiat conversion at authorisation, spend controls, KYC/KYB integration, settlement, reporting and APIs — connected to your chosen issuing and compliance partners.",
+    problem:
+      "A crypto card touches three worlds at once — digital asset wallets, card networks and regulated payments. Stitching together an issuer-processor, custody, conversion, ledger and support tooling without a clear architecture leads to reconciliation gaps and slow launches.",
+    solution:
+      "Crypto Card Infrastructure provides the program software: card lifecycle, wallet-linked funding, real-time conversion at authorisation, controls, ledger and back-office. Actual card issuance, BIN sponsorship and regulated services are provided by qualified third-party issuing and compliance partners that you contract with.",
+    modules: [
+      "Card management|Virtual and physical cards, activation, freeze, replace and PIN flows via the issuer-processor.",
+      "Wallet integration|Fund card spend from crypto or stablecoin balances held in your wallet or custody.",
+      "Crypto-to-fiat conversion|Quote and convert at authorisation or via pre-funding, with configurable spreads.",
+      "Transaction controls|Limits, merchant categories, geography and real-time approve/decline rules.",
+      "KYC/KYB integration|Cardholder and business onboarding through your chosen verification providers.",
+      "Settlement & ledger|Double-entry ledger reconciled against issuer, conversion and custody reports.",
+      "Reporting & admin|Program dashboards, disputes, support tools and exports.",
+      "API|Card, wallet and transaction APIs for your apps and partners.",
+    ],
+    features: [
+      "Virtual and physical card programs",
+      "Wallet-linked funding from crypto and stablecoins",
+      "Real-time authorisation decisioning",
+      "Spend controls and merchant category rules",
+      "KYC/KYB provider integration",
+      "Multi-currency ledger and reconciliation",
+      "Merchant payments and cashback-ready rewards engine",
+      "White-label mobile and web apps",
+    ],
+    useCases: [
+      "Crypto wallet card|Let wallet users spend balances anywhere cards are accepted.",
+      "Exchange card|A card for exchange customers funded from trading balances.",
+      "Stablecoin business card|Corporate spend funded from stablecoin treasury.",
+      "Neobank crypto add-on|Crypto-funded cards inside an existing banking app.",
+    ],
+    architecture: [
+      { name: "Apps", items: ["iOS", "Android", "Web", "Admin"] },
+      { name: "Card program", items: ["Card lifecycle", "Controls", "Authorisations", "Disputes"] },
+      { name: "Funding", items: ["Wallet balances", "Conversion", "Pre-funding", "Treasury"] },
+      { name: "Partners", items: ["Issuer-processor", "Custody", "KYC/KYB", "Liquidity"] },
+    ],
+    technologies: ["typescript", "nodejs", "postgresql", "kafka", "kubernetes"],
+    integrations: ["Card issuer-processors (BIN sponsors)", "Custody & wallet providers", "Conversion / liquidity providers", "KYC/KYB providers", "Card network tokenisation (via issuer)"],
+    industries: ["fintech", "payments", "banking"],
+    services: ["crypto-card-platform", "card-issuing-platform", "card-management-system", "virtual-card-platform"],
+    related: ["card-management", "crypto-wallet", "neobank", "stablecoin-payment"],
+    faq: [
+      ["Can Shivacha issue cards?", "No. Card issuance, BIN sponsorship and card network membership are provided by licensed issuing partners. Shivacha builds and integrates the program software around them."],
+      ["How long does a crypto card launch take?", "Software integration typically takes three to five weeks once an issuing partner is selected. Issuer onboarding, card network approval, compliance review and card production have separate timelines, often longer than the software work."],
+      ["How is crypto converted at the point of sale?", "Depending on the program design, balances are converted in real time at authorisation or pre-funded into fiat, using the liquidity or conversion provider you choose."],
+      ["Which regions are supported?", "Availability depends on your issuing and compliance partners' coverage. The software is region-agnostic and supports multiple currencies."],
+    ],
+    preview: "cards",
+  }),
+  prod({
     slug: "digital-bank",
     name: "Shivacha Digital Bank",
     division: "fintech",
@@ -87,6 +144,10 @@ export const fintechProducts = [
       "Referral and rewards engine",
       "Support and compliance console",
       "Multi-partner, multi-market architecture",
+      "Multi-currency accounts and wallets",
+      "KYC/KYB onboarding via your providers",
+      "Transaction monitoring integration",
+      "Double-entry ledger, notifications and reporting",
     ],
     useCases: [
       "Niche neobank|A bank for freelancers, creators, students or a diaspora community.",
@@ -101,7 +162,8 @@ export const fintechProducts = [
     services: ["neobank-development", "mobile-banking", "embedded-banking", "card-issuing-platform"],
     related: ["digital-bank", "web3-neobank", "card-management", "hybrid-wallet"],
     faq: [
-      ["How fast can we launch?", "The technology can be production-ready in months; overall launch timing usually depends on partner contracts and regulatory readiness."],
+      ["How fast can we launch?", "White-label software implementation typically takes three to four weeks for a defined configuration. Overall launch timing also depends on banking-as-a-service or partner-bank contracts, card-issuer onboarding, KYC provider setup and regulatory readiness — these are separate from software delivery and are often longer."],
+      ["Does Shivacha provide a banking licence?", "No. Accounts, cards and regulated services are provided by licensed partner banks, EMIs or BaaS providers that you contract with. Shivacha delivers and integrates the software."],
       ["Can we switch BaaS partners later?", "Yes. The platform's partner abstraction and independent ledger make migration significantly easier."],
       ["Can we add crypto features?", "Yes — the architecture extends to digital assets through the Shivacha Web3 Neobank and hybrid wallet modules."],
     ],

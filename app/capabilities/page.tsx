@@ -10,11 +10,11 @@ import { Section, SectionHeader } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { divisionTone } from "@/components/ui/division";
 import { cn } from "@/lib/cn";
-import { RenderMosaic } from "@/components/graphics/DivisionArt";
+import { EcosystemVisual } from "@/components/visuals/SystemVisuals";
 
 export const metadata = buildMetadata({
-  title: "Capabilities: AI, Digital, FinTech, Web3 & Cloud",
-  description: "Explore Shivacha's five divisions — AI, Digital, FinTech, Web3 and Cloud — and how they combine to build, transform and scale technology for ambitious companies.",
+  title: "Divisions: Web3, FinTech, Digital Assets, AI & Cloud",
+  description: "Explore Shivacha's five divisions — Web3, FinTech, Digital Assets, AI and Cloud — each pairing white-label, ready-to-launch platforms with custom engineering and dedicated teams.",
   path: "/capabilities",
 });
 
@@ -24,9 +24,9 @@ export default function CapabilitiesPage() {
       <PageHero
         crumbs={[{ name: "Capabilities", href: "/capabilities" }]}
         eyebrow={<span className="eyebrow">Capabilities</span>}
-        title="Five divisions. One engineering organisation."
-        lede="Shivacha AI, Digital, FinTech, Web3 and Cloud are deep practices on their own — and designed to work together on the problems that cross them."
-        aside={<RenderMosaic />}
+        title="Five divisions. One product engineering partner."
+        lede="Shivacha Web3, FinTech, Digital Assets, AI and Cloud each combine ready-to-launch foundations with custom engineering — backed by a product engineering practice for web, mobile and SaaS."
+        aside={<EcosystemVisual />}
       />
       <Section className="pt-0">
         <div className="space-y-4">
@@ -50,7 +50,7 @@ export default function CapabilitiesPage() {
                     </span>
                   ))}
                   <span className="w-full pt-2 text-xs text-dim">
-                    {servicesForDivision(d.id).length} services · {productsForDivision(d.id).length} products
+                    {servicesForDivision(d.id).length} services · {productsForDivision(d.id).length} products{d.launch[0] ? ` · ${d.launch[0][0]}: ${d.launch[0][1]}` : ""}
                   </span>
                 </div>
                 <ArrowUpRight className="size-5 text-dim transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-fg" />

@@ -11,11 +11,12 @@ const bySlug = new Map(products.map((p) => [p.slug, p]));
 export const getProduct = (slug: string) => bySlug.get(slug);
 
 export const productCategories: { id: DivisionId; label: string }[] = [
-  { id: "ai", label: "AI" },
-  { id: "digital", label: "Digital" },
+  { id: "digital-assets", label: "Digital Assets" },
   { id: "fintech", label: "FinTech" },
   { id: "web3", label: "Web3" },
+  { id: "ai", label: "AI" },
   { id: "cloud", label: "Cloud" },
+  { id: "digital", label: "Digital" },
 ];
 
 /** A demo URL is only rendered when it is an absolute https URL. Anything else falls back to Request Demo. */

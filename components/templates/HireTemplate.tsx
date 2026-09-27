@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { lowerName } from "@/lib/cn";
 import { BadgeCheck, ClipboardCheck, Clock3, UserCheck } from "lucide-react";
 import type { HireRole } from "@/data/hire";
 import { hireRoles } from "@/data/hire";
@@ -137,7 +138,7 @@ export function HireTemplate({ role }: { role: HireRole }) {
           <p className="mt-8 text-sm text-muted">
             Need a whole squad instead? See the{" "}
             <Link href={`/dedicated-teams/${team.slug}`} className="font-medium text-brand-blue hover:underline">
-              dedicated {team.name.toLowerCase()}
+              dedicated {lowerName(team.name)}
             </Link>
             .
           </p>
@@ -151,7 +152,7 @@ export function HireTemplate({ role }: { role: HireRole }) {
         lede={`Tell us about the roles, seniority and stack you need. We will reply with a proposed composition and profiles for review.`}
         service={role.service}
         source={`hire:${role.slug}`}
-        whatsappText={`Hi Shivacha, I'd like to hire ${role.role.toLowerCase()}.`}
+        whatsappText={`Hi Shivacha, I'd like to hire ${lowerName(role.role)}.`}
       />
       <Section>
         <p className="eyebrow mb-4">Other roles</p>

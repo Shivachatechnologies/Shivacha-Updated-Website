@@ -3,7 +3,7 @@
  * Every page is rendered from these structures — UI components never hold copy.
  */
 
-export type DivisionId = "ai" | "digital" | "fintech" | "web3" | "cloud";
+export type DivisionId = "ai" | "digital" | "fintech" | "web3" | "digital-assets" | "cloud";
 
 export interface FAQ {
   q: string;
@@ -32,6 +32,12 @@ export interface Division {
   icon: string;
   cta: string;
   ctaHref: string;
+  /** Headline division (one of the five shown on the homepage). */
+  primary: boolean;
+  /** Flagship offerings shown on the homepage and division page. */
+  flagships: string[];
+  /** Typical software implementation ranges: [offering, range]. Excludes third-party approvals. */
+  launch: [string, string][];
 }
 
 export interface Capability {

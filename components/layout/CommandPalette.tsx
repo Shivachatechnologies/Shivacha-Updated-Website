@@ -111,7 +111,7 @@ export function CommandPalette() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 px-4 pt-[12vh] backdrop-blur-sm" onMouseDown={close} role="dialog" aria-modal="true" aria-label="Search">
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/60 px-4 pt-[12vh] backdrop-blur-sm" onMouseDown={close} role="dialog" aria-modal="true" aria-label="Search">
       <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-line-strong bg-ink-900 shadow-2xl shadow-black/60" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 border-b border-line px-4">
           <Search className="size-4 text-dim" aria-hidden />

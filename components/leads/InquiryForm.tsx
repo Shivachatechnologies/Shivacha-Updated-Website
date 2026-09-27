@@ -52,7 +52,7 @@ export function InquiryForm({ source, className, variant = "page", defaultServic
   useEffect(() => {
     if (variant !== "page") return;
     const q = new URLSearchParams(window.location.search);
-    const division: Record<string, string> = { web3: "Blockchain Development", fintech: "FinTech Development", ai: "AI Development", digital: "Web Development" };
+    const division: Record<string, string> = { "digital-assets": "Crypto Exchange Development", web3: "Blockchain Development", fintech: "FinTech Development", ai: "AI Development", digital: "Web Development" };
     const service = q.get("service") ?? division[q.get("division") ?? ""] ?? "";
     const budget = q.get("budget") ?? "";
     const brief = (q.get("brief") ?? "").slice(0, 1500);

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { lowerName } from "@/lib/cn";
 import { notFound } from "next/navigation";
 import { resourceCategories, getResourceCategory, resources } from "@/data/resources";
 import { caseStudies } from "@/data/caseStudies";
@@ -47,7 +48,7 @@ export default async function Page({ params }: P) {
         ) : category !== "faqs" ? (
           <div className="card p-10 text-center">
             <p className="text-lg text-fg">Nothing published here yet.</p>
-            <p className="mx-auto mt-2 max-w-md text-sm text-muted">We only publish {c.name.toLowerCase()} when we have something genuinely useful to share. Subscribe to the newsletter in the footer to hear when new material is available.</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted">We only publish {lowerName(c.name)} when we have something genuinely useful to share. Subscribe to the newsletter in the footer to hear when new material is available.</p>
             <Link href="/resources" className="btn-secondary mt-6">
               Browse all resources
             </Link>

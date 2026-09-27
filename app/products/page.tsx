@@ -1,16 +1,16 @@
-import { products, hasLiveDemo } from "@/data/products";
+import { products, hasLiveDemo, getProduct } from "@/data/products";
+import { FEATURED_PLATFORMS, launchFor } from "@/data/launch";
+import { FromZeroComparison, LaunchProcess, PlatformCard, TimelineTiers } from "@/components/sections/Launch";
 import { buildMetadata } from "@/lib/seo";
 import { PageHero } from "@/components/sections/PageHero";
 import { CTABand } from "@/components/sections/CTABand";
 import { Section, SectionHeader, LinkButton } from "@/components/ui/primitives";
 import { ProductMarketplace } from "@/components/sections/ProductMarketplace";
 import { DashboardPreview } from "@/components/visuals/DashboardPreview";
-import { PointsGrid } from "@/components/sections/blocks";
-import { pts } from "@/data/_helpers";
 
 export const metadata = buildMetadata({
-  title: "Ready-to-Launch Products: FinTech, Web3, AI, Digital & Cloud",
-  description: `Explore ${products.length} configurable Shivacha platforms — digital banking, payments, exchanges, tokenization, AI agents, CRM, marketplaces and cloud foundations — with demos on request.`,
+  title: "White-Label Products: Crypto Exchange, Wallet, Neobank, Crypto Card & AI Platforms",
+  description: `${products.length} white-label and ready-to-launch platforms — crypto exchange, crypto wallet, P2P trading, neobank, crypto card, payment gateway, RWA tokenization, DeFi and AI agent platforms — customised by dedicated engineering teams. Demos on request.`,
   path: "/products",
 });
 
@@ -19,35 +19,34 @@ export default function ProductsPage() {
     <>
       <PageHero
         crumbs={[{ name: "Products", href: "/products" }]}
-        eyebrow={<span className="eyebrow">{products.length} ready-to-launch products</span>}
-        title="Start from a platform. Make it yours."
-        lede="Configurable Shivacha platforms deployed into your environment, customised to your business model and extended by our engineers — so you launch faster without giving up control."
-        aside={<DashboardPreview kind="exchange" name="Shivacha Exchange" />}
+        eyebrow={<span className="eyebrow">White-label · Ready to launch · {products.length} platforms</span>}
+        title="White-label platforms. Launch without starting from zero."
+        lede="Production-ready foundations for digital assets, FinTech, Web3 and AI — deployed into your environment, customised to your brand and business model, and extended by a dedicated engineering team."
+        aside={<DashboardPreview kind="exchange" name="White-Label Crypto Exchange" />}
       >
         <LinkButton href="/request-demo" track="demo:products-index">
           Request Product Demo
         </LinkButton>
         <LinkButton href="#marketplace" variant="secondary">
-          Browse products
+          Browse all platforms
         </LinkButton>
       </PageHero>
+      <Section id="featured">
+        <SectionHeader eyebrow="Ready-to-launch platforms" title="Our most requested white-label platforms." />
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {FEATURED_PLATFORMS.map((slug, i) => (
+            <PlatformCard key={slug} product={getProduct(slug)!} launch={launchFor(slug)!} feature={i === 0} className={i === FEATURED_PLATFORMS.length - 1 && FEATURED_PLATFORMS.length % 2 === 0 ? "md:col-span-2 lg:col-span-1" : undefined} />
+          ))}
+        </div>
+      </Section>
       <Section id="marketplace">
-        <ProductMarketplace items={products.map((p) => ({ slug: p.slug, name: p.name, division: p.division, category: p.category, tagline: p.tagline, live: hasLiveDemo(p) }))} />
+        <SectionHeader eyebrow="All platforms" title="Browse every product." />
+        <ProductMarketplace items={products.map((p) => ({ slug: p.slug, name: launchFor(p.slug)?.seoTitle ?? p.name, division: p.division, category: p.category, tagline: p.tagline, live: hasLiveDemo(p), timeline: launchFor(p.slug)?.timeline }))} />
       </Section>
-      <Section>
-        <SectionHeader eyebrow="How it works" title="Platform speed, custom ownership" />
-        <PointsGrid
-          columns={4}
-          numbered
-          points={pts([
-            "Demo & discovery|A tailored walkthrough and a review of your requirements, partners and markets.",
-            "Configuration|Branding, products, rules and integrations configured for your model.",
-            "Customisation|Our engineers extend the platform where your differentiation lives.",
-            "Deploy & operate|Deployed in your cloud with documentation, support and optional managed operations.",
-          ])}
-        />
-      </Section>
-      <CTABand title="See a product in action." primary={{ label: "Request Product Demo", href: "/request-demo" }} secondary={{ label: "Book Demo", href: "/book-a-meeting" }} />
+      <LaunchProcess />
+      <FromZeroComparison />
+      <TimelineTiers />
+      <CTABand title="See a platform in action." lede="Get a tailored demo, an implementation timeline and a technical proposal for your launch." primary={{ label: "Request Product Demo", href: "/request-demo" }} />
     </>
   );
 }

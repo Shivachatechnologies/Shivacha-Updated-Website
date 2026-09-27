@@ -45,6 +45,23 @@ const commercialRedirects: [string, string][] = [
   ["payment-solutions", "payment-platform-development"],
   ["ai-agent-development", "ai-agents"],
   ["enterprise-software-development", "enterprise-software"],
+  ["crypto-payment-gateway-development", "crypto-payment-gateway"],
+  ["stablecoin-development", "stablecoin-platform-development"],
+  ["digital-asset-platform-development", "digital-asset-platform"],
+  ["p2p-crypto-exchange-development", "p2p-exchange-development"],
+  ["digital-banking-development", "digital-banking-development"],
+];
+
+/** White-label keyword URLs → the canonical product page (one page per product, no duplicates). */
+const whiteLabelRedirects: [string, string][] = [
+  ["white-label-crypto-exchange", "crypto-exchange"],
+  ["white-label-crypto-exchange-development", "crypto-exchange"],
+  ["white-label-crypto-wallet", "crypto-wallet"],
+  ["white-label-neobank", "neobank"],
+  ["crypto-card-development", "crypto-card"],
+  ["crypto-card-platform", "crypto-card"],
+  ["rwa-tokenization-platform", "rwa-platform"],
+  ["white-label-p2p-exchange", "p2p-trading-platform"],
 ];
 
 const nextConfig: NextConfig = {
@@ -74,6 +91,7 @@ const nextConfig: NextConfig = {
       { source: "/company/contact", destination: "/contact", permanent: false },
       // Short commercial URLs → canonical /services/* pages (existing URL architecture).
       ...commercialRedirects.map(([from, to]) => ({ source: `/${from}`, destination: `/services/${to}`, permanent: true })),
+      ...whiteLabelRedirects.map(([from, to]) => ({ source: `/${from}`, destination: `/products/${to}`, permanent: true })),
       { source: "/dedicated-development-team", destination: "/dedicated-teams", permanent: true },
       { source: "/partners", destination: "/company/partners", permanent: true },
     ];

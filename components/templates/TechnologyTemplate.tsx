@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import { lowerName } from "@/lib/cn";
 import type { Technology } from "@/data/types";
 import { techCategories } from "@/data/technologies";
 import { pick, productsForTechnology, relatedInsights, servicesForTechnology, teamsForTechnology } from "@/lib/relations";
@@ -71,7 +72,7 @@ export function TechnologyTemplate({ tech }: { tech: Technology }) {
 
       {pairs.length > 0 && (
         <Section>
-          <SectionHeader eyebrow="Pairs well with" title={`What we combine with ${tech.name}`} lede={cat.description} action={{ label: `Browse ${cat.name.toLowerCase()}`, href: `/technologies#${cat.id}` }} />
+          <SectionHeader eyebrow="Pairs well with" title={`What we combine with ${tech.name}`} lede={cat.description} action={{ label: `Browse ${lowerName(cat.name)}`, href: `/technologies#${cat.id}` }} />
           <TechGrid items={pairs} />
         </Section>
       )}

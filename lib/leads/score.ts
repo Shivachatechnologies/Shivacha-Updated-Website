@@ -18,6 +18,10 @@ const HIGH_VALUE_SERVICES = new Set([
   "Web3 Development",
   "AI Development",
   "Dedicated Development Team",
+  "White-Label Platform",
+  "Neobank / Digital Banking",
+  "Crypto Card Platform",
+  "Crypto Wallet Development",
 ]);
 
 const FREE_EMAIL = new Set([

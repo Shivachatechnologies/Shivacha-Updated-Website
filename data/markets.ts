@@ -89,7 +89,7 @@ export const markets: Market[] = [
     collaboration: "Delivery overlaps naturally with South-East Asian and Australian business hours.",
     industries: ["fintech", "payments", "ecommerce", "logistics", "saas", "gaming"],
     services: ["qr-payment-platform", "embedded-wallets", "rwa-tokenization", "ai-product-development", "mobile-app-development", "cloud-migration"],
-    countries: ["singapore", "australia", "malaysia"],
+    countries: ["india", "singapore", "australia", "malaysia"],
   },
   {
     slug: "africa",
@@ -322,6 +322,27 @@ export const markets: Market[] = [
     collaboration: "Close alignment with Gulf working hours.",
     industries: ["banking", "fintech", "energy", "government"],
     services: ["digital-banking", "enterprise-ai", "cloud-security", "enterprise-software"],
+  },
+  {
+    slug: "india",
+    name: "India",
+    type: "country",
+    region: "asia-pacific",
+    h1: "Technology services for companies in India.",
+    summary: "UPI and payments, account aggregator, lending, AI and enterprise engineering for Indian companies — from our Gurgaon headquarters.",
+    overview: [
+      "India combines one of the world's largest digital public infrastructures — Aadhaar-based identity, UPI real-time payments and the account aggregator framework for consented financial data — with a fast-growing base of fintechs, SaaS companies and enterprises modernising core systems.",
+      "Shivacha is headquartered in Gurgaon. We help Indian companies build UPI and payment integrations, lending and account-aggregator-based credit journeys, AI systems that respect the Digital Personal Data Protection Act, 2023, and SaaS products built for global customers. Regulatory interpretation stays with clients' compliance teams and advisors; we build the technology to their requirements.",
+    ],
+    focus: pts([
+      "Payments and UPI|Payment gateway, UPI and payout integrations with reconciliation built in.",
+      "Digital lending|Loan origination, account aggregator data and co-lending workflows.",
+      "Privacy-aware AI|Assistants and automation designed around consent and data minimisation.",
+      "SaaS for global markets|Products built in India for customers in the USA, UK and Middle East.",
+    ]),
+    collaboration: "Headquarters and engineering teams in Gurgaon, working in IST with in-person workshops available.",
+    industries: ["fintech", "banking", "payments", "saas", "ecommerce"],
+    services: ["payment-gateway-development", "lending-platform-development", "enterprise-ai", "saas-development"],
   },
   {
     slug: "singapore",

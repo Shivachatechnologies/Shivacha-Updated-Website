@@ -55,7 +55,7 @@ export function FactStrip({ items }: { items: { icon: ReactNode; label: string; 
           <span className="icon-tile size-10">{it.icon}</span>
           <div className="min-w-0">
             <p className="text-xs text-dim">{it.label}</p>
-            <p className="mt-0.5 truncate text-sm font-semibold text-fg">{it.value}</p>
+            <p className="mt-0.5 text-sm leading-snug font-semibold text-balance break-words text-fg">{it.value}</p>
           </div>
         </li>
       ))}

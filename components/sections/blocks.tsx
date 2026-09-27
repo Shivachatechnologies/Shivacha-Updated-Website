@@ -127,7 +127,7 @@ export function TechGrid({ items, compact }: { items: { slug: string; name: stri
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-line bg-ink-850 text-fg">
             <TechLogo slug={t.slug} name={t.name} className="size-5" />
           </span>
-          <span className="min-w-0 truncate text-sm font-medium text-fg">{t.name}</span>
+          <span className="min-w-0 text-sm leading-snug font-medium break-words text-fg">{t.name}</span>
         </Link>
       ))}
     </div>

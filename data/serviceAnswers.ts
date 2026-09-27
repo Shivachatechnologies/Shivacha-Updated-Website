@@ -57,6 +57,17 @@ export const divisionAnswers: Record<DivisionId, DivisionAnswers> = {
       { title: "Independent audit", description: "Code prepared for — and we recommend — an external audit before mainnet value." },
     ],
   },
+  "digital-assets": {
+    whoFor: "exchange operators, brokers, fintechs and Web3 companies launching trading, wallet, custody or on/off-ramp products",
+    timeline: "White-label implementations typically take 2–5 weeks of software work depending on product and customisation; advanced custom platforms 4–8+ weeks. Licensing, banking, custody and liquidity partner onboarding run on their own timelines.",
+    costFactors: ["White-label configuration vs custom modules", "Number of assets, chains and trading pairs", "Custody model and provider", "Liquidity, fiat on/off-ramp and KYC integrations", "Mobile apps and admin scope", "Security testing and operational requirements"],
+    security: [
+      { title: "Wallet segregation", description: "Hot/cold tiers, withdrawal limits and approval quorums." },
+      { title: "Custody integration", description: "MPC, multisig or HSM-backed providers — keys never in application code." },
+      { title: "Ledger reconciliation", description: "Internal balances reconciled against on-chain and partner records." },
+      { title: "Admin controls", description: "Role-based access, maker-checker approvals and full audit trails." },
+    ],
+  },
   cloud: {
     whoFor: "companies migrating to the cloud, teams whose releases are slow or risky, and organisations that need stronger reliability, security or cost control",
     timeline: "Assessments take 2–4 weeks; platform builds and migrations are usually delivered in 2–6 month phases.",
@@ -75,6 +86,7 @@ export function ctaFor(name: string, group: string, division: DivisionId, fallba
   const t = `${name} ${group}`.toLowerCase();
   if (/exchange|brokerage|trading/.test(t)) return "Get Exchange Development Estimate";
   if (/\bmvp\b/.test(t)) return "Discuss My MVP";
+  if (division === "digital-assets") return "Discuss Your Launch";
   if (division === "web3" || /blockchain|web3|smart contract|token|defi/.test(t)) return "Discuss Your Blockchain Project";
   if (division === "fintech") return "Discuss Your FinTech Product";
   if (division === "ai") return "Build Your AI Product";
@@ -85,9 +97,12 @@ export function ctaFor(name: string, group: string, division: DivisionId, fallba
 export function serviceOption(name: string, division: DivisionId): string {
   const t = name.toLowerCase();
   if (/exchange/.test(t)) return "Crypto Exchange Development";
-  if (/wallet/.test(t) && division === "web3") return "Crypto Wallet Development";
+  if (/wallet/.test(t) && (division === "web3" || division === "digital-assets")) return "Crypto Wallet Development";
   if (/smart contract|solidity/.test(t)) return "Smart Contract Development";
   if (/web3|dapp/.test(t)) return "Web3 Development";
+  if (/crypto card|card/.test(t) && /crypto/.test(t)) return "Crypto Card Platform";
+  if (/neobank|digital bank/.test(t)) return "Neobank / Digital Banking";
+  if (division === "digital-assets") return "Crypto Exchange Development";
   if (division === "web3") return "Blockchain Development";
   if (division === "fintech") return "FinTech Development";
   if (division === "ai") return "AI Development";

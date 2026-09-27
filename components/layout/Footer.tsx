@@ -7,7 +7,7 @@ import { siteConfig } from "@/data/siteConfig";
 import { NewsletterForm } from "@/components/forms/NewsletterForm";
 import { Flag } from "@/components/graphics/Flag";
 import { Logo } from "./Logo";
-import { OfficeClock } from "./OfficeClock";
+import { WorldClock } from "./WorldClock";
 
 const socials = [
   { name: "LinkedIn", href: siteConfig.social.linkedin, icon: undefined },
@@ -126,13 +126,10 @@ export function Footer() {
           <ul className="relative grid gap-4 sm:grid-cols-3">
             {siteConfig.offices.map((o) => (
               <li key={o.city} className="group relative flex flex-col rounded-2xl border border-line bg-white/[0.03] p-5 transition-colors hover:border-line-strong">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2.5 text-xs font-semibold tracking-wide text-muted">
-                    <Flag code={o.countryCode as "IN" | "US" | "GB"} />
-                    {o.country}
-                  </span>
-                  <OfficeClock timeZone={o.timeZone} />
-                </div>
+                <span className="flex items-center gap-2.5 text-xs font-semibold tracking-wide text-muted">
+                  <Flag code={o.countryCode as "IN" | "US" | "GB"} />
+                  {o.country}
+                </span>
                 <p className="mt-5 flex items-center gap-2 text-lg font-semibold text-fg">
                   {o.label}
                   {o.headquarters && <span className="rounded-full bg-brand-blue/15 px-2 py-0.5 text-[10.5px] font-semibold text-brand-blue">HQ</span>}
@@ -191,6 +188,18 @@ export function Footer() {
             <p className="mt-1.5 mb-5 text-sm text-muted">AI, fintech, Web3 and cloud. No filler, unsubscribe any time.</p>
             <NewsletterForm />
           </div>
+        </div>
+
+        {/* World clock */}
+        <div className="border-b border-line py-12">
+          <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="eyebrow mb-3">World clock</p>
+              <h2 className="text-xl font-semibold tracking-tight text-fg sm:text-2xl">Working across your time zone.</h2>
+            </div>
+            <p className="max-w-sm text-sm text-muted">Local time in the markets we serve most often.</p>
+          </div>
+          <WorldClock />
         </div>
 
         {/* Bottom bar */}

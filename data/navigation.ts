@@ -44,8 +44,48 @@ export const mainNav: NavItem[] = [
   {
     label: "Services",
     href: "/services",
-    footer: { text: "311+ services across five divisions.", label: "Browse all services", href: "/services" },
+    footer: { text: "300+ services across Web3, FinTech, Digital Assets, AI and Cloud.", label: "Browse all services", href: "/services" },
     tabs: [
+      {
+        label: "Web3",
+        icon: "Blocks",
+        tone: "web3",
+        href: "/capabilities/web3",
+        description: "Blockchain and decentralized infrastructure built for rapid deployment.",
+        columns: [
+          { title: "Strategy", links: [s("web3-consulting", "Web3 Consulting"), s("digital-asset-strategy", "Digital Asset Strategy"), s("protocol-consulting", "Protocol Architecture")] },
+          { title: "Infrastructure", links: [s("blockchain-infrastructure", "Blockchain Infrastructure"), s("protocol-development", "Protocol Engineering"), s("interoperability-development", "Interoperability"), s("layer-2-development", "L1 / L2 Infrastructure")] },
+          { title: "Financial", links: [s("defi-development", "DeFi"), s("dex-development", "DEX"), s("rwa-tokenization", "RWA"), s("asset-tokenization", "Tokenization"), s("stablecoin-platform-development", "Stablecoins"), s("crypto-payment-gateway", "Crypto Payments")] },
+          { title: "Build", links: [s("blockchain-development", "Blockchain Development"), s("web3-development", "Web3 Development"), s("smart-contract-development", "Smart Contracts"), s("token-development", "Token Development"), s("staking-platform-development", "Staking")] },
+          { title: "Security", links: [s("smart-contract-security", "Smart Contract Security"), s("protocol-security", "Protocol Security"), s("audit-readiness", "Audit Readiness")] },
+        ],
+      },
+      {
+        label: "FinTech",
+        icon: "Landmark",
+        tone: "fintech",
+        href: "/capabilities/fintech",
+        description: "Financial infrastructure for next-generation banking and payments.",
+        columns: [
+          { title: "Banking", links: [s("digital-banking-development", "Digital Banking"), s("neobank-development", "Neobank"), s("core-banking-platform", "Core Banking"), s("banking-api", "Banking APIs")] },
+          { title: "Payments", links: [s("payment-gateway-development", "Payment Gateway"), s("payment-orchestration", "Payment Orchestration"), s("merchant-payment-platform", "Merchant Payments"), s("cross-border-payment-platform", "Cross-border Payments")] },
+          { title: "Cards & Web3 Finance", links: [s("crypto-card-platform", "Crypto Cards"), s("card-issuing-platform", "Debit / Prepaid Cards"), s("stablecoin-payment-infrastructure", "Stablecoin Payments"), s("remittance-platform", "Remittance")] },
+          { title: "Infrastructure", links: [s("financial-api-development", "Financial APIs"), s("fintech-development", "Ledger"), s("payment-reconciliation", "Reconciliation"), s("compliance-automation", "Risk & Compliance Tech")] },
+        ],
+      },
+      {
+        label: "Digital Assets",
+        icon: "Coins",
+        tone: "digital-assets",
+        href: "/capabilities/digital-assets",
+        description: "White-label exchanges, wallets and digital asset platforms.",
+        columns: [
+          { title: "Exchanges", links: [s("crypto-exchange-development", "Crypto Exchange"), s("centralized-exchange-development", "Centralized Exchange"), s("hybrid-exchange-development", "Hybrid Exchange"), s("p2p-exchange-development", "P2P Exchange"), s("exchange-matching-engine", "Matching Engine")] },
+          { title: "Wallets", links: [s("crypto-wallet-development", "Crypto Wallet"), s("multi-chain-wallet-development", "Multi-Chain Wallet"), s("custodial-wallet-development", "Custodial Wallet"), s("institutional-wallet-development", "MPC / Institutional Wallet")] },
+          { title: "Trading & Custody", links: [s("crypto-brokerage-platform", "Brokerage Platform"), s("digital-asset-custody-integration", "Digital Asset Custody"), s("crypto-onramp", "Crypto On-Ramp"), s("crypto-offramp", "Crypto Off-Ramp")] },
+          { title: "White-label", links: [l("White-Label Exchange", "/products/crypto-exchange"), l("White-Label Wallet", "/products/crypto-wallet"), l("P2P Trading Platform", "/products/p2p-trading-platform"), l("Crypto Launchpad", "/products/web3-launchpad")] },
+        ],
+      },
       {
         label: "AI",
         icon: "Brain",
@@ -59,45 +99,6 @@ export const mainNav: NavItem[] = [
         ],
       },
       {
-        label: "Software",
-        icon: "CodeXml",
-        tone: "digital",
-        href: "/capabilities/digital",
-        description: "Digital products designed to launch and scale.",
-        columns: [
-          { title: "Product", links: [s("saas-development", "SaaS Development"), s("mvp-development", "MVP Development"), s("marketplace-development", "Marketplaces"), s("ecommerce-development", "E-commerce")] },
-          { title: "Engineering", links: [s("custom-software-development", "Custom Software"), s("web-development", "Web Apps"), s("mobile-app-development", "Mobile Apps"), s("api-development", "APIs")] },
-          { title: "Enterprise", links: [s("enterprise-software", "Enterprise Software"), s("crm-development", "CRM"), s("erp-development", "ERP"), s("legacy-modernization", "Legacy Modernization")] },
-        ],
-      },
-      {
-        label: "FinTech",
-        icon: "Landmark",
-        tone: "fintech",
-        href: "/capabilities/fintech",
-        description: "Infrastructure for the next generation of financial products.",
-        columns: [
-          { title: "Banking", links: [s("digital-banking-development", "Digital Banking"), s("neobank-development", "Neobank"), s("core-banking-platform", "Core Banking"), s("banking-api", "Banking APIs")] },
-          { title: "Payments", links: [s("payment-gateway-development", "Payment Gateway"), s("payment-orchestration", "Payment Orchestration"), s("merchant-payment-platform", "Merchant Payments"), s("cross-border-payment-platform", "Cross-border Payments")] },
-          { title: "Web3 Finance", links: [s("stablecoin-fintech", "Stablecoins"), s("crypto-payment-platform", "Crypto Payments"), s("digital-asset-financial-infrastructure", "Digital Assets"), s("tokenized-finance", "Tokenization")] },
-          { title: "Infrastructure", links: [s("financial-api-development", "Financial APIs"), s("fintech-development", "Ledger"), s("payment-reconciliation", "Reconciliation"), s("compliance-automation", "Risk & Compliance Tech")] },
-        ],
-      },
-      {
-        label: "Web3",
-        icon: "Blocks",
-        tone: "web3",
-        href: "/capabilities/web3",
-        description: "Institutional-grade blockchain and digital asset engineering.",
-        columns: [
-          { title: "Strategy", links: [s("web3-consulting", "Web3 Consulting"), s("digital-asset-strategy", "Digital Asset Strategy"), s("protocol-consulting", "Protocol Architecture")] },
-          { title: "Infrastructure", links: [s("blockchain-infrastructure", "Blockchain Infrastructure"), s("protocol-development", "Protocol Engineering"), s("interoperability-development", "Interoperability"), s("digital-asset-custody-integration", "Custody Integration")] },
-          { title: "Financial", links: [s("defi-development", "DeFi"), s("rwa-tokenization", "RWA"), s("asset-tokenization", "Tokenization"), s("stablecoin-platform-development", "Stablecoins"), s("crypto-payment-gateway", "Crypto Payments")] },
-          { title: "Applications", links: [s("crypto-exchange-development", "Exchanges"), s("crypto-wallet-development", "Wallets"), s("smart-contract-development", "dApps & Contracts"), s("marketplace-development", "Marketplaces")] },
-          { title: "Security", links: [s("smart-contract-security", "Smart Contract Security"), s("protocol-security", "Protocol Security"), s("audit-readiness", "Audit Readiness")] },
-        ],
-      },
-      {
         label: "Cloud",
         icon: "Cloud",
         tone: "cloud",
@@ -107,6 +108,18 @@ export const mainNav: NavItem[] = [
           { title: "Cloud", links: [s("cloud-consulting", "Cloud Consulting"), s("cloud-migration", "Cloud Migration"), s("aws-development", "AWS"), s("azure-development", "Azure"), s("google-cloud-development", "Google Cloud")] },
           { title: "DevOps & Platform", links: [s("devops", "DevOps"), s("kubernetes", "Kubernetes"), s("ci-cd", "CI/CD"), s("platform-engineering", "Platform Engineering"), s("site-reliability-engineering", "SRE")] },
           { title: "Resilience", links: [s("disaster-recovery", "Disaster Recovery"), s("high-availability", "High Availability"), s("cloud-monitoring", "Monitoring"), s("cloud-managed-services", "Managed Services")] },
+        ],
+      },
+      {
+        label: "Software",
+        icon: "CodeXml",
+        tone: "digital",
+        href: "/capabilities/digital",
+        description: "Digital products designed to launch and scale.",
+        columns: [
+          { title: "Product", links: [s("saas-development", "SaaS Development"), s("mvp-development", "MVP Development"), s("marketplace-development", "Marketplaces"), s("ecommerce-development", "E-commerce")] },
+          { title: "Engineering", links: [s("custom-software-development", "Custom Software"), s("web-development", "Web Apps"), s("mobile-app-development", "Mobile Apps"), s("api-development", "APIs")] },
+          { title: "Enterprise", links: [s("enterprise-software", "Enterprise Software"), s("crm-development", "CRM"), s("erp-development", "ERP"), s("legacy-modernization", "Legacy Modernization")] },
         ],
       },
       {
@@ -128,40 +141,37 @@ export const mainNav: NavItem[] = [
     href: "/products",
     columns: [
       {
+        title: "Digital Assets",
+        links: [
+          product("crypto-exchange", "White-Label Crypto Exchange", "LineChart"),
+          product("crypto-wallet", "White-Label Crypto Wallet", "Wallet"),
+          product("p2p-trading-platform", "P2P Trading Platform", "Users"),
+          product("web3-launchpad", "Crypto Launchpad", "Rocket"),
+        ],
+      },
+      {
         title: "FinTech",
         links: [
-          product("neobank", "Neobank", "Smartphone"),
-          product("digital-bank", "Digital Bank", "Landmark"),
-          product("payment-gateway", "Payment Gateway", "CreditCard"),
-          product("payment-orchestration", "Payment Orchestration", "Workflow"),
-          product("hybrid-wallet", "Hybrid Wallet", "Wallet"),
+          product("neobank", "White-Label Neobank", "Smartphone"),
+          product("crypto-card", "Crypto Card Platform", "CreditCard"),
+          product("crypto-payment", "Crypto Payment Gateway", "Coins"),
+          product("digital-bank", "Digital Banking Platform", "Landmark"),
         ],
       },
       {
-        title: "Web3",
+        title: "Web3 & AI",
         links: [
-          product("crypto-exchange", "Crypto Exchange", "LineChart"),
-          product("rwa-platform", "RWA Platform", "House"),
-          product("tokenization-platform", "Tokenization Platform", "Coins"),
-          product("web3-wallet", "Web3 Wallet", "Wallet"),
+          product("rwa-platform", "RWA Tokenization Platform", "House"),
           product("defi-platform", "DeFi Platform", "Layers"),
-        ],
-      },
-      {
-        title: "AI & Digital",
-        links: [
+          product("staking-platform", "Staking Platform", "Blocks"),
           product("ai-agent-platform", "AI Agent Platform", "Bot"),
-          product("ai-customer-support", "AI Customer Support", "Headphones"),
-          product("ai-document-processing", "Document AI", "FileText"),
-          product("crm-platform", "CRM Platform", "Users"),
-          product("marketplace-platform", "Marketplace Platform", "Store"),
         ],
       },
     ],
     feature: {
-      eyebrow: "48 ready-to-launch products",
-      title: "Launch in weeks, not years",
-      description: "Deploy in your own cloud, customise to your model and keep full control.",
+      eyebrow: "White-label platforms",
+      title: "Launch without starting from zero",
+      description: "Production-ready foundations, customised by dedicated engineers. Typical software implementation: 1–6 weeks.",
       href: "/products",
       cta: "Browse all products",
     },
@@ -269,7 +279,7 @@ export const mainNav: NavItem[] = [
     feature: {
       eyebrow: "Capabilities",
       title: "Five divisions, one partner",
-      description: "AI, Digital, FinTech, Web3 and Cloud, engineered together.",
+      description: "Web3, FinTech, Digital Assets, AI and Cloud — white-label platforms and custom engineering.",
       href: "/capabilities",
       cta: "Explore capabilities",
     },
@@ -277,8 +287,8 @@ export const mainNav: NavItem[] = [
 ];
 
 export const footerNav: NavColumn[] = [
-  { title: "Capabilities", links: [l("AI", "/capabilities/ai"), l("Digital", "/capabilities/digital"), l("FinTech", "/capabilities/fintech"), l("Web3", "/capabilities/web3"), l("Cloud", "/capabilities/cloud")] },
-  { title: "Offerings", links: [l("Products", "/products"), l("Services", "/services"), l("Solutions", "/solutions"), l("Dedicated Teams", "/dedicated-teams"), l("Hire Developers", "/hire-developers"), l("White-Label Development", "/white-label-development"), l("Project Estimator", "/project-estimator")] },
+  { title: "Divisions", links: [l("Web3", "/capabilities/web3"), l("FinTech", "/capabilities/fintech"), l("Digital Assets", "/capabilities/digital-assets"), l("AI", "/capabilities/ai"), l("Cloud", "/capabilities/cloud"), l("Product Engineering", "/capabilities/digital")] },
+  { title: "Offerings", links: [l("White-Label Products", "/products"), l("Services", "/services"), l("Solutions", "/solutions"), l("Dedicated Teams", "/dedicated-teams"), l("Hire Developers", "/hire-developers"), l("White-Label Development", "/white-label-development"), l("Project Estimator", "/project-estimator")] },
   { title: "Explore", links: [l("Industries", "/industries"), l("Technologies", "/technologies"), l("Work", "/work"), l("Markets", "/markets"), l("Resources", "/resources"), l("Insights", "/insights"), l("Glossary", "/glossary")] },
   { title: "Company", links: [l("About", "/company/about"), l("Leadership", "/company/leadership"), l("Careers", "/careers"), l("Partners", "/company/partners"), l("Contact", "/contact")] },
 ];

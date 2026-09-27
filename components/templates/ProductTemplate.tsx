@@ -15,6 +15,8 @@ import { DivisionArt } from "@/components/graphics/DivisionArt";
 import { divisionTone } from "@/components/ui/division";
 import { DashboardPreview } from "@/components/visuals/DashboardPreview";
 import { ProductViewTracker } from "@/components/forms/ProductViewTracker";
+import { launchFor } from "@/data/launch";
+import { LaunchPanel } from "@/components/sections/Launch";
 import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toServiceItem, toIndustryLink, nonNull } from "./mappers";
 
 export function DemoButtons({ product, compact }: { product: Product; compact?: boolean }) {
@@ -47,6 +49,7 @@ export function ProductTemplate({ product }: { product: Product }) {
   const cases = relatedCaseStudies({ products: [product.slug], services: product.services, division: division.id }, 2);
   const insights = relatedInsights({ services: product.services, technologies: product.technologies, division: division.id }, 3);
   const resources = relatedResources({ services: product.services }, 3);
+  const launch = launchFor(product.slug);
 
   return (
     <>
@@ -62,16 +65,22 @@ export function ProductTemplate({ product }: { product: Product }) {
           <div className="flex flex-wrap items-center gap-2">
             <DivisionBadge division={division.id} />
             <span className="rounded-full border border-line px-2.5 py-1 text-[11px] text-muted">{product.category}</span>
-            <span className="rounded-full border border-line px-2.5 py-1 text-[11px] text-muted">Ready to launch</span>
+            <span className="rounded-full border border-line px-2.5 py-1 text-[11px] text-muted">{launch ? "White-label · Ready to launch" : "Ready to launch"}</span>
           </div>
         }
-        title={product.name}
-        lede={product.tagline}
+        title={launch ? launch.seoTitle : product.name}
+        lede={launch ? `${product.name}: ${product.tagline}` : product.tagline}
         accent={tone.hex}
         aside={product.heroImage ? <Image src={product.heroImage} alt={`${product.name} interface`} width={1200} height={800} className="rounded-2xl border border-line" priority /> : <Stage><DashboardPreview kind={product.preview} name={product.name} /></Stage>}
       >
         <DemoButtons product={product} />
       </PageHero>
+
+      {launch && (
+        <Section className="pt-0 sm:pt-0 lg:pt-0" tone="plain">
+          <LaunchPanel launch={launch} productName={product.name} source={product.slug} />
+        </Section>
+      )}
 
       <Section>
         <div className="grid gap-12 lg:grid-cols-[1.2fr_1fr]">

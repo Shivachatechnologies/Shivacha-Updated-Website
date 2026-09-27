@@ -4,6 +4,8 @@ import { services } from "@/data/services";
 import { getGroup } from "@/data/serviceGroups";
 import { hireRoles } from "@/data/hire";
 import { insights } from "@/data/insights";
+import { productLaunch, LAUNCH_DISCLAIMER } from "@/data/launch";
+import { getProduct } from "@/data/products";
 
 /** /llms.txt — a concise, factual map of the site for AI assistants (https://llmstxt.org). */
 export const dynamic = "force-static";
@@ -21,7 +23,7 @@ export function GET() {
   const lines: string[] = [
     `# ${siteConfig.name}`,
     "",
-    `> ${siteConfig.description} Engineering teams in India, the USA and the UK deliver Web3 and blockchain, FinTech, AI, SaaS, web, mobile and cloud projects for clients worldwide.`,
+    `> ${siteConfig.description} Engineering teams in India, the USA and the UK serve founders, fintechs, Web3 companies, financial institutions and enterprises worldwide.`,
     "",
     "## Company facts",
     `- Brand: ${siteConfig.name}`,
@@ -29,7 +31,7 @@ export function GET() {
     ...siteConfig.offices.map((o) => `- Office: ${o.label}, ${o.country} — ${o.lines.join(", ")}${o.headquarters ? " (headquarters)" : ""}`),
     `- Founded: ${siteConfig.founded}`,
     `- Sales: sales@shivacha.com · General: ${siteConfig.contact.email}`,
-    `- Divisions: ${divisions.map((d) => d.name).join(", ")}`,
+    `- Divisions: ${divisions.filter((d) => d.primary).map((d) => d.name).join(", ")} (plus product engineering for web, mobile and SaaS)`,
     "- Engagement models: fixed-scope projects, dedicated teams, white-label delivery for agencies",
     "",
     "## Key pages",
@@ -41,6 +43,13 @@ export function GET() {
     `- [White-label development](${u}/white-label-development): engineering for agencies and consultancies`,
     `- [Glossary](${u}/glossary): definitions of blockchain, FinTech, AI and cloud terms`,
     `- [Contact](${u}/contact): offices, email and phone`,
+    "",
+    "## White-label and ready-to-launch platforms",
+    ...Object.entries(productLaunch)
+      .map(([slug, l]) => ({ slug, l, p: getProduct(slug) }))
+      .filter((x) => x.p)
+      .map(({ slug, l, p }) => `- [${l.seoTitle}](${u}/products/${slug}): ${p!.tagline} Typical software implementation: ${l.timeline}.`),
+    `- Note: ${LAUNCH_DISCLAIMER}`,
     "",
     "## Core services",
     ...featured

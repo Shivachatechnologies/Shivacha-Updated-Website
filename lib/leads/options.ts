@@ -11,6 +11,9 @@ export const SERVICE_OPTIONS = [
   "Smart Contract Development",
   "Crypto Exchange Development",
   "Crypto Wallet Development",
+  "White-Label Platform",
+  "Neobank / Digital Banking",
+  "Crypto Card Platform",
   "Dedicated Development Team",
   "Other",
 ] as const;

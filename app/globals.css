@@ -41,6 +41,38 @@
   --animate-dash: dash 3s linear infinite;
   --animate-pulse-soft: pulse-soft 3.2s ease-in-out infinite;
   --animate-float: float 8s ease-in-out infinite;
+  --animate-flow-y: flow-y 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  --animate-flow-x: flow-x 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+
+  /* Data-flow pulses: the wrapper is the full rail size, so translating it by 100% moves the dot end to end. */
+  @keyframes flow-y {
+    0% {
+      transform: translateY(0);
+      opacity: 0;
+    }
+    12%,
+    88% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
+  @keyframes flow-x {
+    0% {
+      transform: translateX(0);
+      opacity: 0;
+    }
+    12%,
+    88% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
 
   @keyframes dash {
     to {
@@ -310,4 +342,12 @@ body {
   .label {
     @apply mb-1.5 block text-xs font-medium text-muted;
   }
+}
+
+/*
+ * Layering: page content ≤ z-20 · sticky header z-50 · floating actions (Talk to Shivacha, mobile bar) z-60
+ * · modals (inquiry, Calendly, exit intent, search) z-70. Floating actions hide while the mobile menu is open.
+ */
+html[data-nav="open"] [data-floating-actions] {
+  display: none;
 }
