@@ -26,7 +26,7 @@ export function Section({
       id={id}
       data-tone={tone}
       data-theme={tone === "brand" ? "dark" : undefined}
-      className={cn("relative py-16 sm:py-20 lg:py-24", tone === "muted" && "band-muted", tone === "brand" && "band-brand text-fg", className)}
+      className={cn("relative py-12 sm:py-16 lg:py-24", tone === "muted" && "band-muted", tone === "brand" && "band-brand text-fg", className)}
     >
       <div className="container-x relative">{children}</div>
     </section>
@@ -49,15 +49,15 @@ export function SectionHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("mb-10 flex flex-col gap-6 lg:mb-12", align === "center" ? "items-center text-center" : "md:flex-row md:items-end md:justify-between", className)}>
+    <div className={cn("reveal mb-10 flex flex-col gap-5 lg:mb-12", align === "center" ? "items-center text-center" : "md:flex-row md:items-end md:justify-between", className)}>
       <div className={cn("max-w-2xl", align === "center" && "mx-auto")}>
         {eyebrow && <p className={cn("eyebrow mb-4", align === "center" && "justify-center")}>{eyebrow}</p>}
         <h2 className="h-section text-fg">{title}</h2>
         {lede && <p className="lede mt-4">{lede}</p>}
       </div>
       {action && (
-        <Link href={action.href} className="btn-secondary shrink-0">
-          {action.label} <ArrowRight className="size-4" />
+        <Link href={action.href} className="group inline-flex shrink-0 items-center gap-2 border-b border-line-strong pb-1 text-sm font-medium text-fg transition-colors hover:border-fg">
+          {action.label} <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
       )}
     </div>

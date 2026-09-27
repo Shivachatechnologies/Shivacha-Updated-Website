@@ -24,10 +24,11 @@ export function PageHero({
 }) {
   return (
     <header className="relative overflow-hidden pt-28 pb-14 sm:pt-32 sm:pb-16 lg:pt-36">
+      <div aria-hidden className="grid-bg grid-fade pointer-events-none absolute inset-x-0 top-0 h-[560px] opacity-60" />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[480px] opacity-[0.16]"
-        style={{ background: `radial-gradient(55% 70% at 75% 0%, ${accent}, transparent 70%)` }}
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] opacity-[0.07]"
+        style={{ background: `radial-gradient(50% 70% at 80% 0%, ${accent}, transparent 70%)` }}
       />
       <div className="container-x relative">
         <Breadcrumbs items={crumbs} />

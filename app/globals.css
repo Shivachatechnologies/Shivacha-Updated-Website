@@ -106,6 +106,9 @@
 /* Dark is the default theme (tokens above). Repeated here so a subtree can opt back into dark inside light mode. */
 [data-theme="dark"] {
   color-scheme: dark;
+  --btn-bg: #ffffff;
+  --btn-fg: #06101c;
+  --btn-bg-hover: #dbe9f8;
   --color-ink-950: #03070f;
   --color-ink-900: #06101c;
   --color-ink-850: #0a1626;
@@ -128,6 +131,9 @@
 
 [data-theme="light"] {
   color-scheme: light;
+  --btn-bg: #0b1424;
+  --btn-fg: #ffffff;
+  --btn-bg-hover: #0068b3;
   --color-ink-950: #f6f8fb;
   --color-ink-900: #ffffff;
   --color-ink-850: #eef2f7;
@@ -151,10 +157,6 @@
 
 [data-theme="light"] .card {
   background: var(--color-ink-900);
-  box-shadow: 0 1px 2px rgb(11 20 36 / 0.04);
-}
-[data-theme="light"] .card-hover:hover {
-  box-shadow: 0 12px 32px -16px rgb(11 20 36 / 0.18);
 }
 
 html {
@@ -196,44 +198,49 @@ body {
   .container-x {
     @apply mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-8;
   }
+  /* Type system: display (hero statements) · editorial (section narratives) · technical (mono metadata) · body. */
   .eyebrow {
-    @apply inline-flex items-center gap-2.5 text-[13px] font-semibold tracking-[0.01em] text-brand-blue;
+    @apply inline-flex items-center gap-2.5 font-mono text-[11.5px] font-medium tracking-[0.1em] text-muted uppercase;
+  }
+  .label-tech {
+    @apply font-mono text-[11px] font-medium tracking-[0.08em] text-dim uppercase;
   }
   .h-display {
-    @apply text-[2.5rem] leading-[1.04] font-semibold tracking-[-0.035em] text-balance sm:text-6xl lg:text-[4.25rem];
+    @apply text-[2.4rem] leading-[1.03] font-medium tracking-[-0.04em] text-balance sm:text-[3.5rem] lg:text-[4.1rem] xl:text-[4.5rem];
   }
   .h-page {
-    @apply text-[2.15rem] leading-[1.08] font-semibold tracking-[-0.03em] text-balance sm:text-5xl lg:text-[3.4rem];
+    @apply text-[2.1rem] leading-[1.06] font-medium tracking-[-0.035em] text-balance sm:text-[2.9rem] lg:text-[3.35rem];
   }
   .h-section {
-    @apply text-[1.85rem] leading-[1.12] font-semibold tracking-[-0.025em] text-balance sm:text-4xl lg:text-[2.6rem];
+    @apply text-[1.8rem] leading-[1.1] font-medium tracking-[-0.03em] text-balance sm:text-[2.35rem] lg:text-[2.7rem];
   }
   .h-card {
     @apply text-lg leading-snug font-semibold tracking-[-0.01em];
   }
   .lede {
-    @apply text-[1.075rem] leading-relaxed text-pretty text-muted sm:text-lg;
+    @apply text-[1.05rem] leading-relaxed text-pretty text-muted sm:text-[1.125rem];
   }
+  /* Surfaces: fine 1px borders; depth from contrast and layering rather than shadow. */
   .card {
-    @apply rounded-2xl border border-line bg-ink-900 transition-all duration-200;
+    @apply rounded-xl border border-line bg-ink-900 transition-colors duration-200;
   }
   .card-hover {
-    @apply hover:-translate-y-0.5 hover:border-line-strong hover:shadow-[0_18px_40px_-24px_rgb(0_0_0/0.45)];
+    @apply hover:border-line-strong hover:bg-ink-900;
   }
   .btn {
-    @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-all duration-200 select-none;
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-medium whitespace-nowrap transition-colors duration-200 select-none;
   }
   .btn-primary {
-    @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-all duration-200 select-none bg-brand-600 text-white shadow-[0_8px_24px_-8px_rgb(1_149_255/0.55)] hover:bg-brand-700 hover:shadow-[0_0_0_4px_rgb(1_149_255/0.18)];
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-medium whitespace-nowrap transition-colors duration-200 select-none bg-[var(--btn-bg)] text-[var(--btn-fg)] hover:bg-[var(--btn-bg-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue;
   }
   .btn-secondary {
-    @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium whitespace-nowrap transition-all duration-200 select-none border border-line-strong bg-tint/[0.03] text-fg hover:border-tint/25 hover:bg-tint/[0.06];
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-medium whitespace-nowrap transition-colors duration-200 select-none border border-line-strong bg-transparent text-fg hover:border-tint/30 hover:bg-tint/[0.04] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue;
   }
   .btn-ghost {
-    @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-medium whitespace-nowrap text-muted transition-colors hover:text-fg;
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium whitespace-nowrap text-muted transition-colors hover:text-fg;
   }
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-tint/[0.02] px-3 py-1 text-xs text-muted transition-colors hover:border-line-strong hover:text-fg;
+    @apply inline-flex items-center gap-1.5 rounded-md border border-line bg-transparent px-2.5 py-1 text-xs text-muted transition-colors hover:border-line-strong hover:text-fg;
   }
   .grid-bg {
     background-image:
@@ -255,10 +262,24 @@ body {
   }
   .eyebrow::before {
     content: "";
-    @apply h-[2px] w-5 rounded-full bg-brand-blue;
+    @apply h-px w-6 bg-brand-blue;
   }
   .icon-tile {
-    @apply inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-brand-blue/20 bg-brand-blue/10 text-brand-blue;
+    @apply inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-line-strong bg-transparent text-fg;
+  }
+  /* Section reveal: scroll-driven where supported, static elsewhere; disabled for reduced motion. */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal {
+        animation: reveal linear both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 40%;
+      }
+    }
+  }
+  @keyframes reveal {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
   }
   .band-muted,
   main > section:nth-of-type(even):not([data-tone]) {
@@ -350,4 +371,12 @@ body {
  */
 html[data-nav="open"] [data-floating-actions] {
   display: none;
+}
+
+/* SMIL motion in SVG visuals ignores the CSS animation reset, so hide it explicitly for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  svg .packet,
+  svg .orbit {
+    display: none;
+  }
 }

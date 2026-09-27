@@ -7,7 +7,7 @@ export const divisions: Division[] = [
     slug: "web3",
     name: "Shivacha Web3",
     short: "Web3",
-    tagline: "Institutional-grade blockchain and decentralized infrastructure built for rapid deployment.",
+    tagline: "Institutional-grade blockchain and decentralized infrastructure.",
     description:
       "White-label blockchain platforms, L1/L2 networks, DeFi and DEX, smart contract systems, staking, tokenization, RWA, stablecoin and cross-chain infrastructure.",
     color: "cyan",
@@ -15,7 +15,7 @@ export const divisions: Division[] = [
     cta: "Build Your Platform",
     ctaHref: "/start-a-project?division=web3",
     primary: true,
-    flagships: ["White-Label Blockchain Platforms", "Blockchain Networks", "L1 / L2 Infrastructure", "DeFi Platforms", "DEX", "Smart Contract Systems", "Staking Platforms", "Tokenization Platforms", "RWA Infrastructure", "Stablecoin Infrastructure", "Cross-Chain Infrastructure"],
+    flagships: ["Custom Blockchain", "Protocol Engineering", "Layer 2", "DeFi", "DEX", "Smart Contracts", "Cross-Chain", "Staking", "Stablecoins", "DAO", "RWA", "Blockchain Infrastructure"],
     launch: [["White-label Web3 platform", "3–4 weeks"], ["DeFi / DEX platform", "4–6 weeks"], ["Tokenization platform", "3–5 weeks"], ["Custom blockchain / protocol", "6–10 weeks"]],
   },
   {
@@ -23,7 +23,7 @@ export const divisions: Division[] = [
     slug: "fintech",
     name: "Shivacha FinTech",
     short: "FinTech",
-    tagline: "Financial infrastructure for companies building the next generation of banking and payments.",
+    tagline: "Infrastructure for the next generation of financial products.",
     description:
       "Banking, payments, cards, lending and wealth platforms — plus Web3 finance and hybrid rails that connect fiat and digital assets.",
     color: "emerald",
@@ -31,7 +31,7 @@ export const divisions: Division[] = [
     cta: "Discuss Your Launch",
     ctaHref: "/start-a-project?division=fintech",
     primary: true,
-    flagships: ["White-Label Neobank", "Digital Banking Platform", "Crypto Card Platform", "Debit / Prepaid Card Platform", "Multi-Currency Accounts", "Payment Gateway", "Payment Orchestration", "Stablecoin Payments", "Merchant Payments", "Cross-Border Payments", "Remittance Platform", "Embedded Finance", "Banking Infrastructure"],
+    flagships: ["Neobanks", "Digital Banking", "Crypto Cards", "Payment Infrastructure", "Multi-Currency Accounts", "Cross-Border Payments", "Merchant Payments", "Stablecoin Payments", "BaaS", "Embedded Finance", "Compliance Infrastructure"],
     launch: [["White-label neobank", "3–4 weeks"], ["Payment platform", "3–4 weeks"], ["Multi-currency wallet / accounts", "3–4 weeks"], ["Crypto card platform integration", "3–5 weeks"]],
   },
   {
@@ -39,7 +39,7 @@ export const divisions: Division[] = [
     slug: "digital-assets",
     name: "Shivacha Digital Assets",
     short: "Digital Assets",
-    tagline: "Production-ready infrastructure for exchanges, wallets and digital asset businesses.",
+    tagline: "Infrastructure for exchanges, wallets, trading and digital asset platforms.",
     description:
       "White-label crypto exchanges, wallets, P2P and brokerage platforms, custody integration, on/off-ramps and launchpads — configurable foundations with dedicated engineering.",
     color: "amber",
@@ -47,7 +47,7 @@ export const divisions: Division[] = [
     cta: "Request Product Demo",
     ctaHref: "/request-demo?division=digital-assets",
     primary: true,
-    flagships: ["White-Label Crypto Exchange", "Centralized Exchange", "Hybrid Exchange", "Crypto Wallet", "MPC Wallet", "Custodial Wallet", "Multi-Chain Wallet", "P2P Exchange", "Crypto Swap", "Trading Platform", "Matching Engine", "Brokerage Platform", "Digital Asset Custody", "Crypto On/Off-Ramp", "Launchpad", "Portfolio Management"],
+    flagships: ["Crypto Exchanges", "Institutional Trading", "Wallets", "MPC Wallets", "Custody", "P2P", "Brokerage", "On/Off-Ramps", "Trading Infrastructure", "Launchpads", "Digital Asset Infrastructure"],
     launch: [["White-label crypto exchange", "3–4 weeks"], ["White-label crypto wallet", "2–3 weeks"], ["P2P trading platform", "3–4 weeks"], ["Crypto brokerage platform", "3–5 weeks"], ["Crypto launchpad", "3–4 weeks"]],
   },
   {
@@ -55,7 +55,7 @@ export const divisions: Division[] = [
     slug: "ai",
     name: "Shivacha AI",
     short: "AI",
-    tagline: "Enterprise AI systems and intelligent automation built for real-world operations.",
+    tagline: "Intelligent systems built for complex real-world workflows.",
     description:
       "Generative AI, AI agents, machine learning and automation engineered into the systems your business already runs on.",
     color: "violet",
@@ -63,7 +63,7 @@ export const divisions: Division[] = [
     cta: "Request Technical Proposal",
     ctaHref: "/start-a-project?division=ai",
     primary: true,
-    flagships: ["White-Label AI Platforms", "AI Agent Platforms", "Multi-Agent Systems", "Enterprise AI", "AI Workflow Automation", "AI Customer Operations", "AI FinTech Systems", "AI Web3 Systems", "AI Knowledge Platforms", "Private Enterprise AI"],
+    flagships: ["AI Agents", "Multi-Agent Systems", "Enterprise AI", "AI Automation", "AI + FinTech", "AI + Web3", "Risk Intelligence", "Fraud Detection", "Decision Systems"],
     launch: [["White-label AI platform", "3–4 weeks"], ["AI agent platform", "3–5 weeks"], ["Business automation system", "2–4 weeks"], ["Enterprise AI MVP", "3–5 weeks"]],
   },
   {
@@ -71,7 +71,7 @@ export const divisions: Division[] = [
     slug: "cloud",
     name: "Shivacha Cloud",
     short: "Cloud",
-    tagline: "Secure and scalable infrastructure for production-grade digital businesses.",
+    tagline: "Infrastructure engineered for scale, resilience and security.",
     description:
       "Cloud architecture, migration, DevOps, platform engineering, SRE and cybersecurity for systems that cannot go down.",
     color: "sky",
@@ -79,7 +79,7 @@ export const divisions: Division[] = [
     cta: "Discuss Enterprise Deployment",
     ctaHref: "/start-a-project?division=cloud",
     primary: true,
-    flagships: ["Cloud Architecture", "Cloud Migration", "DevSecOps", "Kubernetes", "High-Availability Infrastructure", "Infrastructure Automation", "Cloud Security", "Disaster Recovery", "API Infrastructure", "Blockchain Infrastructure", "FinTech Infrastructure", "Monitoring & Observability"],
+    flagships: ["Cloud Architecture", "Kubernetes", "DevSecOps", "Multi-Cloud", "High Availability", "Cloud Security", "Disaster Recovery", "Data Infrastructure", "Observability"],
     launch: [["Cloud infrastructure setup", "1–2 weeks"], ["DevSecOps implementation", "1–3 weeks"], ["Production cloud migration", "2–4 weeks"], ["High-availability architecture", "2–4 weeks"]],
   },
   {

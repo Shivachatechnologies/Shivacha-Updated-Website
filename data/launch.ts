@@ -40,7 +40,7 @@ export const productLaunch: Record<string, LaunchInfo> = {
   "crypto-exchange": { timeline: "3–4 weeks", advanced: "4–8+ weeks", tier: "White-label implementation", customization: "Highly customizable", keyModules: ["Spot trading", "Wallets", "Matching engine", "Liquidity", "P2P", "KYC/AML", "Admin", "API"], seoTitle: "White-Label Crypto Exchange Platform", cardName: "White-Label Crypto Exchange", apiReady: true },
   "crypto-wallet": { timeline: "2–3 weeks", advanced: "3–5 weeks", tier: "White-label implementation", customization: "Highly customizable", keyModules: ["Multi-chain", "Custody / MPC", "Swap", "Send & receive", "Admin", "API"], seoTitle: "White-Label Crypto Wallet", cardName: "White-Label Crypto Wallet", apiReady: true },
   "p2p-trading-platform": { timeline: "3–4 weeks", tier: "White-label implementation", customization: "Highly customizable", keyModules: ["Ads", "Escrow", "Trade chat", "Disputes", "Merchants", "Admin"], seoTitle: "White-Label P2P Crypto Trading Platform", cardName: "P2P Trading Platform", apiReady: true },
-  "digital-asset-platform": { timeline: "3–5 weeks", tier: "White-label implementation", customization: "Highly customizable", keyModules: ["Brokerage", "Custody integration", "Treasury", "Reporting", "Admin"], seoTitle: "Digital Asset Brokerage & Custody Platform", cardName: "Digital Asset Platform", apiReady: true },
+  "digital-asset-platform": { timeline: "3–5 weeks", tier: "White-label implementation", customization: "Highly customizable", keyModules: ["Brokerage", "Custody integration", "Treasury", "Reporting", "Admin"], seoTitle: "Digital Asset Brokerage & Custody Platform", cardName: "Trading & Brokerage Platform", apiReady: true },
   "web3-launchpad": { timeline: "3–4 weeks", tier: "White-label implementation", customization: "Configurable", keyModules: ["Project listings", "Token sales", "Vesting", "KYC", "Admin"], seoTitle: "White-Label Crypto Launchpad", cardName: "Crypto Launchpad" },
   // FinTech
   neobank: { timeline: "3–4 weeks", advanced: "4–6+ weeks", tier: "White-label implementation", customization: "Highly customizable", keyModules: ["Multi-currency accounts", "Payments", "Cards", "KYC/KYB", "Ledger", "Admin"], seoTitle: "White-Label Neobank Platform", cardName: "White-Label Neobank", apiReady: true },
@@ -71,7 +71,7 @@ export const productLaunch: Record<string, LaunchInfo> = {
 };
 
 /** Homepage "Ready-to-launch platforms" order. */
-export const FEATURED_PLATFORMS = ["crypto-exchange", "crypto-wallet", "neobank", "crypto-card", "crypto-payment", "rwa-platform", "defi-platform", "p2p-trading-platform", "ai-agent-platform", "digital-bank"];
+export const FEATURED_PLATFORMS = ["crypto-exchange", "crypto-wallet", "neobank", "crypto-card", "p2p-trading-platform", "digital-asset-platform", "defi-platform", "rwa-platform", "ai-agent-platform"];
 
 /** Service pages that sell the same platform as a custom build: link to the white-label product and show its range. */
 export const serviceToProduct: Record<string, string> = {

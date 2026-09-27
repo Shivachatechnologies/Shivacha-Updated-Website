@@ -285,7 +285,7 @@ export const web3Products = [
       ["Can policies require multiple approvers?", "Yes, with configurable quorums by amount, asset and destination."],
       ["Does it support tokenized assets?", "Yes, including permissioned tokens with eligibility controls."],
     ],
-    preview: "analytics",
+    preview: "brokerage",
   }),
   prod({
     slug: "tokenization-platform",

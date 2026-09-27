@@ -62,19 +62,19 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
   const active = nav.find((n) => n.label === open);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50" onMouseLeave={leave}>
+    <header className="fixed inset-x-0 top-0 z-50" onMouseLeave={leave} style={{ ["--hdr-h" as string]: scrolled ? "56px" : "72px" }}>
       {/* Background lives on a sibling layer: backdrop-filter on <header> itself would trap the fixed mobile drawer. */}
       <div
         aria-hidden
         className={cn(
-          "absolute inset-x-0 top-0 h-16 border-b transition-colors duration-300",
-          scrolled || open || mobile ? "border-line bg-ink-950/90 backdrop-blur-xl" : "border-transparent",
+          "absolute inset-x-0 top-0 h-[var(--hdr-h)] border-b transition-[height,background-color,border-color] duration-300 ease-out",
+          scrolled || open || mobile ? "border-line bg-ink-950/85 backdrop-blur-xl" : "border-transparent",
         )}
       />
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:rounded-md focus:bg-fg focus:px-3 focus:py-2 focus:text-ink-950">
         Skip to content
       </a>
-      <div className="container-x relative flex h-16 items-center justify-between gap-6">
+      <div className="container-x relative flex h-[var(--hdr-h)] items-center justify-between gap-6 transition-[height] duration-300 ease-out">
         <Link href="/" aria-label="Shivacha Technologies home" className="shrink-0">
           <Logo />
         </Link>
@@ -92,8 +92,8 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
                     aria-controls={isOpen ? "mega-menu" : undefined}
                     onFocus={() => enter(item.label)}
                     className={cn(
-                      "flex items-center gap-1 rounded-full px-3.5 py-2 text-[14px] font-medium transition-colors",
-                      isOpen ? "bg-tint/[0.06] text-fg" : current ? "text-fg" : "text-muted hover:text-fg",
+                      "relative flex items-center gap-1 px-3 py-2 text-[14px] font-medium transition-colors duration-200 after:absolute after:inset-x-3 after:-bottom-px after:h-px after:origin-left after:bg-fg after:transition-transform after:duration-200",
+                      isOpen || current ? "text-fg after:scale-x-100" : "text-muted after:scale-x-0 hover:text-fg",
                     )}
                   >
                     {item.label}
@@ -109,7 +109,7 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
           <button
             type="button"
             onClick={openSearch}
-            className="flex size-9 items-center justify-center rounded-full border border-line bg-tint/[0.03] text-muted transition-colors hover:border-line-strong hover:text-fg"
+            className="flex size-9 items-center justify-center rounded-lg border border-line text-muted transition-colors hover:border-line-strong hover:text-fg"
             aria-label="Search the site (Ctrl+K)"
             title="Search (⌘K)"
           >
@@ -118,12 +118,12 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
           <Link href="/contact" className="hidden px-2 text-[14px] font-medium text-muted transition-colors hover:text-fg lg:inline">
             Contact
           </Link>
-          <Link href="/start-a-project" className="btn-primary hidden h-9 px-4 text-[13px] sm:inline-flex" data-track="cta:header-discuss-project">
-            Discuss Your Launch
+          <Link href="/start-a-project" className="btn-primary hidden h-9 px-4 text-[13px] sm:inline-flex" data-track="cta:header-discuss-product">
+            Discuss Your Product
           </Link>
           <button
             type="button"
-            className="flex size-9 items-center justify-center rounded-full border border-line text-fg xl:hidden"
+            className="flex size-9 items-center justify-center rounded-lg border border-line text-fg xl:hidden"
             aria-label={mobile ? "Close menu" : "Open menu"}
             aria-expanded={mobile}
             onClick={() => setMobile((m) => !m)}
@@ -135,9 +135,9 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
 
       {/* Desktop mega menu */}
       {active && (
-        <div id="mega-menu" className="absolute inset-x-0 top-16 hidden xl:block" onMouseEnter={() => enter(active.label)}>
+        <div id="mega-menu" className="absolute inset-x-0 top-[var(--hdr-h)] hidden xl:block" onMouseEnter={() => enter(active.label)}>
           <div className="container-x pt-2">
-            <div className="animate-[menu-in_.18s_ease-out] overflow-hidden rounded-2xl border border-line bg-ink-900 shadow-[0_30px_80px_-20px_rgb(0_0_0/0.35)]">
+            <div className="animate-[menu-in_.2s_ease-out] overflow-hidden rounded-xl border border-line bg-ink-900 shadow-[0_24px_60px_-30px_rgb(11_20_36/0.35)]">
               {active.tabs ? <TabbedPanel item={active} tab={tab} setTab={setTab} /> : <ColumnsPanel item={active} />}
               {active.footer && (
                 <div className="flex items-center justify-between gap-6 border-t border-line bg-ink-850 px-7 py-3.5 text-sm">
@@ -155,7 +155,7 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
                     }}
                     className="inline-flex items-center gap-1.5 font-medium text-fg hover:text-brand-blue"
                   >
-                    Not sure where to start? Talk to an Expert <ArrowRight className="size-3.5" />
+                    Not sure where to start? Talk to a Solution Architect <ArrowRight className="size-3.5" />
                   </Link>
                 </div>
               )}
@@ -188,17 +188,20 @@ function TabbedPanel({ item, tab, setTab }: { item: NavItem; tab: number; setTab
       <div className="p-7" role="tabpanel">
         <div className="mb-6 flex items-start justify-between gap-6 border-b border-line pb-5">
           <div>
-            <p className={cn("text-xs font-semibold", t.text)}>{cur.label === "Cybersecurity" ? "Security" : `Shivacha ${cur.label === "Software" ? "Digital" : cur.label}`}</p>
-            <p className="mt-1 text-lg font-semibold text-fg">{cur.description}</p>
+            <p className="label-tech flex items-center gap-2">
+              <span className={cn("size-1.5 rounded-full", t.dot)} aria-hidden />
+              {cur.label === "Cybersecurity" ? "Security engineering" : cur.label === "Dedicated Teams" ? "Engagement" : `Shivacha ${cur.label === "Software" ? "Product Engineering" : cur.label}`}
+            </p>
+            <p className="mt-2 text-xl font-medium tracking-[-0.02em] text-fg">{cur.description}</p>
           </div>
-          <Link href={cur.href} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium text-fg transition-colors hover:border-line-strong">
-            Overview <ArrowRight className="size-3.5" />
+          <Link href={cur.href} className="group inline-flex shrink-0 items-center gap-1.5 border-b border-line-strong pb-0.5 text-sm font-medium text-fg transition-colors hover:border-fg">
+            Overview <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
         <div className={cn("grid gap-x-8 gap-y-6", cur.columns.length >= 4 ? "grid-cols-4" : "grid-cols-3")}>
           {cur.columns.map((c) => (
             <div key={c.title}>
-              <p className="mb-2.5 text-xs font-semibold text-dim">{c.title}</p>
+              <p className="label-tech mb-3">{c.title}</p>
               <ul className="space-y-0.5">
                 {c.links.map((l) => (
                   <li key={l.href + l.label}>
@@ -228,11 +231,12 @@ function TabButton({ tab, active, onSelect }: { tab: NavTab; active: boolean; on
       onFocus={onSelect}
       onClick={onSelect}
       className={cn(
-        "flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-all",
-        active ? "bg-ink-900 shadow-[0_4px_16px_-8px_rgb(0_0_0/0.25)] ring-1 ring-line" : "hover:bg-ink-900/60",
+        "relative flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition-colors duration-150",
+        active ? "bg-ink-900 ring-1 ring-line" : "hover:bg-ink-900/60",
       )}
     >
-      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", t.bg, t.text)}>
+      {active && <span aria-hidden className={cn("absolute top-2.5 bottom-2.5 left-0 w-[2px] rounded-full", t.dot)} />}
+      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg border border-line", active ? t.text : "text-muted")}>
         <Icon name={tab.icon} className="size-[18px]" />
       </span>
       <span className="min-w-0">
@@ -250,7 +254,7 @@ function ColumnsPanel({ item }: { item: NavItem }) {
       <div className={cn("grid gap-x-6 gap-y-6 p-7", cols.length >= 3 ? "grid-cols-3" : "grid-cols-2")}>
         {cols.map((c) => (
           <div key={c.title}>
-            <p className="mb-2 px-2 text-xs font-semibold text-dim">{c.title}</p>
+            <p className="label-tech mb-2 px-2">{c.title}</p>
             <ul className="space-y-0.5">
               {c.links.map((l) => (
                 <li key={l.href + l.label}>
@@ -285,13 +289,8 @@ function LinkIcon({ link, className }: { link: NavLink; className?: string }) {
 
 function RichLink({ link }: { link: NavLink }) {
   return (
-    <Link href={link.href} className="group flex items-start gap-3 rounded-xl p-2 transition-colors hover:bg-ink-850">
-      <span
-        className={cn(
-          "flex size-9 shrink-0 items-center justify-center rounded-lg border transition-colors",
-          link.logo ? "border-line bg-ink-900 text-fg" : "border-brand-blue/15 bg-brand-blue/[0.07] text-brand-blue group-hover:bg-brand-600 group-hover:text-white",
-        )}
-      >
+    <Link href={link.href} className="group flex items-start gap-3 rounded-lg p-2 transition-colors duration-150 hover:bg-ink-850">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-line bg-ink-900 text-fg transition-colors group-hover:border-line-strong">
         <LinkIcon link={link} className="size-[18px]" />
       </span>
       <span className="min-w-0 pt-0.5">
@@ -322,7 +321,7 @@ function FeatureCard({ eyebrow, title, description, href, cta }: NonNullable<Nav
 function MobileMenu({ nav, contact }: { nav: NavItem[]; contact: { email: string; phone: string; phoneHref: string } }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   return (
-    <div className="fixed inset-x-0 top-16 bottom-0 animate-[menu-in_.18s_ease-out] overflow-y-auto border-t border-line bg-ink-950 xl:hidden">
+    <div className="fixed inset-x-0 top-[var(--hdr-h)] bottom-0 animate-[menu-in_.18s_ease-out] overflow-y-auto border-t border-line bg-ink-950 xl:hidden">
       <nav aria-label="Mobile" className="container-x pt-3 pb-36">
         <ul>
           {nav.map((item) => {
@@ -380,7 +379,7 @@ function MobileMenu({ nav, contact }: { nav: NavItem[]; contact: { email: string
         </ul>
         <div className="mt-8 grid gap-3">
           <Link href="/start-a-project" className="btn-primary">
-            Discuss Your Launch
+            Discuss Your Product
           </Link>
           <BookCallButton label="Book a Call" variant="secondary" source="mobile_menu" />
         </div>

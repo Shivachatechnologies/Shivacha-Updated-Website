@@ -111,98 +111,77 @@ export function PlatformCard({ product, launch, feature, className }: { product:
   );
 }
 
-/* ───────────── process ───────────── */
+/* ───────────── launch model (process · timelines · comparison) ───────────── */
 
 const STEPS = [
   { n: "01", title: "Select", body: "Choose a ready-to-launch foundation." },
   { n: "02", title: "Customize", body: "Brand, UI, workflows and business logic." },
-  { n: "03", title: "Integrate", body: "Connect APIs, payment rails, custody, identity, analytics and infrastructure." },
+  { n: "03", title: "Integrate", body: "APIs, payment rails, custody, identity, analytics and infrastructure." },
   { n: "04", title: "Test", body: "QA, security testing and deployment preparation." },
   { n: "05", title: "Launch", body: "Deploy your production environment." },
 ];
 
-export function LaunchProcess() {
+const ZERO = ["Longer discovery", "Architecture from scratch", "Higher initial engineering effort", "Longer QA cycle", "More infrastructure setup", "—", "—"];
+const WL = ["Pre-built foundation", "Configurable architecture", "Faster implementation", "Reusable modules", "Dedicated engineering", "Deployment support", "Custom integrations"];
+
+/** Editorial launch narrative: numbered process, implementation tiers and the build-from-zero matrix — no card grids. */
+export function LaunchModel() {
   return (
-    <Section id="launch-process">
-      <SectionHeader eyebrow="Ready to launch" title="From product idea to launch — faster." lede="A proven foundation, customised by a dedicated engineering team and deployed into your environment." />
-      <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {STEPS.map((s, i) => (
-          <li key={s.n} className="card relative flex flex-col p-5">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-sm font-semibold text-brand-blue">{s.n}</span>
-              {i < STEPS.length - 1 && <ArrowRight className="hidden size-4 text-dim lg:block" aria-hidden />}
-            </div>
-            <h3 className="mt-4 text-lg font-semibold text-fg">{s.title}</h3>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted">{s.body}</p>
+    <Section id="launch-model">
+      <SectionHeader eyebrow="The launch model" title="From product idea to launch — faster." lede="A proven foundation, customised by a dedicated engineering team and deployed into your environment. Typical software implementation: 1–6 weeks, depending on product and customization." />
+
+      <ol className="grid border-t border-line sm:grid-cols-2 lg:grid-cols-5">
+        {STEPS.map((s) => (
+          <li key={s.n} className="border-b border-line py-6 sm:pr-6 lg:border-b-0 lg:pt-7 lg:pr-8">
+            <span className="font-mono text-[12px] text-brand-blue">{s.n}</span>
+            <h3 className="mt-3 text-xl font-medium tracking-[-0.02em] text-fg">{s.title}</h3>
+            <p className="mt-1.5 text-[14.5px] leading-relaxed text-muted">{s.body}</p>
           </li>
         ))}
       </ol>
-      <p className="mt-6 flex items-start gap-2 text-sm text-muted">
-        <Clock3 className="mt-0.5 size-4 shrink-0 text-brand-blue" aria-hidden />
-        <span>
-          <strong className="font-semibold text-fg">Typical software implementation: 1–6 weeks</strong> depending on product and customization. Not every project launches in 3–4 weeks — complex enterprise systems take longer.
-        </span>
-      </p>
-    </Section>
-  );
-}
 
-/* ───────────── timeline tiers ───────────── */
-
-export function TimelineTiers() {
-  return (
-    <Section id="timelines">
-      <SectionHeader eyebrow="Realistic timelines" title="How long implementation takes." lede="Ranges depend on the foundation, the depth of customization and your integrations." />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {LAUNCH_TIERS.map((t, i) => (
-          <div key={t.tier} className="card flex flex-col p-5">
-            <div className="flex items-center gap-1" aria-hidden>
-              {LAUNCH_TIERS.map((_, j) => (
-                <span key={j} className={cn("h-1.5 flex-1 rounded-full", j <= i ? "bg-brand-blue" : "bg-ink-800")} />
-              ))}
-            </div>
-            <p className="mt-4 text-sm font-medium text-muted">{t.tier}</p>
-            <p className="mt-1 text-2xl font-semibold tracking-tight text-fg">{t.range}</p>
-            <p className="mt-2 text-sm leading-relaxed text-muted">{t.description}</p>
-          </div>
-        ))}
-      </div>
-      <p className="mt-6 flex gap-2 rounded-xl border border-line bg-ink-900 p-4 text-xs leading-relaxed text-dim">
-        <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden /> {LAUNCH_DISCLAIMER}
-      </p>
-    </Section>
-  );
-}
-
-/* ───────────── build from zero vs white-label ───────────── */
-
-const ZERO = ["Longer discovery", "Architecture from scratch", "Higher initial engineering effort", "Longer QA cycle", "More infrastructure setup"];
-const WL = ["Pre-built foundation", "Configurable architecture", "Faster implementation", "Reusable modules", "Dedicated engineering", "Deployment support", "Custom integrations"];
-
-export function FromZeroComparison() {
-  return (
-    <Section id="white-label-advantage">
-      <SectionHeader eyebrow="White-label advantage" title="Why build everything from zero?" align="center" />
-      <div className="mx-auto grid max-w-4xl gap-4 md:grid-cols-2">
-        <div className="card p-6 sm:p-7">
-          <h3 className="text-sm font-semibold tracking-wide text-muted uppercase">From zero</h3>
-          <ul className="mt-5 space-y-3">
-            {ZERO.map((z) => (
-              <li key={z} className="flex items-center gap-3 text-[15px] text-muted">
-                <Minus className="size-4 shrink-0 text-dim" aria-hidden /> {z}
-              </li>
+      <div className="mt-16 grid gap-12 lg:mt-20 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
+        <div id="timelines">
+          <h3 className="text-[1.45rem] font-medium tracking-[-0.025em] text-fg">How long implementation takes</h3>
+          <dl className="mt-6 divide-y divide-line border-y border-line">
+            {LAUNCH_TIERS.map((t) => (
+              <div key={t.tier} className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 py-4">
+                <dt className="text-[15px] font-medium text-fg">{t.tier}</dt>
+                <dd className="row-span-2 self-center text-right font-mono text-[15px] text-fg tabular-nums">{t.range}</dd>
+                <dd className="text-[13.5px] leading-snug text-muted">{t.description}</dd>
+              </div>
             ))}
-          </ul>
+          </dl>
+          <p className="mt-4 flex gap-2 text-xs leading-relaxed text-dim">
+            <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden /> {LAUNCH_DISCLAIMER}
+          </p>
         </div>
-        <div className="card border-brand-blue/40 p-6 shadow-[0_24px_60px_-30px_rgb(1_115_204/0.45)] sm:p-7">
-          <h3 className="text-sm font-semibold tracking-wide text-brand-blue uppercase">Shivacha white-label</h3>
-          <ul className="mt-5 space-y-3">
-            {WL.map((z) => (
-              <li key={z} className="flex items-center gap-3 text-[15px] text-fg">
-                <Check className="size-4 shrink-0 text-brand-teal" aria-hidden /> {z}
-              </li>
-            ))}
-          </ul>
+
+        <div id="white-label-advantage">
+          <h3 className="text-[1.45rem] font-medium tracking-[-0.025em] text-fg">Why build everything from zero?</h3>
+          <table className="mt-6 w-full border-y border-line text-left text-[14.5px]">
+            <caption className="sr-only">Building from zero compared with a Shivacha white-label foundation</caption>
+            <thead>
+              <tr className="border-b border-line">
+                <th scope="col" className="label-tech py-3 pr-4 font-medium">From zero</th>
+                <th scope="col" className="label-tech py-3 font-medium text-brand-blue">Shivacha white-label</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {WL.map((w, i) => (
+                <tr key={w}>
+                  <td className="py-3 pr-4 text-muted">
+                    {ZERO[i] === "—" ? <Minus className="size-4 text-dim" aria-label="Not applicable" /> : ZERO[i]}
+                  </td>
+                  <td className="py-3 text-fg">
+                    <span className="flex items-center gap-2">
+                      <Check className="size-4 shrink-0 text-brand-teal" aria-hidden /> {w}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </Section>

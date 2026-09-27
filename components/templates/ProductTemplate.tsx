@@ -17,6 +17,9 @@ import { DashboardPreview } from "@/components/visuals/DashboardPreview";
 import { ProductViewTracker } from "@/components/forms/ProductViewTracker";
 import { launchFor } from "@/data/launch";
 import { LaunchPanel } from "@/components/sections/Launch";
+import { ArchitectureFlow, STORIES } from "@/components/sections/ArchitectureStory";
+
+const productStory: Record<string, keyof typeof STORIES> = { "crypto-exchange": "exchange", "p2p-trading-platform": "exchange", "crypto-card": "card", "ai-agent-platform": "agents" };
 import { toCaseItem, toInsightItem, toProductItem, toResourceItem, toServiceItem, toIndustryLink, nonNull } from "./mappers";
 
 export function DemoButtons({ product, compact }: { product: Product; compact?: boolean }) {
@@ -79,6 +82,13 @@ export function ProductTemplate({ product }: { product: Product }) {
       {launch && (
         <Section className="pt-0 sm:pt-0 lg:pt-0" tone="plain">
           <LaunchPanel launch={launch} productName={product.name} source={product.slug} />
+        </Section>
+      )}
+
+      {productStory[product.slug] && (
+        <Section id="how-it-works">
+          <SectionHeader eyebrow="How it works" title={`${STORIES[productStory[product.slug]].title}.`} lede={STORIES[productStory[product.slug]].intro} />
+          <ArchitectureFlow story={STORIES[productStory[product.slug]]} />
         </Section>
       )}
 

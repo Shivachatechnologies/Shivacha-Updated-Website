@@ -21,8 +21,8 @@ function Frame({ title, status, tone = "light", children, className, label }: { 
       data-theme={tone === "dark" ? "dark" : undefined}
       aria-label={label}
       className={cn(
-        "@container relative w-full overflow-hidden rounded-[24px] border text-fg",
-        tone === "dark" ? "border-white/10 bg-[#07111f] shadow-[0_40px_100px_-40px_rgb(1_40_90/0.65)]" : "border-line bg-ink-900 shadow-[0_30px_80px_-40px_rgb(11_20_36/0.35)]",
+        "@container relative w-full overflow-hidden rounded-2xl border text-fg",
+        tone === "dark" ? "border-white/10 bg-[#07111f]" : "border-line bg-ink-900 shadow-[0_24px_60px_-40px_rgb(11_20_36/0.3)]",
         className,
       )}
     >

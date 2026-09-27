@@ -1,6 +1,6 @@
 import { products, hasLiveDemo, getProduct } from "@/data/products";
 import { FEATURED_PLATFORMS, launchFor } from "@/data/launch";
-import { FromZeroComparison, LaunchProcess, PlatformCard, TimelineTiers } from "@/components/sections/Launch";
+import { LaunchModel, PlatformCard } from "@/components/sections/Launch";
 import { buildMetadata } from "@/lib/seo";
 import { PageHero } from "@/components/sections/PageHero";
 import { CTABand } from "@/components/sections/CTABand";
@@ -35,7 +35,7 @@ export default function ProductsPage() {
         <SectionHeader eyebrow="Ready-to-launch platforms" title="Our most requested white-label platforms." />
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {FEATURED_PLATFORMS.map((slug, i) => (
-            <PlatformCard key={slug} product={getProduct(slug)!} launch={launchFor(slug)!} feature={i === 0} className={i === FEATURED_PLATFORMS.length - 1 && FEATURED_PLATFORMS.length % 2 === 0 ? "md:col-span-2 lg:col-span-1" : undefined} />
+            <PlatformCard key={slug} product={getProduct(slug)!} launch={launchFor(slug)!} className={i === FEATURED_PLATFORMS.length - 1 && FEATURED_PLATFORMS.length % 2 === 1 ? "md:col-span-2 lg:col-span-1" : undefined} />
           ))}
         </div>
       </Section>
@@ -43,9 +43,7 @@ export default function ProductsPage() {
         <SectionHeader eyebrow="All platforms" title="Browse every product." />
         <ProductMarketplace items={products.map((p) => ({ slug: p.slug, name: launchFor(p.slug)?.seoTitle ?? p.name, division: p.division, category: p.category, tagline: p.tagline, live: hasLiveDemo(p), timeline: launchFor(p.slug)?.timeline }))} />
       </Section>
-      <LaunchProcess />
-      <FromZeroComparison />
-      <TimelineTiers />
+      <LaunchModel />
       <CTABand title="See a platform in action." lede="Get a tailored demo, an implementation timeline and a technical proposal for your launch." primary={{ label: "Request Product Demo", href: "/request-demo" }} />
     </>
   );

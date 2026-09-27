@@ -103,6 +103,7 @@ export type PreviewKind =
   | "cards"
   | "lending"
   | "exchange"
+  | "brokerage"
   | "tokenization"
   | "ai-agent"
   | "ai-chat"

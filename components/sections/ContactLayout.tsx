@@ -6,13 +6,18 @@ import { Section } from "@/components/ui/primitives";
 import { BookCallButton } from "@/components/leads/BookCall";
 import type { Crumb } from "@/components/ui/Breadcrumbs";
 
-export function ContactLayout({ crumbs, title, lede, eyebrow, children, side }: { crumbs: Crumb[]; title: string; lede: string; eyebrow: string; children: ReactNode; side?: ReactNode }) {
+export function ContactLayout({ crumbs, title, lede, eyebrow, children, side, intro }: { crumbs: Crumb[]; title: string; lede: string; eyebrow: string; children: ReactNode; side?: ReactNode; intro?: ReactNode }) {
   return (
     <>
       <PageHero crumbs={crumbs} eyebrow={<span className="eyebrow">{eyebrow}</span>} title={title} lede={lede} />
+      {intro && (
+        <div className="container-x -mt-4 mb-10 lg:mb-12" data-tone="plain">
+          {intro}
+        </div>
+      )}
       <Section className="pt-0">
         <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr]">
-          <div className="card min-w-0 p-6 sm:p-8">{children}</div>
+          <div className="card min-w-0 self-start p-6 sm:p-8">{children}</div>
           <aside className="space-y-6">
             {side}
             <div className="card p-6">

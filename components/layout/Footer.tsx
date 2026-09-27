@@ -165,27 +165,31 @@ export function Footer() {
           </ul>
         </div>
 
-        {/* Sitemap + newsletter */}
-        <div className="grid gap-12 border-b border-line py-14 lg:grid-cols-[2.2fr_1fr] lg:gap-16">
-          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-            {footerNav.map((col) => (
-              <div key={col.title}>
-                <p className="mb-4 text-sm font-semibold text-fg">{col.title}</p>
-                <ul className="space-y-2.5">
-                  {col.links.map((l) => (
-                    <li key={l.href}>
-                      <Link href={l.href} className="text-sm text-muted transition-colors hover:text-fg">
-                        {l.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+        {/* Sitemap */}
+        <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-10 border-b border-line py-14 sm:grid-cols-3 lg:grid-cols-6">
+          {footerNav.map((col) => (
+            <div key={col.title} className="min-w-0">
+              <p className="label-tech mb-4 text-muted">{col.title}</p>
+              <ul className="space-y-2.5">
+                {col.links.map((l) => (
+                  <li key={l.href}>
+                    <Link href={l.href} className="text-sm text-muted transition-colors hover:text-fg">
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        {/* Newsletter */}
+        <div className="flex flex-col gap-6 border-b border-line py-10 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="font-semibold text-fg">Engineering notes, once a month</p>
-            <p className="mt-1.5 mb-5 text-sm text-muted">AI, fintech, Web3 and cloud. No filler, unsubscribe any time.</p>
+            <p className="font-medium text-fg">Engineering notes, once a month</p>
+            <p className="mt-1 text-sm text-muted">Web3, digital assets, FinTech, AI and cloud. No filler, unsubscribe any time.</p>
+          </div>
+          <div className="w-full lg:max-w-md">
             <NewsletterForm />
           </div>
         </div>

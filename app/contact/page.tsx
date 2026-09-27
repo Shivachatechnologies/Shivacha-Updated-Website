@@ -3,7 +3,8 @@ import { contactFaqs } from "@/data/faqs";
 import { ContactLayout } from "@/components/sections/ContactLayout";
 import { LeadForm } from "@/components/forms/LeadForm";
 import { FAQ } from "@/components/sections/FAQ";
-import { JsonLd, LinkCard } from "@/components/ui/primitives";
+import { ContactPaths } from "@/components/sections/ContactPaths";
+import { JsonLd } from "@/components/ui/primitives";
 import { webPageSchema } from "@/lib/jsonld";
 
 export const metadata = buildMetadata({ title: "Contact Shivacha", description: "Contact Shivacha Technologies about AI, digital, fintech, Web3 or cloud projects, product demos, dedicated teams or partnerships.", path: "/contact" });
@@ -16,14 +17,8 @@ export default function ContactPage() {
         crumbs={[{ name: "Contact", href: "/contact" }]}
         eyebrow="Contact"
         title="Let's talk about what you're building."
-        lede="Questions, partnerships or general enquiries. For project briefs, use Discuss Your Project."
-        side={
-          <div className="grid gap-3">
-            <h2 className="sr-only">Other ways to work with us</h2>
-            <LinkCard href="/start-a-project" title="Discuss Your Project" description="Two quick steps. We reply within one business day." />
-            <LinkCard href="/request-demo" title="Request a Demo" description="See a ready-to-launch product." />
-          </div>
-        }
+        lede="Choose the path that fits — or send a message below for partnerships and general enquiries. Every enquiry is read by a senior engineer."
+        intro={<ContactPaths />}
       >
         <LeadForm type="contact" />
       </ContactLayout>
