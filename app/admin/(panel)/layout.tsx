@@ -21,7 +21,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const footer = (
     <div className="flex items-center justify-between gap-2">
       <div className="min-w-0">
-        <p className="truncate text-[13px] font-medium text-fg">{user.name}</p>
+        <Link href="/admin/account" className="block truncate text-[13px] font-medium text-fg hover:underline">{user.name}</Link>
         <p className="truncate text-[11.5px] text-dim">{ROLE_LABELS[user.role]}</p>
       </div>
       <form action={logoutAction}>

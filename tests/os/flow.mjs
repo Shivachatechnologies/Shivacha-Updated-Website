@@ -9,6 +9,7 @@ import { chromium } from "playwright-core";
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { createHmac } from "node:crypto";
 
 const BASE = process.env.ADMIN_E2E_URL ?? "http://localhost:3100";
 const PW = process.env.ADMIN_E2E_PASSWORD;
@@ -33,6 +34,18 @@ async function login(page, email) {
 }
 const toast = async (page, text) => page.locator("[role=status]", { hasText: text }).first().waitFor({ timeout: 20000 }).then(() => true, () => false);
 const state = {};
+/** RFC 6238 TOTP for the 2FA flow test. */
+const totp = (secret, step = Math.floor(Date.now() / 30000)) => {
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = "";
+  for (const c of secret.replace(/\s/g, "")) bits += A.indexOf(c).toString(2).padStart(5, "0");
+  const key = Buffer.from(bits.match(/.{8}/g).map((b) => parseInt(b, 2)));
+  const msg = Buffer.alloc(8);
+  msg.writeBigUInt64BE(BigInt(step));
+  const h = createHmac("sha1", key).update(msg).digest();
+  const o = h[h.length - 1] & 15;
+  return String((((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3]) % 1e6).padStart(6, "0");
+};
 /** Lets an okThen redirect (which strips its ?toast param) finish before navigating elsewhere. */
 const settle = async (page) => {
   await page.waitForTimeout(1500);
@@ -548,6 +561,102 @@ try {
       check(hidden, "content manager cannot open others' approvals (not found)");
     }
     await cm.close();
+  }
+
+  if (!only.length || only.includes("sys")) {
+    /* ───── executive dashboard ───── */
+    await p.goto("/admin/executive?range=ytd");
+    check((await p.locator("text=Revenue collected").count()) === 1, "executive dashboard renders live KPIs");
+
+    /* ───── knowledge base → public help centre ───── */
+    await p.goto("/admin/knowledge/new");
+    await p.fill("#f-title", `How invoices work ${RUN}`);
+    await p.fill("#f-excerpt", "Payment terms, methods and confirmation.");
+    await p.fill("#f-body", `# Paying an invoice\n\n- Bank transfer or card\n- Payments are **confirmed** by finance\n\nSee [contact](/contact). kb-${RUN}`);
+    await p.selectOption("#f-visibility", "PUBLIC");
+    await p.selectOption("#f-status", "PUBLISHED");
+    await p.selectOption("#f-category", "SUPPORT");
+    await p.click("button:has-text('Create article')");
+    await p.waitForURL(/\/admin\/knowledge\/c/, { timeout: 30000 });
+    check((await p.locator("strong", { hasText: "confirmed" }).count()) === 1, "article created and markdown rendered safely");
+    const slug = `how-invoices-work-${RUN}`;
+    await p.goto(`/help/${slug}`);
+    check((await p.locator("h1", { hasText: `How invoices work ${RUN}` }).count()) === 1, "public article published at /help/<slug>");
+    await p.goto("/help");
+    check((await p.locator(`a[href='/help/${slug}']`).count()) === 1, "help centre lists the public article");
+    const anonHelp = await (await ctxFor()).newPage();
+    await anonHelp.goto("/sitemap.xml");
+    check((await anonHelp.content()).includes(`/help/${slug}`), "public article is in the sitemap");
+
+    /* ───── global search spans OS records ───── */
+    await p.goto("/admin/dashboard");
+    await p.waitForLoadState("networkidle");
+    await p.locator("header button", { hasText: /Search/ }).first().click();
+    await p.fill("input[aria-label='Search query']", `How invoices work ${RUN}`);
+    check(await p.locator("text=Article").first().waitFor({ timeout: 15000 }).then(() => true, () => false), "global search finds knowledge articles");
+
+    /* ───── reports + exports ───── */
+    await p.goto("/admin/reports/leads?range=all");
+    check((await p.locator("text=Summary").count()) >= 1, "leads report renders");
+    const csv = await p.request.get("/admin/reports/leads/export?range=all&format=csv");
+    check(csv.status() === 200 && (await csv.text()).includes("Ref,Created,Name"), "report CSV export");
+    const pdf = await p.request.get("/admin/reports/receivables/export?format=pdf");
+    check(pdf.status() === 200 && (await pdf.body()).subarray(0, 4).toString() === "%PDF", "report PDF export");
+    await p.goto("/admin/performance?range=all");
+    check((await p.locator("h1", { hasText: "Team performance" }).count()) === 1, "team performance renders");
+
+    /* ───── security, integrations, system ───── */
+    await p.goto("/admin/security");
+    check((await p.locator("text=HTTPS-only secure session cookies").count()) === 1, "security center renders configuration checks");
+    await p.goto("/admin/security?tab=logins");
+    check((await p.locator("tbody tr").count()) > 0, "sign-in history listed");
+    await p.goto("/admin/integrations");
+    check((await p.locator("text=Not connected").count()) > 0 && !(await p.content()).includes("test-only-encryption-key"), "integrations show status without secret values");
+    await p.goto("/admin/system");
+    check((await p.locator("text=Online").count()) >= 1, "system health: database online");
+    await p.click("button:has-text('Run daily jobs now')");
+    check(await toast(p, "Scheduler ran"), "daily jobs run on demand");
+    await settle(p);
+
+    /* ───── regional URLs ───── */
+    const reg = await p.request.get("/uae", { maxRedirects: 0 });
+    check(reg.status() === 308 && reg.headers().location?.endsWith("/markets/uae"), "regional short URL redirects to its market page");
+
+    /* ───── 2FA: enrol, then sign in with a code ───── */
+    const ac = await ctxFor();
+    const a = await ac.newPage();
+    await login(a, "qa-admin@shivacha.test");
+    await a.goto("/admin/account");
+    if ((await a.locator("button:has-text('Turn off')").count()) === 0) {
+      await a.click("button:has-text('Set up two-factor authentication')");
+      await a.locator("code").first().waitFor({ timeout: 20000 });
+      state.secret = (await a.locator("code").first().innerText()).replace(/\s/g, "");
+      await a.fill("input[name=code]", totp(state.secret));
+      await a.click("button:has-text('Turn on')");
+      check(await toast(a, "Two-factor authentication is on"), "2FA enrolled with a valid code");
+      await settle(a);
+    }
+    await ac.close();
+    const bc = await ctxFor();
+    const b = await bc.newPage();
+    await b.goto("/admin/login");
+    await b.fill("input[name=email]", "qa-admin@shivacha.test");
+    await b.fill("input[name=password]", PW);
+    await b.click("button[type=submit]");
+    check(await b.locator("input[name=code]").waitFor({ timeout: 20000 }).then(() => true, () => false), "sign-in asks for the 2FA code");
+    await b.fill("input[name=code]", "000000");
+    await b.click("button[type=submit]");
+    check(await b.locator("text=That code is not valid").waitFor({ timeout: 20000 }).then(() => true, () => false), "wrong code is rejected");
+    // Wait for a fresh time step (the enrolment code cannot be replayed).
+    await b.waitForTimeout(31000 - (Date.now() % 30000));
+    await b.fill("input[name=code]", totp(state.secret));
+    await Promise.all([b.waitForURL(/\/admin\/dashboard/, { timeout: 60000 }), b.click("button[type=submit]")]);
+    check(b.url().includes("/admin/dashboard"), "valid TOTP code signs in");
+    await b.goto("/admin/account");
+    await b.fill("input[name=code]", totp(state.secret));
+    await b.click("button:has-text('Turn off')");
+    check(await toast(b, "Two-factor authentication is off"), "2FA turned off again (test cleanup)");
+    await bc.close();
   }
 } catch (e) {
   check(false, `unexpected error: ${e.message.split("\n")[0]}`);

@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
  * Minimal, safe Markdown for AI output: headings, bullets, numbered lists, bold/italic, inline code, fenced code and
  * links. Renders React elements only (never raw HTML). Links are allowed only to /admin paths and https URLs.
  */
-function inline(text: string, key: string): ReactNode[] {
+function inline(text: string, key: string, rel = false): ReactNode[] {
   const out: ReactNode[] = [];
   const re = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)\s]+\)|_[^_]+_|\/admin\/[A-Za-z0-9/_\-?=&#.%]+)/g;
   let last = 0;
@@ -19,7 +19,7 @@ function inline(text: string, key: string): ReactNode[] {
     else if (t.startsWith("_")) out.push(<em key={k}>{t.slice(1, -1)}</em>);
     else if (t.startsWith("[")) {
       const [, label, href] = t.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/) ?? [];
-      if (href?.startsWith("/admin/")) out.push(<Link key={k} href={href} className="text-brand-blue hover:underline">{label}</Link>);
+      if (href?.startsWith("/admin/") || (rel && href?.startsWith("/") && !href.startsWith("//"))) out.push(<Link key={k} href={href} className="text-brand-blue hover:underline">{label}</Link>);
       else if (href?.startsWith("https://")) out.push(<a key={k} href={href} target="_blank" rel="noopener noreferrer nofollow" className="text-brand-blue hover:underline">{label}</a>);
       else out.push(label ?? t);
     } else {
@@ -32,14 +32,15 @@ function inline(text: string, key: string): ReactNode[] {
   return out;
 }
 
-export function Markdown({ text }: { text: string }) {
+/** `relativeLinks` also allows site-relative links (knowledge articles); AI output only links to /admin. */
+export function Markdown({ text, relativeLinks = false }: { text: string; relativeLinks?: boolean }) {
   const blocks: ReactNode[] = [];
   const lines = text.replace(/\r/g, "").split("\n");
   let list: { ordered: boolean; items: string[] } | null = null;
   const flush = () => {
     if (!list) return;
     const k = `l${blocks.length}`;
-    const items = list.items.map((it, i) => <li key={i}>{inline(it, `${k}-${i}`)}</li>);
+    const items = list.items.map((it, i) => <li key={i}>{inline(it, `${k}-${i}`, relativeLinks)}</li>);
     blocks.push(list.ordered ? <ol key={k} className="ml-5 list-decimal space-y-0.5">{items}</ol> : <ul key={k} className="ml-5 list-disc space-y-0.5">{items}</ul>);
     list = null;
   };
@@ -57,7 +58,7 @@ export function Markdown({ text }: { text: string }) {
     const n = line.match(/^\s*\d+[.)]\s+(.*)$/);
     if (h) {
       flush();
-      blocks.push(<p key={`h${i}`} className="mt-2 font-semibold text-fg">{inline(h[2], `h${i}`)}</p>);
+      blocks.push(<p key={`h${i}`} className="mt-2 font-semibold text-fg">{inline(h[2], `h${i}`, relativeLinks)}</p>);
     } else if (b || n) {
       const ordered = !!n;
       if (list && list.ordered !== ordered) flush();
@@ -66,7 +67,7 @@ export function Markdown({ text }: { text: string }) {
     } else if (!line.trim()) flush();
     else {
       flush();
-      blocks.push(<p key={`p${i}`}>{inline(line, `p${i}`)}</p>);
+      blocks.push(<p key={`p${i}`}>{inline(line, `p${i}`, relativeLinks)}</p>);
     }
   }
   flush();

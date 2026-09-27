@@ -1,14 +1,14 @@
 import type { MetadataRoute } from "next";
 import { siteConfig } from "@/data/siteConfig";
 import { allRoutes } from "@/lib/routes";
-import { getCmsCaseStudies, getCmsPageSlugs, getCmsPosts, getCmsProducts, getCmsServices, getSeoEntries, getSeoSettings } from "@/lib/cms/public";
+import { getCmsCaseStudies, getCmsPageSlugs, getCmsPosts, getCmsProducts, getCmsServices, getSeoEntries, getSeoSettings, getHelpArticles } from "@/lib/cms/public";
 
 export const revalidate = 3600;
 
 /** Built-in routes plus published CMS content; URLs marked noindex in the SEO module are left out. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date().toISOString();
-  const [seo, entries, svc, prod, posts, cases, pages] = await Promise.all([getSeoSettings(), getSeoEntries(), getCmsServices(), getCmsProducts(), getCmsPosts(), getCmsCaseStudies(), getCmsPageSlugs()]);
+  const [seo, entries, svc, prod, posts, cases, pages, help] = await Promise.all([getSeoSettings(), getSeoEntries(), getCmsServices(), getCmsProducts(), getCmsPosts(), getCmsCaseStudies(), getCmsPageSlugs(), getHelpArticles()]);
   if (!seo.allowIndexing) return [];
   const iso = (d: Date | string) => new Date(d).toISOString();
   const routes = new Map(allRoutes().map((r) => [r.path, { path: r.path, priority: r.priority, lastModified: r.lastModified ?? now }]));
@@ -18,6 +18,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   posts.forEach((p) => add(`/insights/${p.slug}`, 0.6, p.updatedAt));
   cases.forEach((c) => add(`/work/${c.slug}`, 0.6, c.updatedAt));
   pages.forEach((p) => add(`/${p.slug}`, 0.6, p.updatedAt));
+  if (help.length) add("/help", 0.5, help.reduce((m, a) => (new Date(a.updatedAt) > new Date(m) ? a.updatedAt : m), help[0].updatedAt));
+  help.forEach((a) => add(`/help/${a.slug}`, 0.4, a.updatedAt));
   return [...routes.values()]
     .filter((r) => !entries[r.path]?.noindex)
     .map((r) => ({

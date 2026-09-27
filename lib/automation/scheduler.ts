@@ -133,3 +133,16 @@ export async function runDailyJobs(extra: { name: string; run: () => Promise<num
   for (const e of extra) reports.push(await job(e.name, e.run));
   return reports;
 }
+
+export interface SchedulerRun {
+  at: string;
+  trigger: string;
+  ms: number;
+  reports: JobReport[];
+}
+
+/** Last scheduler run, shown on System Health (Setting "scheduler:lastRun"). */
+export async function recordSchedulerRun(trigger: string, ms: number, reports: JobReport[]) {
+  const value = { at: new Date().toISOString(), trigger, ms, reports } satisfies SchedulerRun;
+  await db.setting.upsert({ where: { key: "scheduler:lastRun" }, update: { value: value as object }, create: { key: "scheduler:lastRun", value: value as object } }).catch((e) => console.error("[scheduler] could not record run", (e as Error).message));
+}

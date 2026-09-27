@@ -264,3 +264,41 @@ ADMIN_E2E_PASSWORD=… npm run test:admin:e2e   # 64 end-to-end checks (auth, CR
 
 Run the e2e suite only against a test database — it creates and deletes content.
 Header mega-menu navigation stays code-managed (`data/navigation.ts`); the footer menu is editable in the CMS.
+
+## Shivacha OS
+
+The admin panel is an operating system for the whole business. Every module is behind a feature flag (`/admin/settings/features`) and server-side RBAC (`lib/auth/permissions.ts`, 9 roles).
+
+| Area | Where | Notes |
+|---|---|---|
+| Executive dashboard | `/admin/executive` | Live KPIs per currency, risks, CEO briefing |
+| CRM 2.0 | `/admin/leads`, `/admin/crm/*` | Pipeline, activities, duplicates & merge, CSV import |
+| Sales | `/admin/deals`, `/admin/proposals`, `/admin/quotes`, `/admin/contracts` | Secret share links (`/p/…`), e-sign, PDF |
+| Clients & portal | `/admin/clients`, `/client/*` | Strict tenant isolation for portal users |
+| Delivery | `/admin/projects`, tasks, milestones, issues, change requests | |
+| Finance | `/admin/finance/*` | Decimal money, payments PENDING until confirmed/webhook-verified |
+| Support & KB | `/admin/support`, `/admin/knowledge`, public `/help` | SLA policies, visibility per article |
+| Communication | `/admin/communication/*` | Email, WhatsApp, calls/IVR, meetings |
+| Marketing | `/admin/marketing/*` | Attribution from real UTM data; spend only when entered/synced |
+| Automations | `/admin/automations` | Trigger → conditions → actions, run log |
+| AI workforce | `/admin/ai/*` | 12 agents, approvals, costs, insights, logs |
+| Reports | `/admin/reports`, `/admin/performance` | CSV + PDF exports |
+| System | `/admin/integrations`, `/admin/security`, `/admin/system`, `/admin/account` | Status only — secrets never shown |
+
+### AI workforce
+
+- Provider: Anthropic Claude via `@anthropic-ai/sdk` (`lib/ai/provider.ts`, behind an `AIProvider` interface). Requests opt into server-side refusal fallbacks (`fallbacks: "default"`). Without `ANTHROPIC_API_KEY` agents run their read tools and show live data labelled "AI provider not connected".
+- Agents only use their listed tools, and every tool re-checks the **requesting user's** permissions (`lib/ai/tools.ts`).
+- Modes: OBSERVE (recommend only), ASSIST (default — every change or customer message becomes an approval), AUTONOMOUS (Super Admin only; pre-approved low-risk internal tools only). Customer emails always need approval.
+- Approvals (`/admin/ai/approvals`): approve, reject, or edit & approve. Input is re-validated and executed under the approver's permissions, atomically (never twice).
+- Cost control: every call is metered in `AIUsage`; `MAX_DAILY_AI_COST`, `MAX_REQUEST_TOKENS` and per-agent daily limits stop requests.
+- Daily jobs (`/api/cron/daily`, `CRON_SECRET`): insights, queued AI tasks, CEO briefing, reminders, expiries, retention.
+
+### Tests
+
+```bash
+npm run test:admin                                      # unit tests
+DATABASE_URL=<test db> npm run test:ai                  # AI workforce integration tests (refuses non-test databases)
+ADMIN_E2E_URL=http://localhost:3100 ADMIN_E2E_PASSWORD=… node tests/os/flow.mjs [sales|portal|ops|auto|ai]
+ADMIN_E2E_URL=http://localhost:3100 ADMIN_E2E_PASSWORD=… node tests/os/smoke.mjs
+```

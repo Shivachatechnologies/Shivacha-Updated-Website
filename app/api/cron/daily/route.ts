@@ -1,4 +1,4 @@
-import { runDailyJobs } from "@/lib/automation/scheduler";
+import { recordSchedulerRun, runDailyJobs } from "@/lib/automation/scheduler";
 import { aiDailyJobs } from "@/lib/ai/scheduled";
 import { safeEqual } from "@/lib/payments/signature";
 
@@ -16,5 +16,7 @@ export async function GET(req: Request) {
   if (!process.env.DATABASE_URL) return Response.json({ skipped: "no database" });
   const started = Date.now();
   const reports = await runDailyJobs(aiDailyJobs());
-  return Response.json({ ok: true, ms: Date.now() - started, reports });
+  const ms = Date.now() - started;
+  await recordSchedulerRun("cron", ms, reports);
+  return Response.json({ ok: true, ms, reports });
 }

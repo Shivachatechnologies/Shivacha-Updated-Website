@@ -93,6 +93,8 @@ const nextConfig: NextConfig = {
       { source: "/nginx", destination: "/technologies/nginx", permanent: true },
       { source: "/linux", destination: "/technologies/linux", permanent: true },
       { source: "/south-africa", destination: "/markets/south-africa", permanent: true },
+      // Short regional URLs → the existing market pages (one canonical page per market, no duplicate content).
+      ...["usa", "uk", "uae", "saudi-arabia", "europe", "africa", "singapore", "australia", "canada"].map((m) => ({ source: `/${m}`, destination: `/markets/${m}`, permanent: true })),
       { source: "/company/contact", destination: "/contact", permanent: false },
       // Short commercial URLs → canonical /services/* pages (existing URL architecture).
       ...commercialRedirects.map(([from, to]) => ({ source: `/${from}`, destination: `/services/${to}`, permanent: true })),
