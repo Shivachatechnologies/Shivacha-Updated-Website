@@ -38,6 +38,12 @@ export function LoginForm({ next }: { next?: string }) {
         </div>
         <input id="password" name="password" type="password" autoComplete="current-password" required className={inputCls} />
       </div>
+      {state?.twoFactor && (
+        <div>
+          <label htmlFor="code" className={labelCls}>Authentication code</label>
+          <input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]*" maxLength={7} required autoFocus className={inputCls} />
+        </div>
+      )}
       <SubmitButton className="w-full">Sign in</SubmitButton>
       </FormPendingContext.Provider>
     </form>

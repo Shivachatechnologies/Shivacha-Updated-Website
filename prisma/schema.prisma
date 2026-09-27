@@ -19,12 +19,16 @@ enum Role {
   SALES_MANAGER
   SEO_MANAGER
   CONTENT_MANAGER
+  FINANCE_MANAGER
+  PROJECT_MANAGER
+  SUPPORT_MANAGER
 }
 
 enum LeadStatus {
   NEW
   CONTACTED
   QUALIFIED
+  MEETING
   PROPOSAL_SENT
   NEGOTIATION
   WON
@@ -105,6 +109,41 @@ model User {
   auditLogs       AuditLog[]
   media           Media[]
 
+  // Shivacha OS
+  savedViews         SavedView[]
+  ownedDeals         Deal[]                   @relation("DealOwner")
+  createdProposals   Proposal[]               @relation("ProposalCreator")
+  approvedProposals  Proposal[]               @relation("ProposalApprover")
+  createdQuotes      Quote[]                  @relation("QuoteCreator")
+  createdContracts   Contract[]               @relation("ContractCreator")
+  ownedClients       Client[]                 @relation("ClientOwner")
+  managedProjects    Project[]                @relation("ProjectManager")
+  projectMemberships ProjectMember[]
+  assignedTasks      Task[]                   @relation("TaskAssignee")
+  createdTasks       Task[]                   @relation("TaskCreator")
+  taskComments       TaskComment[]
+  projectUpdates     ProjectUpdate[]
+  createdInvoices    Invoice[]                @relation("InvoiceCreator")
+  confirmedPayments  Payment[]                @relation("PaymentConfirmer")
+  expenses           Expense[]
+  assignedTickets    Ticket[]                 @relation("TicketAssignee")
+  ticketMessages     TicketMessage[]
+  communications     Communication[]
+  calls              Call[]
+  campaigns          Campaign[]
+  automations        Automation[]
+  notifications      Notification[]
+  notificationPrefs  NotificationPreference[]
+  aiExecutions       AIExecution[]
+  aiConversations    AIConversation[]
+  aiApprovalsAsked   AIApproval[]             @relation("AIApprovalRequester")
+  aiApprovalsDecided AIApproval[]             @relation("AIApprovalDecider")
+  kbArticles         KnowledgeArticle[]
+  securityEvents     SecurityEvent[]
+  twoFactor          TwoFactorMethod?
+  activities         Activity[]
+  documents          Document[]
+
   @@index([role])
   @@index([active])
 }
@@ -140,6 +179,7 @@ model LoginAttempt {
   id        String   @id @default(cuid())
   email     String
   ip        String?
+  userAgent String?
   success   Boolean
   createdAt DateTime @default(now())
 
@@ -150,9 +190,9 @@ model LoginAttempt {
 // ───────────────────────── CRM ─────────────────────────
 
 model Lead {
-  id              String       @id @default(cuid())
+  id              String         @id @default(cuid())
   /// Human-readable id sent in emails and the Google Sheet (e.g. SHV-20260927-AB12).
-  ref             String       @unique
+  ref             String         @unique
   name            String
   company         String?
   email           String
@@ -161,8 +201,8 @@ model Lead {
   service         String?
   product         String?
   budget          String?
-  message         String?      @db.Text
-  formType        String       @default("project")
+  message         String?        @db.Text
+  formType        String         @default("project")
   source          String?
   campaign        String?
   landingPage     String?
@@ -174,21 +214,36 @@ model Lead {
   utmContent      String?
   score           Int?
   scoreLabel      String?
-  status          LeadStatus   @default(NEW)
-  priority        LeadPriority @default(MEDIUM)
+  status          LeadStatus     @default(NEW)
+  priority        LeadPriority   @default(MEDIUM)
   assignedToId    String?
-  estimatedValue  Decimal?     @db.Decimal(14, 2)
+  estimatedValue  Decimal?       @db.Decimal(14, 2)
   lastContactedAt DateTime?
   nextFollowUpAt  DateTime?
   archivedAt      DateTime?
   extra           Json?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  // CRM 2.0 (additive, all optional)
+  city            String?
+  website         String?
+  currency        Currency       @default(USD)
+  lifecycleStage  LifecycleStage @default(LEAD)
+  team            String?
+  tags            String[]       @default([])
+  /// Set when this lead was merged into another (the record is archived, never deleted).
+  mergedIntoId    String?
 
-  assignedTo User?          @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
-  notes      LeadNote[]
-  activities LeadActivity[]
-  followUps  FollowUp[]
+  assignedTo     User?           @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  notes          LeadNote[]
+  activities     LeadActivity[]
+  followUps      FollowUp[]
+  deals          Deal[]
+  client         Client?
+  proposals      Proposal[]
+  communications Communication[]
+  calls          Call[]
+  tasks          Task[]
 
   @@index([email])
   @@index([status])
@@ -200,6 +255,10 @@ model Lead {
   @@index([assignedToId])
   @@index([createdAt])
   @@index([archivedAt, createdAt])
+  @@index([lifecycleStage])
+  @@index([archivedAt, status, createdAt])
+  @@index([nextFollowUpAt])
+  @@index([utmCampaign])
 }
 
 model LeadNote {
@@ -557,4 +616,1659 @@ model AuditLog {
   @@index([userId, createdAt])
   @@index([entity, entityId])
   @@index([action])
+}
+
+// ═════════════════════════ SHIVACHA OS ═════════════════════════
+// Everything below is additive: new enums and tables only. Money is always Decimal (never float).
+
+enum Currency {
+  USD
+  EUR
+  GBP
+  AED
+  SAR
+  INR
+  SGD
+  AUD
+  CAD
+}
+
+enum LifecycleStage {
+  LEAD
+  MQL
+  SQL
+  OPPORTUNITY
+  CUSTOMER
+  EVANGELIST
+  DISQUALIFIED
+}
+
+enum DealStage {
+  DISCOVERY
+  QUALIFICATION
+  SOLUTION
+  PROPOSAL
+  NEGOTIATION
+  CONTRACT
+  WON
+  LOST
+}
+
+enum PaymentState {
+  NOT_INVOICED
+  INVOICED
+  PARTIALLY_PAID
+  PAID
+}
+
+enum ProposalStatus {
+  DRAFT
+  INTERNAL_REVIEW
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum ContractStatus {
+  DRAFT
+  SENT
+  SIGNED
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+enum SignatureStatus {
+  NOT_REQUESTED
+  PENDING
+  SIGNED
+  DECLINED
+  VOIDED
+}
+
+enum LineItemKind {
+  SERVICE
+  PRODUCT
+  CUSTOM
+}
+
+enum ClientStatus {
+  ACTIVE
+  ONBOARDING
+  INACTIVE
+  CHURNED
+}
+
+enum ProjectStatus {
+  PLANNED
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  BLOCKED
+  DONE
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  MISSED
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ChangeRequestStatus {
+  PROPOSED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  IMPLEMENTED
+}
+
+enum Health {
+  GREEN
+  AMBER
+  RED
+}
+
+enum Visibility {
+  INTERNAL
+  CLIENT
+  PUBLIC
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CARD
+  UPI
+  CRYPTO
+  CHEQUE
+  CASH
+  OTHER
+}
+
+enum PaymentProviderName {
+  MANUAL
+  STRIPE
+  RAZORPAY
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum RefundStatus {
+  REQUESTED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum CreditNoteStatus {
+  DRAFT
+  ISSUED
+  APPLIED
+  VOID
+}
+
+enum TicketCategory {
+  BUG
+  FEATURE
+  TECHNICAL
+  BILLING
+  GENERAL
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_CLIENT
+  RESOLVED
+  CLOSED
+}
+
+enum TicketSource {
+  PORTAL
+  EMAIL
+  PHONE
+  INTERNAL
+  WEBSITE
+}
+
+enum CommChannel {
+  EMAIL
+  WHATSAPP
+  CALL
+  MEETING
+  SMS
+  NOTE
+}
+
+enum CommDirection {
+  INBOUND
+  OUTBOUND
+  INTERNAL
+}
+
+enum CommStatus {
+  DRAFT
+  PENDING_APPROVAL
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  RECEIVED
+  LOGGED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum IvrOption {
+  SALES
+  HR
+  GENERAL
+  EXISTING_CLIENT
+}
+
+enum CallStatus {
+  RINGING
+  IN_PROGRESS
+  COMPLETED
+  MISSED
+  BUSY
+  NO_ANSWER
+  FAILED
+  VOICEMAIL
+}
+
+enum CallOutcome {
+  CONNECTED
+  INTERESTED
+  NOT_INTERESTED
+  CALLBACK_REQUESTED
+  WRONG_NUMBER
+  SUPPORT_RESOLVED
+  ESCALATED
+  NO_OUTCOME
+}
+
+enum CampaignChannel {
+  GOOGLE_ADS
+  META_ADS
+  LINKEDIN_ADS
+  EMAIL
+  SEO
+  SOCIAL
+  EVENT
+  REFERRAL
+  CONTENT
+  OTHER
+}
+
+enum CampaignStatus {
+  PLANNED
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum AutomationTrigger {
+  NEW_LEAD
+  DEAL_WON
+  PROPOSAL_SENT
+  PROPOSAL_EXPIRING
+  INVOICE_OVERDUE
+  PAYMENT_RECEIVED
+  TICKET_CREATED
+  PROJECT_DELAYED
+  FOLLOW_UP_DUE
+}
+
+enum RunStatus {
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+  SKIPPED
+}
+
+enum AIMode {
+  OBSERVE
+  ASSIST
+  AUTONOMOUS
+}
+
+enum AIExecutionStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  AWAITING_APPROVAL
+  BLOCKED
+  CANCELLED
+}
+
+enum AIApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXECUTED
+  FAILED
+  EXPIRED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AITaskStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+  CANCELLED
+}
+
+enum RecommendationStatus {
+  OPEN
+  DISMISSED
+  ACTED
+}
+
+enum KnowledgeCategory {
+  WEB3
+  FINTECH
+  DIGITAL_ASSETS
+  AI
+  CLOUD
+  COMPANY
+  PRODUCTS
+  SERVICES
+  SUPPORT
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  NOT_CONNECTED
+  ERROR
+}
+
+// ───────────────────────── platform ─────────────────────────
+
+/// Atomic human-readable number sequences (DL-2026-00001, INV-2026-00001, …).
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}
+
+/// Saved list filters (CRM views, etc.). `query` is a whitelisted URL query string.
+model SavedView {
+  id        String   @id @default(cuid())
+  userId    String
+  module    String
+  name      String
+  query     String
+  shared    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([module, userId])
+}
+
+/// Unified business timeline for deals, clients, projects, tickets, proposals, quotes, contracts and invoices.
+model Activity {
+  id         String   @id @default(cuid())
+  type       String
+  summary    String?
+  data       Json?
+  actorId    String?
+  /// Set when the action was performed by an AI agent (its slug).
+  aiAgent    String?
+  dealId     String?
+  clientId   String?
+  projectId  String?
+  ticketId   String?
+  proposalId String?
+  quoteId    String?
+  contractId String?
+  invoiceId  String?
+  createdAt  DateTime @default(now())
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  deal       Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  client     Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ticket     Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([dealId, createdAt])
+  @@index([clientId, createdAt])
+  @@index([projectId, createdAt])
+  @@index([ticketId, createdAt])
+  @@index([proposalId, createdAt])
+  @@index([quoteId, createdAt])
+  @@index([contractId, createdAt])
+  @@index([invoiceId, createdAt])
+  @@index([createdAt])
+}
+
+/// Files attached to clients, projects, deals, contracts and tickets. `visibility` CLIENT exposes it in the client portal.
+model Document {
+  id           String     @id @default(cuid())
+  name         String
+  key          String
+  url          String
+  mimeType     String
+  size         Int
+  visibility   Visibility @default(INTERNAL)
+  clientId     String?
+  projectId    String?
+  dealId       String?
+  contractId   String?
+  ticketId     String?
+  uploadedById String?
+  portalUserId String?
+  createdAt    DateTime   @default(now())
+  deletedAt    DateTime?
+  uploadedBy   User?      @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  client       Client?    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project      Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deal         Deal?      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contract     Contract?  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  ticket       Ticket?    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, visibility, createdAt])
+  @@index([projectId, createdAt])
+  @@index([dealId])
+  @@index([contractId])
+  @@index([ticketId])
+}
+
+/// Non-secret integration state. Credentials live only in environment variables.
+model Integration {
+  key        String            @id
+  status     IntegrationStatus @default(NOT_CONNECTED)
+  lastSyncAt DateTime?
+  lastError  String?
+  config     Json?
+  updatedAt  DateTime          @updatedAt
+}
+
+// ───────────────────────── sales ─────────────────────────
+
+model Deal {
+  id                String          @id @default(cuid())
+  number            String          @unique
+  name              String
+  leadId            String?
+  clientId          String?
+  company           String?
+  ownerId           String?
+  value             Decimal         @default(0) @db.Decimal(14, 2)
+  currency          Currency        @default(USD)
+  probability       Int             @default(10)
+  expectedCloseDate DateTime?
+  stage             DealStage       @default(DISCOVERY)
+  services          String[]        @default([])
+  products          String[]        @default([])
+  country           String?
+  source            String?
+  notes             String?         @db.Text
+  paymentStatus     PaymentState    @default(NOT_INVOICED)
+  lostReason        String?
+  wonAt             DateTime?
+  lostAt            DateTime?
+  stageChangedAt    DateTime        @default(now())
+  deletedAt         DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  lead              Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client            Client?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  owner             User?           @relation("DealOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  proposals         Proposal[]
+  quotes            Quote[]
+  contracts         Contract[]
+  projects          Project[]
+  invoices          Invoice[]
+  activities        Activity[]
+  documents         Document[]
+  communications    Communication[]
+  tasks             Task[]
+
+  @@index([stage, deletedAt])
+  @@index([ownerId, stage])
+  @@index([clientId])
+  @@index([leadId])
+  @@index([expectedCloseDate])
+  @@index([wonAt])
+  @@index([createdAt])
+}
+
+/// Shared line items for proposals, quotes and invoices. amount = qty × unit × (1 − discount%) — tax is applied on the document.
+model LineItem {
+  id          String       @id @default(cuid())
+  proposalId  String?
+  quoteId     String?
+  invoiceId   String?
+  kind        LineItemKind @default(CUSTOM)
+  refSlug     String?
+  name        String
+  description String?      @db.Text
+  quantity    Decimal      @default(1) @db.Decimal(12, 2)
+  unitPrice   Decimal      @default(0) @db.Decimal(14, 2)
+  discountPct Decimal      @default(0) @db.Decimal(5, 2)
+  taxPct      Decimal      @default(0) @db.Decimal(5, 2)
+  amount      Decimal      @default(0) @db.Decimal(14, 2)
+  sortOrder   Int          @default(0)
+  proposal    Proposal?    @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  quote       Quote?       @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  invoice     Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId, sortOrder])
+  @@index([quoteId, sortOrder])
+  @@index([invoiceId, sortOrder])
+}
+
+/// Immutable snapshots of proposals, quotes and contracts.
+model DocumentVersion {
+  id          String   @id @default(cuid())
+  entity      String
+  entityId    String
+  version     Int
+  snapshot    Json
+  note        String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@unique([entity, entityId, version])
+}
+
+model Proposal {
+  id              String         @id @default(cuid())
+  number          String         @unique
+  title           String
+  dealId          String?
+  clientId        String?
+  leadId          String?
+  status          ProposalStatus @default(DRAFT)
+  currency        Currency       @default(USD)
+  version         Int            @default(1)
+  /// Structured body: scope, deliverables, assumptions, timeline, milestones, paymentSchedule, terms, client/company info.
+  content         Json?
+  subtotal        Decimal        @default(0) @db.Decimal(14, 2)
+  discountTotal   Decimal        @default(0) @db.Decimal(14, 2)
+  taxTotal        Decimal        @default(0) @db.Decimal(14, 2)
+  total           Decimal        @default(0) @db.Decimal(14, 2)
+  validUntil      DateTime?
+  /// SHA-256 of the secret share token (the token itself is never stored).
+  shareTokenHash  String?        @unique
+  shareExpiresAt  DateTime?
+  viewCount       Int            @default(0)
+  firstViewedAt   DateTime?
+  lastViewedAt    DateTime?
+  sentAt          DateTime?
+  acceptedAt      DateTime?
+  acceptedByName  String?
+  rejectedAt      DateTime?
+  rejectionReason String?
+  approvedById    String?
+  approvedAt      DateTime?
+  createdById     String?
+  aiGenerated     Boolean        @default(false)
+  deletedAt       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deal            Deal?          @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  client          Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  lead            Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  createdBy       User?          @relation("ProposalCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  approvedBy      User?          @relation("ProposalApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  items           LineItem[]
+  contracts       Contract[]
+
+  @@index([status, deletedAt])
+  @@index([dealId])
+  @@index([clientId])
+  @@index([validUntil])
+  @@index([createdAt])
+}
+
+model Quote {
+  id            String      @id @default(cuid())
+  number        String      @unique
+  title         String
+  dealId        String?
+  clientId      String?
+  status        QuoteStatus @default(DRAFT)
+  currency      Currency    @default(USD)
+  version       Int         @default(1)
+  subtotal      Decimal     @default(0) @db.Decimal(14, 2)
+  discountTotal Decimal     @default(0) @db.Decimal(14, 2)
+  taxTotal      Decimal     @default(0) @db.Decimal(14, 2)
+  total         Decimal     @default(0) @db.Decimal(14, 2)
+  validUntil    DateTime?
+  paymentTerms  String?
+  notes         String?     @db.Text
+  sentAt        DateTime?
+  decidedAt     DateTime?
+  createdById   String?
+  deletedAt     DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deal          Deal?       @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  client        Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy     User?       @relation("QuoteCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  items         LineItem[]
+
+  @@index([status, deletedAt])
+  @@index([dealId])
+  @@index([clientId])
+}
+
+model Contract {
+  id                String              @id @default(cuid())
+  number            String              @unique
+  title             String
+  clientId          String
+  dealId            String?
+  proposalId        String?
+  value             Decimal             @default(0) @db.Decimal(14, 2)
+  currency          Currency            @default(USD)
+  startDate         DateTime?
+  endDate           DateTime?
+  renewalDate       DateTime?
+  status            ContractStatus      @default(DRAFT)
+  signatureStatus   SignatureStatus     @default(NOT_REQUESTED)
+  /// e-signature provider key (e.g. "docusign") — null until a provider is connected.
+  signatureProvider String?
+  signatureRef      String?
+  signedAt          DateTime?
+  terms             String?             @db.Text
+  version           Int                 @default(1)
+  createdById       String?
+  deletedAt         DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  client            Client              @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  deal              Deal?               @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  proposal          Proposal?           @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+  createdBy         User?               @relation("ContractCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  signatures        ContractSignature[]
+  documents         Document[]
+  invoices          Invoice[]
+
+  @@index([clientId, status])
+  @@index([status, deletedAt])
+  @@index([renewalDate])
+  @@index([endDate])
+}
+
+/// Signatures are only recorded from a provider callback or with the countersigned document attached — never simulated.
+model ContractSignature {
+  id          String          @id @default(cuid())
+  contractId  String
+  signerName  String
+  signerEmail String
+  status      SignatureStatus @default(PENDING)
+  signedAt    DateTime?
+  provider    String?
+  providerRef String?
+  evidence    Json?
+  createdAt   DateTime        @default(now())
+  contract    Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+}
+
+// ───────────────────────── clients & portal ─────────────────────────
+
+model Client {
+  id             String          @id @default(cuid())
+  number         String          @unique
+  name           String
+  legalName      String?
+  industry       String?
+  country        String?
+  city           String?
+  website        String?
+  billingEmail   String?
+  phone          String?
+  address        String?         @db.Text
+  taxId          String?
+  currency       Currency        @default(USD)
+  status         ClientStatus    @default(ONBOARDING)
+  accountOwnerId String?
+  leadId         String?         @unique
+  notes          String?         @db.Text
+  tags           String[]        @default([])
+  deletedAt      DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  accountOwner   User?           @relation("ClientOwner", fields: [accountOwnerId], references: [id], onDelete: SetNull)
+  lead           Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  contacts       ClientContact[]
+  portalUsers    PortalUser[]
+  deals          Deal[]
+  proposals      Proposal[]
+  quotes         Quote[]
+  contracts      Contract[]
+  projects       Project[]
+  invoices       Invoice[]
+  payments       Payment[]
+  creditNotes    CreditNote[]
+  expenses       Expense[]
+  tickets        Ticket[]
+  documents      Document[]
+  activities     Activity[]
+  communications Communication[]
+  calls          Call[]
+
+  @@index([status, deletedAt])
+  @@index([accountOwnerId])
+  @@index([country])
+  @@index([name])
+}
+
+model ClientContact {
+  id        String   @id @default(cuid())
+  clientId  String
+  name      String
+  email     String?
+  phone     String?
+  title     String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([email])
+  @@index([phone])
+}
+
+/// Client-portal identity. Every portal query is scoped to `clientId` from the server-side session.
+model PortalUser {
+  id                String          @id @default(cuid())
+  clientId          String
+  email             String          @unique
+  name              String
+  passwordHash      String?
+  active            Boolean         @default(true)
+  failedLoginCount  Int             @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  passwordChangedAt DateTime        @default(now())
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  client            Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sessions          PortalSession[]
+  tokens            PortalToken[]
+  tickets           Ticket[]
+  ticketMessages    TicketMessage[]
+
+  @@index([clientId])
+}
+
+model PortalSession {
+  id           String     @id
+  portalUserId String
+  expiresAt    DateTime
+  createdAt    DateTime   @default(now())
+  lastSeenAt   DateTime   @default(now())
+  ip           String?
+  userAgent    String?
+  portalUser   PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+
+  @@index([portalUserId])
+  @@index([expiresAt])
+}
+
+/// Invitation / password-reset tokens for portal users (SHA-256 hashed, single use).
+model PortalToken {
+  id           String     @id
+  portalUserId String
+  purpose      String
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime   @default(now())
+  portalUser   PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+
+  @@index([portalUserId])
+}
+
+// ───────────────────────── projects ─────────────────────────
+
+model Project {
+  id             String          @id @default(cuid())
+  number         String          @unique
+  name           String
+  clientId       String
+  dealId         String?
+  managerId      String?
+  description    String?         @db.Text
+  startDate      DateTime?
+  targetDate     DateTime?
+  completedAt    DateTime?
+  budget         Decimal?        @db.Decimal(14, 2)
+  currency       Currency        @default(USD)
+  status         ProjectStatus   @default(PLANNED)
+  priority       LeadPriority    @default(MEDIUM)
+  progress       Int             @default(0)
+  health         Health          @default(GREEN)
+  deletedAt      DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  deal           Deal?           @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  manager        User?           @relation("ProjectManager", fields: [managerId], references: [id], onDelete: SetNull)
+  members        ProjectMember[]
+  milestones     Milestone[]
+  tasks          Task[]
+  issues         ProjectIssue[]
+  changeRequests ChangeRequest[]
+  updates        ProjectUpdate[]
+  documents      Document[]
+  activities     Activity[]
+  invoices       Invoice[]
+  expenses       Expense[]
+  tickets        Ticket[]
+  communications Communication[]
+
+  @@index([clientId, status])
+  @@index([status, deletedAt])
+  @@index([managerId])
+  @@index([targetDate])
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String?
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+model Milestone {
+  id            String          @id @default(cuid())
+  projectId     String
+  name          String
+  description   String?         @db.Text
+  dueDate       DateTime?
+  status        MilestoneStatus @default(PENDING)
+  completedAt   DateTime?
+  amount        Decimal?        @db.Decimal(14, 2)
+  clientVisible Boolean         @default(true)
+  sortOrder     Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks         Task[]
+
+  @@index([projectId, sortOrder])
+  @@index([status, dueDate])
+}
+
+/// Work items. Project tasks have projectId; CRM/AI/automation tasks may link to a lead or deal instead.
+model Task {
+  id          String        @id @default(cuid())
+  title       String
+  description String?       @db.Text
+  status      TaskStatus    @default(TODO)
+  priority    LeadPriority  @default(MEDIUM)
+  projectId   String?
+  milestoneId String?
+  leadId      String?
+  dealId      String?
+  assigneeId  String?
+  createdById String?
+  dueDate     DateTime?
+  startDate   DateTime?
+  completedAt DateTime?
+  sortOrder   Int           @default(0)
+  estimateHrs Decimal?      @db.Decimal(8, 2)
+  source      String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  project     Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestone   Milestone?    @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  lead        Lead?         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal        Deal?         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  assignee    User?         @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdBy   User?         @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  comments    TaskComment[]
+
+  @@index([projectId, status, sortOrder])
+  @@index([assigneeId, status])
+  @@index([status, dueDate])
+  @@index([leadId])
+  @@index([dealId])
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  authorId  String?
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
+}
+
+model ProjectIssue {
+  id          String       @id @default(cuid())
+  projectId   String
+  title       String
+  description String?      @db.Text
+  severity    LeadPriority @default(MEDIUM)
+  status      IssueStatus  @default(OPEN)
+  assigneeId  String?
+  reportedBy  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+}
+
+model ChangeRequest {
+  id          String              @id @default(cuid())
+  projectId   String
+  title       String
+  description String?             @db.Text
+  impactCost  Decimal?            @db.Decimal(14, 2)
+  impactDays  Int?
+  status      ChangeRequestStatus @default(PROPOSED)
+  requestedBy String?
+  fromClient  Boolean             @default(false)
+  decidedById String?
+  decidedAt   DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  project     Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+}
+
+model ProjectUpdate {
+  id         String     @id @default(cuid())
+  projectId  String
+  authorId   String?
+  body       String     @db.Text
+  health     Health     @default(GREEN)
+  visibility Visibility @default(INTERNAL)
+  aiDrafted  Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author     User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt])
+}
+
+// ───────────────────────── finance ─────────────────────────
+
+model Invoice {
+  id                  String               @id @default(cuid())
+  number              String               @unique
+  clientId            String
+  projectId           String?
+  dealId              String?
+  contractId          String?
+  status              InvoiceStatus        @default(DRAFT)
+  currency            Currency             @default(USD)
+  issueDate           DateTime?
+  dueDate             DateTime?
+  subtotal            Decimal              @default(0) @db.Decimal(14, 2)
+  discountTotal       Decimal              @default(0) @db.Decimal(14, 2)
+  taxTotal            Decimal              @default(0) @db.Decimal(14, 2)
+  total               Decimal              @default(0) @db.Decimal(14, 2)
+  /// Sum of CONFIRMED payment allocations only.
+  amountPaid          Decimal              @default(0) @db.Decimal(14, 2)
+  amountCredited      Decimal              @default(0) @db.Decimal(14, 2)
+  balanceDue          Decimal              @default(0) @db.Decimal(14, 2)
+  notes               String?              @db.Text
+  terms               String?              @db.Text
+  sentAt              DateTime?
+  paidAt              DateTime?
+  paymentLinkUrl      String?
+  paymentLinkProvider PaymentProviderName?
+  paymentLinkRef      String?
+  createdById         String?
+  voidedAt            DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  client              Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  project             Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  deal                Deal?                @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  contract            Contract?            @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  createdBy           User?                @relation("InvoiceCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  items               LineItem[]
+  allocations         PaymentAllocation[]
+  creditNotes         CreditNote[]
+
+  @@index([clientId, status])
+  @@index([status, dueDate])
+  @@index([issueDate])
+  @@index([projectId])
+  @@index([dealId])
+}
+
+/// A payment is only counted once CONFIRMED (provider webhook with verified signature, or a finance manager confirming a manual receipt).
+model Payment {
+  id             String              @id @default(cuid())
+  number         String              @unique
+  clientId       String
+  amount         Decimal             @db.Decimal(14, 2)
+  currency       Currency            @default(USD)
+  method         PaymentMethod       @default(BANK_TRANSFER)
+  provider       PaymentProviderName @default(MANUAL)
+  providerRef    String?
+  status         PaymentStatus       @default(PENDING)
+  reference      String?
+  notes          String?             @db.Text
+  receivedAt     DateTime?
+  confirmedAt    DateTime?
+  confirmedById  String?
+  refundedAmount Decimal             @default(0) @db.Decimal(14, 2)
+  createdById    String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  client         Client              @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  confirmedBy    User?               @relation("PaymentConfirmer", fields: [confirmedById], references: [id], onDelete: SetNull)
+  allocations    PaymentAllocation[]
+  refunds        Refund[]
+
+  @@unique([provider, providerRef])
+  @@index([clientId, status])
+  @@index([status, confirmedAt])
+}
+
+model PaymentAllocation {
+  id        String   @id @default(cuid())
+  paymentId String
+  invoiceId String
+  amount    Decimal  @db.Decimal(14, 2)
+  createdAt DateTime @default(now())
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentId, invoiceId])
+  @@index([invoiceId])
+}
+
+model Refund {
+  id          String       @id @default(cuid())
+  paymentId   String
+  amount      Decimal      @db.Decimal(14, 2)
+  reason      String?
+  status      RefundStatus @default(REQUESTED)
+  providerRef String?
+  createdById String?
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+  payment     Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId])
+}
+
+model CreditNote {
+  id          String           @id @default(cuid())
+  number      String           @unique
+  clientId    String
+  invoiceId   String?
+  amount      Decimal          @db.Decimal(14, 2)
+  currency    Currency         @default(USD)
+  reason      String?
+  status      CreditNoteStatus @default(DRAFT)
+  issuedAt    DateTime?
+  createdById String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  client      Client           @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  invoice     Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@index([invoiceId])
+}
+
+model Expense {
+  id          String    @id @default(cuid())
+  date        DateTime
+  category    String
+  vendor      String?
+  description String?
+  amount      Decimal   @db.Decimal(14, 2)
+  currency    Currency  @default(USD)
+  projectId   String?
+  clientId    String?
+  receiptUrl  String?
+  createdById String?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  client      Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([category])
+  @@index([projectId])
+}
+
+// ───────────────────────── support ─────────────────────────
+
+model Ticket {
+  id                 String          @id @default(cuid())
+  number             String          @unique
+  subject            String
+  description        String?         @db.Text
+  category           TicketCategory  @default(GENERAL)
+  status             TicketStatus    @default(OPEN)
+  priority           LeadPriority    @default(MEDIUM)
+  source             TicketSource    @default(INTERNAL)
+  clientId           String?
+  projectId          String?
+  portalUserId       String?
+  contactName        String?
+  contactEmail       String?
+  assigneeId         String?
+  firstResponseDueAt DateTime?
+  resolutionDueAt    DateTime?
+  firstResponseAt    DateTime?
+  resolvedAt         DateTime?
+  closedAt           DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  client             Client?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  project            Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  portalUser         PortalUser?     @relation(fields: [portalUserId], references: [id], onDelete: SetNull)
+  assignee           User?           @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  messages           TicketMessage[]
+  documents          Document[]
+  activities         Activity[]
+  communications     Communication[]
+
+  @@index([status, priority])
+  @@index([clientId, status])
+  @@index([assigneeId, status])
+  @@index([resolutionDueAt])
+  @@index([createdAt])
+}
+
+model TicketMessage {
+  id           String      @id @default(cuid())
+  ticketId     String
+  authorId     String?
+  portalUserId String?
+  body         String      @db.Text
+  /// Internal notes are never shown in the client portal.
+  internal     Boolean     @default(false)
+  aiDrafted    Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  ticket       Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author       User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  portalUser   PortalUser? @relation(fields: [portalUserId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId, createdAt])
+}
+
+// ───────────────────────── communication ─────────────────────────
+
+/// Unified communication record: email, WhatsApp, meetings, SMS and notes (calls have their own table).
+model Communication {
+  id          String        @id @default(cuid())
+  channel     CommChannel
+  direction   CommDirection @default(OUTBOUND)
+  status      CommStatus    @default(LOGGED)
+  subject     String?
+  body        String?       @db.Text
+  fromAddress String?
+  toAddress   String?
+  provider    String?
+  providerRef String?
+  leadId      String?
+  clientId    String?
+  dealId      String?
+  projectId   String?
+  ticketId    String?
+  userId      String?
+  scheduledAt DateTime?
+  occurredAt  DateTime      @default(now())
+  durationMin Int?
+  meetingUrl  String?
+  meta        Json?
+  error       String?
+  createdAt   DateTime      @default(now())
+  lead        Lead?         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  client      Client?       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  deal        Deal?         @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  project     Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  ticket      Ticket?       @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([leadId, occurredAt])
+  @@index([clientId, occurredAt])
+  @@index([channel, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([provider, providerRef])
+}
+
+model Call {
+  id               String        @id @default(cuid())
+  direction        CommDirection @default(INBOUND)
+  fromNumber       String?
+  toNumber         String?
+  callerName       String?
+  leadId           String?
+  clientId         String?
+  userId           String?
+  ivrOption        IvrOption?
+  provider         String        @default("MANUAL")
+  providerCallId   String?
+  status           CallStatus    @default(RINGING)
+  durationSec      Int?
+  recordingUrl     String?
+  recordingConsent Boolean       @default(false)
+  outcome          CallOutcome?
+  notes            String?       @db.Text
+  startedAt        DateTime      @default(now())
+  endedAt          DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  lead             Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client           Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  user             User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  events           CallEvent[]
+
+  @@unique([provider, providerCallId])
+  @@index([startedAt])
+  @@index([leadId])
+  @@index([clientId])
+  @@index([userId, startedAt])
+  @@index([status])
+}
+
+model CallEvent {
+  id        String   @id @default(cuid())
+  callId    String
+  type      String
+  data      Json?
+  createdAt DateTime @default(now())
+  call      Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@index([callId, createdAt])
+}
+
+// ───────────────────────── marketing ─────────────────────────
+
+model Campaign {
+  id          String           @id @default(cuid())
+  name        String
+  channel     CampaignChannel  @default(OTHER)
+  status      CampaignStatus   @default(PLANNED)
+  /// Matches Lead.utmCampaign for attribution.
+  utmCampaign String?          @unique
+  utmSource   String?
+  utmMedium   String?
+  landingPage String?
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Decimal?         @db.Decimal(14, 2)
+  currency    Currency         @default(USD)
+  notes       String?          @db.Text
+  ownerId     String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  owner       User?            @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  metrics     CampaignMetric[]
+
+  @@index([status])
+  @@index([channel])
+}
+
+/// Daily spend/traffic figures — entered by a marketer or synced from a connected ad platform (source records which).
+model CampaignMetric {
+  id          String   @id @default(cuid())
+  campaignId  String
+  date        DateTime @db.Date
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  spend       Decimal  @default(0) @db.Decimal(14, 2)
+  source      String   @default("MANUAL")
+  createdAt   DateTime @default(now())
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, date, source])
+}
+
+// ───────────────────────── automation ─────────────────────────
+
+model Automation {
+  id           String            @id @default(cuid())
+  name         String
+  description  String?
+  trigger      AutomationTrigger
+  /// [{ field, op, value }] — all must match.
+  conditions   Json              @default("[]")
+  /// [{ type, config }] executed in order.
+  actions      Json              @default("[]")
+  enabled      Boolean           @default(false)
+  runCount     Int               @default(0)
+  failureCount Int               @default(0)
+  lastRunAt    DateTime?
+  createdById  String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  createdBy    User?             @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  runs         AutomationRun[]
+
+  @@index([trigger, enabled])
+}
+
+model AutomationRun {
+  id           String            @id @default(cuid())
+  automationId String
+  trigger      AutomationTrigger
+  entity       String?
+  entityId     String?
+  status       RunStatus         @default(RUNNING)
+  steps        Json?
+  error        String?
+  startedAt    DateTime          @default(now())
+  finishedAt   DateTime?
+  automation   Automation        @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@index([automationId, startedAt])
+  @@index([status, startedAt])
+  @@index([entity, entityId])
+}
+
+// ───────────────────────── notifications ─────────────────────────
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String?
+  href      String?
+  entity    String?
+  entityId  String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+}
+
+model NotificationPreference {
+  id     String  @id @default(cuid())
+  userId String
+  type   String
+  inApp  Boolean @default(true)
+  email  Boolean @default(false)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+}
+
+// ───────────────────────── AI workforce ─────────────────────────
+
+model AIAgent {
+  id              String        @id @default(cuid())
+  slug            String        @unique
+  name            String
+  description     String?
+  enabled         Boolean       @default(true)
+  provider        String?
+  model           String?
+  mode            AIMode        @default(ASSIST)
+  systemPrompt    String?       @db.Text
+  dailyCostLimit  Decimal?      @db.Decimal(12, 4)
+  /// Actions that always need human approval for this agent (in addition to the platform defaults).
+  approvalActions String[]      @default([])
+  config          Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  tools           AIAgentTool[]
+
+  @@index([enabled])
+}
+
+model AIAgentTool {
+  id                String  @id @default(cuid())
+  agentId           String
+  tool              String
+  enabled           Boolean @default(true)
+  /// AUTONOMOUS mode may run this mutation without approval (low-risk tools only).
+  autonomousAllowed Boolean @default(false)
+  agent             AIAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, tool])
+}
+
+model AIConversation {
+  id        String      @id @default(cuid())
+  userId    String
+  title     String?
+  expiresAt DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  AIMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model AIMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  role           String
+  content        String         @db.Text
+  data           Json?
+  executionId    String?
+  createdAt      DateTime       @default(now())
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model AIExecution {
+  id              String            @id @default(cuid())
+  agentSlug       String
+  userId          String?
+  parentId        String?
+  conversationId  String?
+  trigger         String            @default("USER")
+  mode            AIMode            @default(ASSIST)
+  request         String            @db.Text
+  status          AIExecutionStatus @default(RUNNING)
+  toolsUsed       Json?
+  recordsAccessed Json?
+  actionsProposed Json?
+  actionsExecuted Json?
+  result          Json?
+  error           String?
+  provider        String?
+  model           String?
+  inputTokens     Int               @default(0)
+  outputTokens    Int               @default(0)
+  costUsd         Decimal           @default(0) @db.Decimal(12, 6)
+  durationMs      Int?
+  startedAt       DateTime          @default(now())
+  finishedAt      DateTime?
+  user            User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  approvals       AIApproval[]
+  usage           AIUsage[]
+
+  @@index([agentSlug, startedAt])
+  @@index([userId, startedAt])
+  @@index([status, startedAt])
+  @@index([startedAt])
+}
+
+model AIApproval {
+  id                 String           @id @default(cuid())
+  executionId        String?
+  agentSlug          String
+  action             String
+  tool               String
+  /// Validated tool input that will run on approval.
+  input              Json
+  reason             String?          @db.Text
+  affectedRecords    Json?
+  proposedChanges    Json?
+  generatedContent   String?          @db.Text
+  risk               RiskLevel        @default(MEDIUM)
+  requiredPermission String
+  status             AIApprovalStatus @default(PENDING)
+  requestedById      String?
+  decidedById        String?
+  decidedAt          DateTime?
+  decisionNote       String?
+  executedAt         DateTime?
+  executionResult    Json?
+  expiresAt          DateTime?
+  createdAt          DateTime         @default(now())
+  execution          AIExecution?     @relation(fields: [executionId], references: [id], onDelete: SetNull)
+  requestedBy        User?            @relation("AIApprovalRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  decidedBy          User?            @relation("AIApprovalDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([agentSlug, status])
+}
+
+model AITask {
+  id            String       @id @default(cuid())
+  agentSlug     String
+  title         String
+  request       String       @db.Text
+  status        AITaskStatus @default(QUEUED)
+  entity        String?
+  entityId      String?
+  source        String       @default("MANUAL")
+  requestedById String?
+  executionId   String?
+  error         String?
+  runAfter      DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([status, runAfter])
+  @@index([agentSlug, createdAt])
+}
+
+model AIRecommendation {
+  id         String               @id @default(cuid())
+  agentSlug  String
+  type       String
+  title      String
+  body       String?              @db.Text
+  severity   RiskLevel            @default(MEDIUM)
+  entity     String?
+  entityId   String?
+  href       String?
+  data       Json?
+  /// Stable key so the same insight is not duplicated between runs.
+  dedupeKey  String               @unique
+  status     RecommendationStatus @default(OPEN)
+  permission String
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  @@index([status, severity, createdAt])
+  @@index([agentSlug, status])
+}
+
+model AIUsage {
+  id           String       @id @default(cuid())
+  executionId  String?
+  agentSlug    String
+  userId       String?
+  provider     String
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  costUsd      Decimal      @db.Decimal(12, 6)
+  createdAt    DateTime     @default(now())
+  execution    AIExecution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([agentSlug, createdAt])
+  @@index([userId, createdAt])
+}
+
+/// Scoped, expiring memory (user preferences or account context). Never unrestricted.
+model AIMemory {
+  id        String    @id @default(cuid())
+  scope     String
+  userId    String?
+  entity    String?
+  entityId  String?
+  key       String
+  value     String    @db.Text
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([scope, userId, entity, entityId, key])
+  @@index([expiresAt])
+}
+
+// ───────────────────────── knowledge ─────────────────────────
+
+model KnowledgeArticle {
+  id             String            @id @default(cuid())
+  slug           String            @unique
+  title          String
+  excerpt        String?
+  body           String            @db.Text
+  category       KnowledgeCategory @default(SUPPORT)
+  tags           String[]          @default([])
+  visibility     Visibility        @default(INTERNAL)
+  status         ContentStatus     @default(DRAFT)
+  authorId       String?
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  author         User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([status, visibility, category])
+  @@index([updatedAt])
+}
+
+// ───────────────────────── security ─────────────────────────
+
+model SecurityEvent {
+  id        String    @id @default(cuid())
+  type      String
+  severity  RiskLevel @default(LOW)
+  userId    String?
+  ip        String?
+  userAgent String?
+  detail    Json?
+  createdAt DateTime  @default(now())
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([type, createdAt])
+  @@index([userId, createdAt])
+}
+
+/// TOTP second factor. The secret is AES-256-GCM encrypted with APP_ENCRYPTION_KEY (never stored in plaintext).
+model TwoFactorMethod {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  type            String    @default("TOTP")
+  secretEncrypted String
+  enabledAt       DateTime?
+  lastUsedStep    Int?
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

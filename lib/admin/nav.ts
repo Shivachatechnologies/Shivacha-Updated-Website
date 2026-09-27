@@ -1,19 +1,145 @@
 import type { Permission } from "@/lib/auth/permissions";
+import type { FeatureFlag } from "@/lib/os/flags";
 
 export interface AdminNavItem {
   label: string;
   href: string;
   icon: string;
   permission: Permission;
+  flag?: FeatureFlag;
 }
 
-export const ADMIN_NAV: { title?: string; items: AdminNavItem[] }[] = [
-  { items: [{ label: "Dashboard", href: "/admin/dashboard", icon: "LayoutDashboard", permission: "dashboard:view" }] },
+export interface AdminNavGroup {
+  title?: string;
+  flag?: FeatureFlag;
+  items: AdminNavItem[];
+}
+
+/** Shivacha OS navigation. Items are filtered server-side by permission and feature flag. */
+export const ADMIN_NAV: AdminNavGroup[] = [
+  {
+    title: "Overview",
+    items: [
+      { label: "Dashboard", href: "/admin/dashboard", icon: "LayoutDashboard", permission: "dashboard:view" },
+      { label: "Executive", href: "/admin/executive", icon: "Gauge", permission: "executive:view" },
+      { label: "Notifications", href: "/admin/notifications", icon: "Bell", permission: "dashboard:view" },
+    ],
+  },
   {
     title: "CRM",
     items: [
       { label: "Leads", href: "/admin/leads", icon: "Inbox", permission: "leads:view" },
+      { label: "Pipeline", href: "/admin/crm/pipeline", icon: "Columns3", permission: "leads:view", flag: "ADVANCED_CRM" },
+      { label: "Activities", href: "/admin/crm/activities", icon: "Activity", permission: "leads:view", flag: "ADVANCED_CRM" },
       { label: "Follow-ups", href: "/admin/follow-ups", icon: "CalendarClock", permission: "followups:manage" },
+      { label: "Duplicates", href: "/admin/crm/duplicates", icon: "Copy", permission: "leads:merge", flag: "ADVANCED_CRM" },
+      { label: "Import", href: "/admin/crm/import", icon: "Upload", permission: "leads:import", flag: "ADVANCED_CRM" },
+    ],
+  },
+  {
+    title: "Sales",
+    flag: "SALES_PIPELINE",
+    items: [
+      { label: "Deals", href: "/admin/deals", icon: "Handshake", permission: "deals:view" },
+      { label: "Proposals", href: "/admin/proposals", icon: "FileSignature", permission: "proposals:view", flag: "PROPOSALS" },
+      { label: "Quotes", href: "/admin/quotes", icon: "Receipt", permission: "proposals:view", flag: "PROPOSALS" },
+      { label: "Contracts", href: "/admin/contracts", icon: "ScrollText", permission: "contracts:view", flag: "PROPOSALS" },
+    ],
+  },
+  {
+    title: "Clients",
+    items: [
+      { label: "Clients", href: "/admin/clients", icon: "Building", permission: "clients:view" },
+      { label: "Contacts", href: "/admin/contacts", icon: "Contact", permission: "clients:view" },
+      { label: "Documents", href: "/admin/documents", icon: "FolderOpen", permission: "clients:view" },
+      { label: "Client Portal", href: "/admin/portal-users", icon: "KeyRound", permission: "portal:manage", flag: "CLIENT_PORTAL" },
+    ],
+  },
+  {
+    title: "Projects",
+    flag: "PROJECTS",
+    items: [
+      { label: "Projects", href: "/admin/projects", icon: "FolderKanban", permission: "projects:view" },
+      { label: "Tasks", href: "/admin/tasks", icon: "ListChecks", permission: "projects:view" },
+      { label: "Milestones", href: "/admin/milestones", icon: "Flag", permission: "projects:view" },
+      { label: "Issues", href: "/admin/issues", icon: "Bug", permission: "projects:view" },
+      { label: "Change Requests", href: "/admin/change-requests", icon: "GitPullRequest", permission: "projects:view" },
+    ],
+  },
+  {
+    title: "Finance",
+    flag: "FINANCE",
+    items: [
+      { label: "Revenue", href: "/admin/finance", icon: "TrendingUp", permission: "finance:view" },
+      { label: "Invoices", href: "/admin/finance/invoices", icon: "FileText", permission: "finance:view" },
+      { label: "Payments", href: "/admin/finance/payments", icon: "Wallet", permission: "finance:view" },
+      { label: "Credit Notes", href: "/admin/finance/credit-notes", icon: "ReceiptText", permission: "finance:view" },
+      { label: "Expenses", href: "/admin/finance/expenses", icon: "CreditCard", permission: "finance:view" },
+    ],
+  },
+  {
+    title: "Marketing",
+    items: [
+      { label: "Analytics", href: "/admin/marketing", icon: "BarChart3", permission: "marketing:view", flag: "MARKETING_ANALYTICS" },
+      { label: "Campaigns", href: "/admin/marketing/campaigns", icon: "Megaphone", permission: "marketing:view", flag: "MARKETING_ANALYTICS" },
+      { label: "Landing Pages", href: "/admin/marketing/landing-pages", icon: "PanelsTopLeft", permission: "marketing:view", flag: "MARKETING_ANALYTICS" },
+      { label: "SEO", href: "/admin/seo", icon: "Search", permission: "seo:manage" },
+      { label: "Redirects", href: "/admin/redirects", icon: "ArrowRightLeft", permission: "redirects:manage" },
+    ],
+  },
+  {
+    title: "Communication",
+    flag: "COMMUNICATION",
+    items: [
+      { label: "Timeline", href: "/admin/communication", icon: "MessagesSquare", permission: "communication:view" },
+      { label: "Email", href: "/admin/communication/email", icon: "Mail", permission: "communication:view" },
+      { label: "WhatsApp", href: "/admin/communication/whatsapp", icon: "MessageCircle", permission: "communication:view" },
+      { label: "Calls", href: "/admin/communication/calls", icon: "Phone", permission: "calls:view", flag: "IVR" },
+      { label: "Meetings", href: "/admin/communication/meetings", icon: "Video", permission: "communication:view" },
+    ],
+  },
+  {
+    title: "Support",
+    items: [
+      { label: "Tickets", href: "/admin/support", icon: "LifeBuoy", permission: "support:view", flag: "SUPPORT" },
+      { label: "Knowledge Base", href: "/admin/knowledge", icon: "BookOpen", permission: "knowledge:view" },
+    ],
+  },
+  {
+    title: "AI Workforce",
+    flag: "AI_WORKFORCE",
+    items: [
+      { label: "Command Center", href: "/admin/ai", icon: "Bot", permission: "ai:view" },
+      { label: "AI Agents", href: "/admin/ai/agents", icon: "Users2", permission: "ai:view" },
+      { label: "Approvals", href: "/admin/ai/approvals", icon: "ShieldCheck", permission: "ai:view" },
+      { label: "AI Tasks", href: "/admin/ai/tasks", icon: "ListTodo", permission: "ai:view" },
+      { label: "Insights", href: "/admin/ai/insights", icon: "Lightbulb", permission: "ai:view" },
+      { label: "AI Costs", href: "/admin/ai/costs", icon: "Coins", permission: "ai:view" },
+      { label: "AI Logs", href: "/admin/ai/logs", icon: "ScrollText", permission: "ai:view" },
+    ],
+  },
+  {
+    title: "Automations",
+    flag: "AUTOMATIONS",
+    items: [
+      { label: "Workflows", href: "/admin/automations", icon: "Workflow", permission: "automations:view" },
+      { label: "Runs", href: "/admin/automations/runs", icon: "History", permission: "automations:view" },
+      { label: "Failures", href: "/admin/automations/failures", icon: "AlertTriangle", permission: "automations:view" },
+    ],
+  },
+  {
+    title: "Insights",
+    items: [
+      { label: "Reports", href: "/admin/reports", icon: "FileBarChart", permission: "reports:view" },
+      { label: "Performance", href: "/admin/performance", icon: "Trophy", permission: "performance:view" },
+    ],
+  },
+  {
+    title: "Platform",
+    items: [
+      { label: "Integrations", href: "/admin/integrations", icon: "Plug", permission: "integrations:view", flag: "INTEGRATIONS" },
+      { label: "Security", href: "/admin/security", icon: "Lock", permission: "security:view" },
+      { label: "System Health", href: "/admin/system", icon: "HeartPulse", permission: "system:view" },
     ],
   },
   {
@@ -28,22 +154,19 @@ export const ADMIN_NAV: { title?: string; items: AdminNavItem[] }[] = [
       { label: "Technologies", href: "/admin/technologies", icon: "Cpu", permission: "technologies:manage" },
       { label: "FAQs", href: "/admin/faqs", icon: "HelpCircle", permission: "faqs:manage" },
       { label: "Media", href: "/admin/media", icon: "ImageIcon", permission: "media:manage" },
-    ],
-  },
-  {
-    title: "SEO",
-    items: [
-      { label: "SEO", href: "/admin/seo", icon: "Search", permission: "seo:manage" },
-      { label: "Redirects", href: "/admin/redirects", icon: "ArrowRightLeft", permission: "redirects:manage" },
-    ],
-  },
-  {
-    title: "System",
-    items: [
-      { label: "Users", href: "/admin/users", icon: "Users", permission: "users:manage" },
       { label: "Navigation", href: "/admin/navigation", icon: "ListTree", permission: "navigation:manage" },
+    ],
+  },
+  {
+    title: "Settings",
+    items: [
       { label: "Settings", href: "/admin/settings", icon: "Settings", permission: "settings:manage" },
+      { label: "Feature Flags", href: "/admin/settings/features", icon: "ToggleRight", permission: "settings:manage" },
+      { label: "Users", href: "/admin/users", icon: "Users", permission: "users:manage" },
       { label: "Audit Logs", href: "/admin/audit-logs", icon: "ScrollText", permission: "audit:view" },
     ],
   },
 ];
+
+/** Every route prefix mapped to its feature flag, used to block disabled modules server-side. */
+export const FLAGGED_PREFIXES: [string, FeatureFlag][] = ADMIN_NAV.flatMap((g) => g.items.filter((i) => i.flag ?? g.flag).map((i) => [i.href, (i.flag ?? g.flag)!] as [string, FeatureFlag]));

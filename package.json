@@ -23,9 +23,12 @@
     "db:import": "tsx scripts/db/import-content.ts",
     "admin:create": "tsx scripts/db/create-admin.ts",
     "test:admin": "tsx --conditions=react-server --test tests/admin/*.test.ts",
-    "test:admin:e2e": "node tests/admin/e2e.mjs"
+    "test:admin:e2e": "node tests/admin/e2e.mjs",
+    "test:os": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/unit.test.ts",
+    "test:ai": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/ai.test.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "@vercel/blob": "^2.8.0",
@@ -36,6 +39,7 @@
     "lucide-react": "^1.48.0",
     "next": "^16.3.6",
     "nodemailer": "^7.0.13",
+    "pdf-lib": "^1.17.1",
     "pg": "^8.23.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

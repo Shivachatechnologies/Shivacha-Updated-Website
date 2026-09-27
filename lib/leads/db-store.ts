@@ -1,6 +1,8 @@
 import "server-only";
 import { db } from "@/lib/db/client";
 import type { LeadRecord } from "./types";
+import { queueEvent } from "@/lib/automation/engine";
+import { notify } from "@/lib/os/notify";
 
 /** Source label for reporting: UTM source, else referrer host, else direct. */
 function sourceOf(l: LeadRecord) {
@@ -47,8 +49,11 @@ export async function saveLeadToDatabase(l: LeadRecord): Promise<{ stored: boole
         extra: { ...extra, sourcePage: l.sourcePage, attachments: l.attachments.map(({ name, type, size }) => ({ name, type, size })) },
         activities: { create: { type: "CREATED", data: { formType: l.formType, source: sourceOf(l), score: l.score } } },
       },
-      select: { id: true },
+      select: { id: true, name: true, email: true, company: true, country: true, service: true, product: true, budget: true, source: true, score: true, scoreLabel: true, priority: true, formType: true, assignedToId: true },
     });
+    // Shivacha OS: NEW_LEAD automations and the in-app notification run after the response (never block or fail the form).
+    queueEvent({ trigger: "NEW_LEAD", entity: "Lead", entityId: row.id, ownerId: row.assignedToId, payload: { lead: { ...row, ref: l.id } } });
+    void notify({ type: "lead.new", title: `New lead: ${row.name}${row.company ? ` (${row.company})` : ""}`, body: [row.service ?? row.product, row.country, row.budget].filter(Boolean).join(" · "), href: `/admin/leads/${row.id}`, entity: "Lead", entityId: row.id, permission: "leads:assign" });
     return { stored: true, id: row.id };
   } catch (e) {
     return { stored: false, error: (e as Error).message };

@@ -9,8 +9,10 @@ import { siteConfig } from "@/data/siteConfig";
 import { dummyHash, hashPassword, passwordProblem, verifyPassword } from "./password";
 import { createSession, destroySession, getSessionUser, requestMeta } from "./session";
 import { hashToken, newToken } from "./tokens";
+import { decryptSecret, verifyTotp } from "./totp";
+import { securityEvent } from "./security-events";
 
-export type FormState = { error?: string; ok?: string } | undefined;
+export type FormState = { error?: string; ok?: string; twoFactor?: boolean } | undefined;
 
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_EMAIL_FAILS = 5; // per email per window
@@ -19,15 +21,15 @@ const LOCK_AFTER = 10; // consecutive failures before the account is locked
 const LOCK_MS = 30 * 60 * 1000;
 const GENERIC = "Invalid email or password.";
 
-const loginSchema = z.object({ email: z.string().trim().toLowerCase().email().max(160), password: z.string().min(1).max(128), next: z.string().max(300).optional() });
+const loginSchema = z.object({ email: z.string().trim().toLowerCase().email().max(160), password: z.string().min(1).max(128), next: z.string().max(300).optional(), code: z.string().trim().max(10).optional() });
 
 /** Only same-site admin paths are accepted as post-login destinations (no open redirects). */
 const safeNext = (n?: string) => (n && /^\/admin(\/[\w\-/[\]?=&%.]*)?$/.test(n) && !n.startsWith("/admin/login") ? n : "/admin/dashboard");
 
 export async function loginAction(_: FormState, form: FormData): Promise<FormState> {
-  const parsed = loginSchema.safeParse({ email: form.get("email"), password: form.get("password"), next: form.get("next") || undefined });
+  const parsed = loginSchema.safeParse({ email: form.get("email"), password: form.get("password"), next: form.get("next") || undefined, code: form.get("code") || undefined });
   if (!parsed.success) return { error: GENERIC };
-  const { email, password, next } = parsed.data;
+  const { email, password, next, code } = parsed.data;
   const { ip } = await requestMeta();
   const since = new Date(Date.now() - WINDOW_MS);
 
@@ -47,12 +49,32 @@ export async function loginAction(_: FormState, form: FormData): Promise<FormSta
 
   if (!user || !ok || !user.active || locked) {
     await db.loginAttempt.create({ data: { email, ip, success: false } });
+    if (locked || (user && !ok)) await securityEvent(locked ? "login.locked_account" : "login.failed", { userId: user?.id, severity: "LOW", detail: { email } });
     if (user && !ok) {
       const fails = user.failedLoginCount + 1;
       await db.user.update({ where: { id: user.id }, data: { failedLoginCount: fails, lockedUntil: fails >= LOCK_AFTER ? new Date(Date.now() + LOCK_MS) : user.lockedUntil } });
       if (fails === LOCK_AFTER) await audit({ userId: user.id, action: "auth.locked", entity: "User", entityId: user.id });
     }
     return { error: locked ? "This account is temporarily locked. Try again later or reset your password." : GENERIC };
+  }
+
+  // Optional TOTP second factor (only for users who enabled it).
+  const tfa = await db.twoFactorMethod.findUnique({ where: { userId: user.id } });
+  if (tfa?.enabledAt) {
+    if (!code) return { error: "Enter the 6-digit code from your authenticator app.", twoFactor: true };
+    let step: number | null = null;
+    try {
+      step = verifyTotp(decryptSecret(tfa.secretEncrypted), code);
+    } catch {
+      step = null;
+    }
+    // Reject replays of an already-used code (atomic compare-and-set on the last used step).
+    const fresh = step !== null && (await db.twoFactorMethod.updateMany({ where: { id: tfa.id, OR: [{ lastUsedStep: null }, { lastUsedStep: { lt: step } }] }, data: { lastUsedStep: step } })).count === 1;
+    if (!fresh) {
+      await db.loginAttempt.create({ data: { email, ip, success: false } });
+      await securityEvent("login.2fa_failed", { userId: user.id, severity: "MEDIUM" });
+      return { error: "That code is not valid. Try the current code.", twoFactor: true };
+    }
   }
 
   await db.$transaction([

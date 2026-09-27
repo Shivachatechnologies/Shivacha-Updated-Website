@@ -63,3 +63,17 @@ export const getCmsPage = unstable_cache(
   { tags: ["cms:pages"], revalidate: HOUR },
 );
 export const getCmsPageSlugs = unstable_cache(async () => safe(async () => (await db.page.findMany({ where: published, select: { slug: true, updatedAt: true } })), []), ["cms-page-slugs"], { tags: ["cms:pages"], revalidate: HOUR });
+
+/* ───────── public help centre (Knowledge Base articles marked PUBLIC + PUBLISHED) ───────── */
+
+const publicArticle = { status: "PUBLISHED" as const, visibility: "PUBLIC" as const };
+export const getHelpArticles = unstable_cache(
+  async () => safe(() => db.knowledgeArticle.findMany({ where: publicArticle, orderBy: [{ category: "asc" }, { title: "asc" }], select: { slug: true, title: true, excerpt: true, category: true, updatedAt: true } }), []),
+  ["help-articles"],
+  { tags: ["cms:knowledge"], revalidate: HOUR },
+);
+export const getHelpArticle = unstable_cache(
+  async (slug: string) => safe(() => db.knowledgeArticle.findFirst({ where: { slug, ...publicArticle }, select: { slug: true, title: true, excerpt: true, body: true, category: true, tags: true, seoTitle: true, seoDescription: true, publishedAt: true, updatedAt: true } }), null),
+  ["help-article"],
+  { tags: ["cms:knowledge"], revalidate: HOUR },
+);

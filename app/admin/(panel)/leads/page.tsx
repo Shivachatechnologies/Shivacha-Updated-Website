@@ -7,16 +7,26 @@ import { bulkLeadsAction } from "@/lib/admin/lead-actions";
 import { Badge, EmptyState, LEAD_STATUS_TONE, PRIORITY_TONE, PageHeader, Pagination, TableWrap, fmtDate, inputCls, label, td, th } from "@/components/admin/ui";
 import { AutoSubmit } from "@/components/admin/client";
 import { ActionForm, BulkControls, SelectAll } from "@/components/admin/forms";
+import { db } from "@/lib/db/client";
+import { deleteViewAction, saveViewAction } from "@/lib/crm/actions";
+import { LIFECYCLE_STAGES } from "@/lib/crm/constants";
+import { getFlags } from "@/lib/os/flags";
 
 export const metadata = { title: "Leads" };
 
-const KEYS = ["q", "status", "priority", "country", "service", "product", "source", "assigned", "from", "to", "archived", "sort", "page"] as const;
+const KEYS = ["q", "status", "priority", "country", "service", "product", "source", "assigned", "from", "to", "archived", "sort", "page", "lifecycle", "tag"] as const;
 
 export default async function LeadsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requirePermission("leads:view");
   const sp = await searchParams;
   const f: LeadFilters = Object.fromEntries(KEYS.map((k) => [k, typeof sp[k] === "string" ? (sp[k] as string) : undefined]).filter(([, v]) => v));
-  const [{ rows, total, page, pages }, opts] = await Promise.all([listLeads(f), leadFilterOptions()]);
+  const [{ rows, total, page, pages }, opts, views, flags] = await Promise.all([
+    listLeads(f),
+    leadFilterOptions(),
+    db.savedView.findMany({ where: { module: "leads", OR: [{ userId: user.id }, { shared: true }] }, orderBy: { name: "asc" }, take: 40 }),
+    getFlags(),
+  ]);
+  const currentQuery = filtersToQuery(f, { page: undefined });
   const caps = { edit: can(user.role, "leads:edit"), assign: can(user.role, "leads:assign"), archive: can(user.role, "leads:archive"), export: can(user.role, "leads:export") };
   const bulk = caps.edit || caps.assign || caps.archive;
   const archived = f.archived === "1";
@@ -31,6 +41,9 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         crumbs={[{ label: "Leads" }]}
         actions={
           <>
+            {flags.ADVANCED_CRM && (
+              <Link href="/admin/crm/pipeline" className="btn-secondary h-9 px-3 text-[13px]">Pipeline</Link>
+            )}
             <Link href={archived ? "/admin/leads" : "/admin/leads?archived=1"} className="btn-secondary h-9 px-3 text-[13px]">
               {archived ? "Active leads" : "Archived"}
             </Link>
@@ -39,10 +52,37 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                 <Download className="size-4" aria-hidden /> Export CSV
               </a>
             )}
+            {can(user.role, "leads:create") && (
+              <Link href="/admin/leads/new" className="btn-primary h-9 px-3.5 text-[13px]">New lead</Link>
+            )}
           </>
         }
       />
 
+      {flags.ADVANCED_CRM && (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5" aria-label="Saved views">
+          <span className="text-xs text-dim">Views:</span>
+          {views.length === 0 && <span className="text-xs text-dim">none yet</span>}
+          {views.map((v) => (
+            <span key={v.id} className={`inline-flex items-center overflow-hidden rounded-md border text-[12.5px] ${v.query === currentQuery ? "border-brand-blue text-fg" : "border-line text-muted"}`}>
+              <Link href={`/admin/leads?${v.query}`} className="px-2 py-1 hover:text-fg">{v.name}{v.shared ? " · shared" : ""}</Link>
+              {v.userId === user.id && (
+                <form action={deleteViewAction.bind(null, v.id)}>
+                  <button type="submit" aria-label={`Delete view ${v.name}`} className="border-l border-line px-1.5 py-1 text-dim hover:text-red-700">×</button>
+                </form>
+              )}
+            </span>
+          ))}
+          {currentQuery && (
+            <ActionForm action={saveViewAction} className="flex items-center gap-1.5" resetOnOk>
+              <input type="hidden" name="query" value={currentQuery} />
+              <input name="name" required maxLength={60} placeholder="Save current filters as…" aria-label="View name" className="h-7 w-44 rounded-md border border-line-strong bg-ink-900 px-2 text-[12.5px]" />
+              <label className="flex items-center gap-1 text-xs text-dim"><input type="checkbox" name="shared" className="size-3.5" /> shared</label>
+              <button type="submit" className="btn-secondary h-7 px-2 text-xs">Save view</button>
+            </ActionForm>
+          )}
+        </div>
+      )}
       <form method="get" className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" role="search" aria-label="Filter leads">
         <AutoSubmit />
         {archived && <input type="hidden" name="archived" value="1" />}
@@ -66,6 +106,13 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
             <option key={u.id} value={u.id}>{u.name}</option>
           ))}
         </select>
+        <select name="lifecycle" defaultValue={f.lifecycle ?? ""} aria-label="Lifecycle stage" className={sel}>
+          <option value="">All lifecycle stages</option>
+          {LIFECYCLE_STAGES.map((s) => (
+            <option key={s} value={s}>{label(s)}</option>
+          ))}
+        </select>
+        <input name="tag" defaultValue={f.tag} placeholder="Tag" aria-label="Tag" className={`${inputCls} min-w-0`} />
         <select name="sort" defaultValue={f.sort ?? "newest"} aria-label="Sort" className={sel}>
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
