@@ -225,6 +225,23 @@ The public website keeps working without a database (it falls back to the built-
 
 **Never run `prisma migrate reset` or `prisma db push --force-reset` against production.**
 
+### Migration lock (P1002)
+
+`prisma migrate deploy` holds a session-level Postgres advisory lock (`pg_advisory_lock(72707369)`) so two deployments can never migrate at once. Through a transaction pooler (Neon's `-pooler` host) that lock can be left held by an idle pooled connection, and every later build fails with **P1002**. Migrations therefore always use a **direct** connection (`DATABASE_URL_UNPOOLED`, or the Neon direct host derived from `DATABASE_URL`); the app keeps the pooled URL. The build waits and retries a few times if another deployment holds the lock, and otherwise stops without changing anything.
+
+Read-only query to see who holds the lock (Neon SQL editor, same database):
+
+```sql
+SELECT a.pid, a.usename, a.application_name, a.client_addr, a.state,
+       a.backend_start, a.state_change, now() - a.state_change AS idle_for,
+       left(a.query, 120) AS last_query
+FROM pg_locks l
+JOIN pg_stat_activity a ON a.pid = l.pid
+WHERE l.locktype = 'advisory' AND l.objid = 72707369 AND l.granted;
+```
+
+If it shows a session that is `idle` with a last query of `SELECT pg_advisory_lock(...)`/`pg_advisory_unlock(...)` and no deployment is building, that is a leaked lock from an earlier pooled migration. Releasing it ends only that one idle connection (no data is touched): `SELECT pg_terminate_backend(<pid>);` — run it deliberately, for that pid only.
+
 ### Existing databases
 
 If the Neon database already contains other tables, `migrate deploy` stops with **P3005** and changes nothing.
