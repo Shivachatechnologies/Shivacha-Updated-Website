@@ -27,10 +27,8 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
       <div className="mt-4">
         {preview.length === 0 ? <p className="text-sm text-muted">No records for this period.</p> : (
           <TableWrap>
-            <table className="w-full text-sm">
-              <thead><tr>{res.columns.map((c) => <th key={c} className={th}>{c}</th>)}</tr></thead>
-              <tbody>{preview.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} className={`${td} whitespace-nowrap`}>{c ?? ""}</td>)}</tr>)}</tbody>
-            </table>
+            <thead><tr>{res.columns.map((c) => <th key={c} className={th}>{c}</th>)}</tr></thead>
+            <tbody>{preview.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} className={`${td} whitespace-nowrap`}>{c ?? ""}</td>)}</tr>)}</tbody>
           </TableWrap>
         )}
         {res.rows.length > preview.length && <p className="mt-2 text-xs text-dim">Showing 100 of {res.rows.length.toLocaleString()} rows — export for the full report.</p>}
