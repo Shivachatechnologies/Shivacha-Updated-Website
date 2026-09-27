@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { DivisionId } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { SystemVisual, pickSystemVisual } from "@/components/visuals/SystemVisuals";
+import { DashboardPreview } from "@/components/visuals/DashboardPreview";
 
 /**
  * Division hero visuals (code-drawn system views, see components/visuals/SystemVisuals) and the office
@@ -28,6 +29,11 @@ export const RENDERS: Record<RenderKey, { src: string; w: number; h: number; dar
  * (agent workflow, payment flow, contract pipeline, cloud topology, security controls, product release).
  */
 export function DivisionArt({ division, topic, className }: { division: DivisionId | "product"; topic?: string; className?: string; label?: string; priority?: boolean }) {
+  // Digital asset pages show the product itself: a trading or wallet interface.
+  if (division === "digital-assets" && !/custody|policy|compliance|screening|travel rule|monitoring|analytics/i.test(topic ?? "")) {
+    const wallet = /wallet/i.test(topic ?? "");
+    return <DashboardPreview kind={wallet ? "wallet" : "exchange"} name={wallet ? "White-Label Crypto Wallet" : "White-Label Crypto Exchange"} className={className} />;
+  }
   return <SystemVisual kind={pickSystemVisual(division, topic)} className={className} />;
 }
 

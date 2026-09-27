@@ -66,8 +66,10 @@ export function CapabilityTemplate({ cap, division }: { cap: Capability; divisio
               [cap.pillars.flatMap((p) => p.groups).length, "Service areas"],
               [productsForDivision(division.id).length, "Ready products"],
               [cases.length, "Reference architectures"],
-            ].map(([v, k], i) => (
-              <div key={String(k)} className={cn("card flex flex-col-reverse p-6", i === 0 && "band-brand")} data-theme={i === 0 ? "dark" : undefined}>
+            ]
+              .filter(([v]) => Number(v) > 0)
+              .map(([v, k], i, all) => (
+              <div key={String(k)} className={cn("card flex flex-col-reverse p-6", i === 0 && "band-brand", i === 0 && all.length % 2 === 1 && "col-span-2")} data-theme={i === 0 ? "dark" : undefined}>
                 <dt className="mt-1.5 text-sm text-muted">{k}</dt>
                 <dd className="text-4xl font-semibold tracking-tight text-fg">{v}</dd>
               </div>
