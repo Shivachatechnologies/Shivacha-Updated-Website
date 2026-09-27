@@ -14,6 +14,20 @@ const PORTAL_COOKIE = process.env.NODE_ENV === "production" ? "__Host-shv_client
 export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
+  // Employee self-service shares the staff session cookie.
+  if (pathname === "/employee" || pathname.startsWith("/employee/")) {
+    if (!req.cookies.get(COOKIE)?.value) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/admin/login";
+      url.search = `?next=${encodeURIComponent(pathname + search)}`;
+      return NextResponse.redirect(url);
+    }
+    const res = NextResponse.next();
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    res.headers.set("Cache-Control", "no-store");
+    return res;
+  }
+
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
     const isPublic = PUBLIC_ADMIN.some((p) => pathname === p || pathname.startsWith(`${p}/`));
     if (!isPublic && !req.cookies.get(COOKIE)?.value) {

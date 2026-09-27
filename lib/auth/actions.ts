@@ -24,7 +24,7 @@ const GENERIC = "Invalid email or password.";
 const loginSchema = z.object({ email: z.string().trim().toLowerCase().email().max(160), password: z.string().min(1).max(128), next: z.string().max(300).optional(), code: z.string().trim().max(10).optional() });
 
 /** Only same-site admin paths are accepted as post-login destinations (no open redirects). */
-const safeNext = (n?: string) => (n && /^\/admin(\/[\w\-/[\]?=&%.]*)?$/.test(n) && !n.startsWith("/admin/login") ? n : "/admin/dashboard");
+const safeNext = (n?: string) => (n && /^\/(admin|employee)(\/[\w\-/[\]?=&%.]*)?$/.test(n) && !n.startsWith("/admin/login") ? n : "/admin/dashboard");
 
 export async function loginAction(_: FormState, form: FormData): Promise<FormState> {
   const parsed = loginSchema.safeParse({ email: form.get("email"), password: form.get("password"), next: form.get("next") || undefined, code: form.get("code") || undefined });
