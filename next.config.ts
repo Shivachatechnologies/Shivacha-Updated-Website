@@ -6,6 +6,8 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
+  // Server text-to-speech replies are played from blob: URLs.
+  "media-src 'self' blob:",
   "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.facebook.com https://px.ads.linkedin.com https://challenges.cloudflare.com",
   "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://calendly.com",
   "object-src 'none'",
@@ -21,7 +23,9 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+  // microphone: voice AI employees (asked only when the user presses the mic). geolocation: employee check-in.
+  // Both are limited to this origin; the browser still asks the user. Camera stays off.
+  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(self), interest-cohort=()" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 

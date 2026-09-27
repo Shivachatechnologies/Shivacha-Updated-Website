@@ -8,7 +8,7 @@ import { authorizeAccess } from "@/lib/os/guard";
 import { fail, formObject, okThen, UserError, type ActionState } from "@/lib/os/action";
 import type { EntityRef } from "@/lib/ai/runner";
 import { isVoiceLanguage, VOICE_LANGUAGES } from "./languages";
-import { endVoiceSession, interruptVoice, startVoiceSession, voiceTurn, type VoiceTurnResult } from "./session";
+import { endVoiceSession, interruptVoice, startVoiceSession, voiceReadiness, voiceTurn, type VoiceTurnResult } from "./session";
 import { OPENAI_VOICES, VOICE_PROVIDERS } from "./provider";
 
 const ENTITIES = ["Lead", "Deal", "Project", "Invoice", "Ticket", "Client"] as const;
@@ -39,6 +39,16 @@ export async function voiceTurnAction(input: z.input<typeof turnSchema>): Promis
     return { result: await voiceTurn(user, d.sessionId, d.text, d) };
   } catch (e) {
     return { error: fail(e, "voice")?.error };
+  }
+}
+
+/** Server half of the voice diagnostics: is the voice provider configured and may this user talk to this AI employee? */
+export async function voiceReadinessAction(agentSlug: string, provider: string) {
+  try {
+    const user = await authorizeAccess("voice:use", "AI_WORKFORCE");
+    return await voiceReadiness(user, z.string().trim().min(1).max(40).parse(agentSlug), z.enum(["browser", "openai"]).parse(provider));
+  } catch (e) {
+    return { error: fail(e, "voice")?.error ?? "Voice is not available." };
   }
 }
 
