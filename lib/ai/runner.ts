@@ -12,6 +12,7 @@ import { aiLimits, assertBudget, BudgetError } from "./cost";
 import { DEFAULT_MODEL, getProvider, providerError, webSearchEnabled, type AIProvider, type AIToolOutcome } from "./provider";
 import { getTool, toolPermissions, toolSchema, type ToolCtx, type ToolDef } from "./tools";
 import type { ExecutionClass } from "./router/policy";
+import { checkAIWorkforcePermission, logBlocked, type ControlChannel, type ControlCode } from "./control";
 
 /**
  * The AI Workforce runtime: routes a request to an agent, runs its tool loop under the requesting user's permissions,
@@ -41,6 +42,8 @@ export interface RunInput {
   channelHint?: string;
   /** Classification from the global execution router (lib/ai/router). Narrows tools for reads; lets simple actions run now. */
   route?: { cls: ExecutionClass; reason: string };
+  /** Where the request came from, for the AI Workforce Control Center checks (voice, task, automation, …). */
+  channel?: ControlChannel;
 }
 
 /** A tool that only touches the running task (plan, progress, memory). No data permissions are involved. */
@@ -66,6 +69,11 @@ export interface TaskHooks {
 }
 
 class StopRequested extends Error {}
+class ControlStop extends Error {
+  constructor(public code: ControlCode, message: string) {
+    super(message);
+  }
+}
 
 export interface ProposedAction {
   approvalId?: string;
@@ -85,6 +93,8 @@ export interface RunOutput {
   toolsUsed: string[];
   conversationId: string | null;
   error?: string;
+  /** Set when the AI Workforce Control Center blocked or halted this run. */
+  control?: ControlCode;
 }
 
 /* ───────────────────────── orchestrator (routing) ───────────────────────── */
@@ -191,6 +201,14 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
   if (!isSystem(user) && !canRunAgent(user.role, cfg.spec)) return base(cfg.spec.slug, `You do not have permission to use the ${cfg.name}.`);
   if (!cfg.enabled) return base(cfg.spec.slug, `${cfg.name} is disabled by an administrator.`);
 
+  // AI Workforce Control Center: checked before anything runs (no execution row, no provider call, no tool).
+  const channel: ControlChannel = input.channel ?? (input.task ? "task" : trigger === "AUTOMATION" ? "automation" : trigger === "SCHEDULE" ? "schedule" : "chat");
+  const gate = await checkAIWorkforcePermission({ kind: "execute", agentSlug: cfg.spec.slug, channel });
+  if (!gate.ok) {
+    await logBlocked(gate, { kind: "execute", agentSlug: cfg.spec.slug, channel }, user.id);
+    return { ...base(cfg.spec.slug, gate.message), control: gate.code };
+  }
+
   // System (automation/scheduled) runs never act autonomously.
   const mode: AIModeName = isSystem(user) && cfg.mode === "AUTONOMOUS" ? "ASSIST" : cfg.mode;
   const provider = input.provider !== undefined ? input.provider : getProvider();
@@ -233,6 +251,14 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
     };
     const tool = getTool(name);
     if (!tool || !cfg.tools.has(name)) return done(false, { content: `Tool "${name}" is not available to this agent.`, isError: true }, "not allowed");
+    // Re-checked on every tool call so an emergency stop or pause takes effect mid-run, before the tool touches data.
+    const external = !!tool.alwaysApprove || !!tool.external;
+    const toolGate = await checkAIWorkforcePermission({ kind: external ? "external" : "tool", agentSlug: cfg.spec.slug, channel, tool: name });
+    if (!toolGate.ok) {
+      await logBlocked(toolGate, { kind: external ? "external" : "tool", agentSlug: cfg.spec.slug, channel, tool: name }, user.id);
+      if (toolGate.code !== "EXTERNAL_DISABLED") throw new ControlStop(toolGate.code, toolGate.message);
+      return done(false, { content: `Not executed: ${toolGate.message}`, isError: true }, "external actions disabled");
+    }
     const parsed = tool.input.safeParse(raw ?? {});
     if (!parsed.success) return done(false, { content: `Invalid input: ${parsed.error.issues.map((i) => `${i.path.join(".") || "input"}: ${i.message}`).join("; ")}`.slice(0, 800), isError: true }, "invalid input");
     if (input.route?.cls === "INSTANT_READ" && tool.kind === "write") return done(false, { content: "Not executed: this request was classified as a read-only question. Answer it without changing data.", isError: true }, "read-only request");
@@ -260,7 +286,9 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
         actions.push((lastAction = { tool: name, summary: preview.summary, status: "BLOCKED" }));
         return done(true, { content: "Not executed: this agent is in OBSERVE mode. Present it to the user as a recommendation." });
       }
-      const autonomous = mode === "AUTONOMOUS" && !isSystem(user) && tool.risk === "LOW" && !tool.alwaysApprove && cfg.tools.get(name) === true && !cfg.approvalActions.includes(name);
+      // Autonomous execution also needs the Control Center's autonomous switch (global and for this employee);
+      // when it is off the action falls back to the Human Approval Center instead of running.
+      const autonomous = mode === "AUTONOMOUS" && !isSystem(user) && tool.risk === "LOW" && !tool.alwaysApprove && cfg.tools.get(name) === true && !cfg.approvalActions.includes(name) && (await checkAIWorkforcePermission({ kind: "autonomous", agentSlug: cfg.spec.slug, channel, tool: name })).ok;
       // The person asked for this exact change and holds every permission it needs (checked above), so a simple internal
       // change runs now, as if they did it themselves. Customer contact, HIGH/CRITICAL risk and admin-listed tools still go to approval.
       const instant = !autonomous && input.route?.cls === "INSTANT_ACTION" && !isSystem(user) && !input.task && (tool.risk === "LOW" || tool.risk === "MEDIUM") && !tool.alwaysApprove && !cfg.approvalActions.includes(name);
@@ -283,6 +311,7 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
   let text = "";
   let status: RunOutput["status"] = "SUCCEEDED";
   let error: string | undefined;
+  let control: ControlCode | undefined;
 
   try {
     if (!provider) {
@@ -309,11 +338,17 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
         model,
         maxTokens: limits.callMaxTokens,
         maxIterations: input.task?.maxIterations ?? limits.maxIterations,
-        webSearch: cfg.tools.has("webResearch") && webSearchEnabled(),
+        webSearch: cfg.tools.has("webResearch") && webSearchEnabled() && (await checkAIWorkforcePermission({ kind: "external", agentSlug: cfg.spec.slug, channel, tool: "webSearch" })).ok,
         executeTool: callTool,
         beforeCall: async () => {
           const stop = input.task ? await input.task.shouldStop() : null;
           if (stop) throw new StopRequested(stop);
+          // Checked before every model call: emergency stop, pause, employee disabled, global daily budget.
+          const g = await checkAIWorkforcePermission({ kind: "provider", agentSlug: cfg.spec.slug, channel });
+          if (!g.ok) {
+            await logBlocked(g, { kind: "provider", agentSlug: cfg.spec.slug, channel }, user.id);
+            throw new ControlStop(g.code, g.message);
+          }
           const tokenLimit = input.task?.requestTokens ?? limits.requestTokens;
           if (tokens >= tokenLimit) throw new BudgetError(`Request token limit reached (${tokenLimit.toLocaleString()} tokens).`);
           await assertBudget(cfg.spec.slug, cfg.dailyCostLimit);
@@ -336,10 +371,11 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
     }
     if (status === "SUCCEEDED" && actions.some((a) => a.status === "PENDING_APPROVAL")) status = "AWAITING_APPROVAL";
   } catch (e) {
-    status = e instanceof StopRequested ? "CANCELLED" : e instanceof BudgetError ? "BLOCKED" : "FAILED";
-    error = e instanceof StopRequested || e instanceof BudgetError ? e.message : providerError(e);
+    status = e instanceof StopRequested ? "CANCELLED" : e instanceof BudgetError || e instanceof ControlStop ? "BLOCKED" : "FAILED";
+    error = e instanceof StopRequested || e instanceof BudgetError || e instanceof ControlStop ? e.message : providerError(e);
+    if (e instanceof ControlStop) control = e.code;
     text = [text, error].filter(Boolean).join("\n\n");
-    if (!(e instanceof BudgetError) && !(e instanceof StopRequested)) console.error("[ai] execution failed", exec.id, (e as Error)?.message);
+    if (!(e instanceof BudgetError) && !(e instanceof StopRequested) && !(e instanceof ControlStop)) console.error("[ai] execution failed", exec.id, (e as Error)?.message);
   }
 
   await db.aIExecution.update({
@@ -352,7 +388,7 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
   }
   await audit({ userId: isSystem(user) ? null : user.id, action: "ai.execute", entity: "AIExecution", entityId: exec.id, metadata: { agent: cfg.spec.slug, trigger, mode, status, route: input.route?.cls ?? null, tools: toolsUsed.map((t) => t.tool), approvals: actions.filter((a) => a.approvalId).length } });
 
-  return { executionId: exec.id, agent: cfg.spec.slug, status, text, provider: provider ? provider.name : "none", drafts, actions, toolsUsed: toolsUsed.map((t) => t.tool), conversationId, error };
+  return { executionId: exec.id, agent: cfg.spec.slug, status, text, provider: provider ? provider.name : "none", drafts, actions, toolsUsed: toolsUsed.map((t) => t.tool), conversationId, error, control };
 }
 
 /* ───────────────────────── approvals ───────────────────────── */

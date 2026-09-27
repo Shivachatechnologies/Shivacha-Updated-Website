@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/permissions";
 import { rateLimited } from "@/lib/os/ratelimit";
 import { voiceProvider } from "@/lib/voice/provider";
+import { checkAIWorkforcePermission } from "@/lib/ai/control";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,9 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { sessionId?: string; messageId?: string } | null;
   const m = body?.messageId ? await db.voiceMessage.findFirst({ where: { id: String(body.messageId), sessionId: String(body.sessionId ?? ""), role: "assistant", session: { userId: user.id } }, include: { session: { select: { provider: true, language: true, agentSlug: true } } } }) : null;
   if (!m) return NextResponse.json({ error: "Message not found." }, { status: 404 });
+  // AI Workforce Control Center: no speech provider calls while voice is off or the workforce is stopped.
+  const gate = await checkAIWorkforcePermission({ kind: "voice", agentSlug: m.session.agentSlug, channel: "voice" });
+  if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: 423 });
   const provider = voiceProvider(m.session.provider);
   if (!provider.serverAudio) return NextResponse.json({ error: "This session speaks in the browser." }, { status: 400 });
   const profile = await db.aIEmployeeVoiceProfile.findUnique({ where: { agentSlug: m.session.agentSlug } });

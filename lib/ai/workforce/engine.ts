@@ -1,4 +1,5 @@
 import "server-only";
+import { assertAIWorkforcePermission, checkAIWorkforcePermission, workforceHalted } from "@/lib/ai/control";
 import { after } from "next/server";
 import { db } from "@/lib/db/client";
 import type { Prisma } from "@/lib/generated/prisma/client";
@@ -34,6 +35,8 @@ export interface NewTask {
 
 /** Assigns work to an AI employee: creates the task, records it on the timeline and starts it when it is due. */
 export async function createEmployeeTask(t: NewTask) {
+  // AI Workforce Control Center: no new background work while it is stopped, paused or switched off.
+  await assertAIWorkforcePermission({ kind: "background", agentSlug: t.agentSlug, channel: t.automationId ? "automation" : "task" }, t.requestedById);
   const runAfter = t.runAfter ?? new Date();
   const task = await db.aITask.create({
     data: {
@@ -117,6 +120,12 @@ export async function executeTask(id: string, opts: { provider?: AIProvider | nu
   if (!t || t.status !== "QUEUED" || t.runAfter > new Date()) return "SKIPPED";
   const employee = await db.aIAgent.findUnique({ where: { slug: t.agentSlug }, select: { enabled: true, available: true } });
   if (employee && (!employee.enabled || !employee.available)) return "SKIPPED";
+  // Held (not failed) while the Control Center blocks background work; it runs once the workforce resumes.
+  const gate = await checkAIWorkforcePermission({ kind: "background", agentSlug: t.agentSlug, channel: "task" });
+  if (!gate.ok) {
+    if (t.currentStep !== `On hold: ${gate.message}`) await db.aITask.updateMany({ where: { id, status: "QUEUED" }, data: { currentStep: `On hold: ${gate.message}` } });
+    return "SKIPPED";
+  }
   const claimed = await db.aITask.updateMany({ where: { id, status: "QUEUED" }, data: { status: "RUNNING", startedAt: t.startedAt ?? new Date(), attempts: { increment: 1 }, error: null, currentStep: t.currentStep ?? "Understanding the task" } });
   if (!claimed.count) return "SKIPPED";
   const slug = t.agentSlug;
@@ -239,6 +248,12 @@ export async function executeTask(id: string, opts: { provider?: AIProvider | nu
     await logEmployeeActivity({ agentSlug: slug, taskId: id, type: "task.stopped", summary: `Stopped working on "${t.title}" (${r.error ?? "stopped by a person"})` });
     return "STOPPED";
   }
+  if (r.control && r.status === "BLOCKED") {
+    // Stopped by the Control Center mid-run: put it back in the queue instead of failing it.
+    await db.aITask.updateMany({ where: { id, status: "RUNNING" }, data: { ...common, status: "QUEUED", currentStep: `On hold: ${r.error ?? "AI workforce stopped"}` } });
+    await logEmployeeActivity({ agentSlug: slug, taskId: id, type: "task.held", summary: `Put "${t.title}" on hold: ${r.error ?? "AI workforce stopped"}` });
+    return "STOPPED";
+  }
   if (r.status === "FAILED" || r.status === "BLOCKED") {
     await db.aITask.update({ where: { id }, data: common });
     await saveMemory({ agentSlug: slug, kind: "WORKFLOW_FAILURE", title: `Failed: ${t.title}`, content: `Error: ${r.error ?? "unknown"}. Tools used: ${r.toolsUsed.join(", ") || "none"}.`, taskId: id, expiresInDays: 90 });
@@ -283,6 +298,7 @@ export async function onApprovalDecided(a: { id: string; taskId: string | null; 
 
 /** Runs due queued tasks and recovers tasks interrupted mid-run (e.g. a serverless timeout). */
 export async function processDueTasks(limit = 5): Promise<number> {
+  if (await workforceHalted()) return 0;
   const stale = await db.aITask.findMany({ where: { status: "RUNNING", updatedAt: { lt: new Date(Date.now() - 15 * 60_000) } }, select: { id: true, attempts: true, agentSlug: true, title: true } });
   for (const s of stale) {
     const retry = s.attempts < 2;

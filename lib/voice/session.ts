@@ -8,6 +8,7 @@ import { rateLimited } from "@/lib/os/ratelimit";
 import { isEnabled } from "@/lib/os/flags";
 import { agentBySlug } from "@/lib/ai/catalog";
 import { canRunAgent } from "@/lib/ai/agents";
+import { checkAIWorkforcePermission, logBlocked } from "@/lib/ai/control";
 import type { EntityRef } from "@/lib/ai/runner";
 import { executeRequest, type ExecutionClass } from "@/lib/ai/router";
 import type { ReplyLanguage } from "@/lib/ai/router/policy";
@@ -36,6 +37,12 @@ async function assertCanTalk(user: SessionUser, agentSlug: string) {
   if (!can(user.role, "voice:use") || !can(user.role, "ai:execute")) throw new UserError("You do not have permission to talk to AI employees.");
   const spec = agentBySlug(agentSlug);
   if (!spec) throw new UserError("Unknown AI employee.");
+  // AI Workforce Control Center: voice employees can be switched off globally or per employee.
+  const gate = await checkAIWorkforcePermission({ kind: "voice", agentSlug: spec.slug, channel: "voice" });
+  if (!gate.ok) {
+    await logBlocked(gate, { kind: "voice", agentSlug: spec.slug, channel: "voice" }, user.id);
+    throw new UserError(gate.message);
+  }
   // The AI employee can only do what BOTH it and you are allowed to do; runAgent enforces this per tool call.
   if (!canRunAgent(user.role, spec)) throw new UserError(`You do not have permission to use the ${spec.name}.`);
   return spec;
