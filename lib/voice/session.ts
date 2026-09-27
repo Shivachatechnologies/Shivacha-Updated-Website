@@ -8,8 +8,9 @@ import { rateLimited } from "@/lib/os/ratelimit";
 import { isEnabled } from "@/lib/os/flags";
 import { agentBySlug } from "@/lib/ai/catalog";
 import { canRunAgent } from "@/lib/ai/agents";
-import { runAgent, type EntityRef } from "@/lib/ai/runner";
-import { createEmployeeTask } from "@/lib/ai/workforce/engine";
+import type { EntityRef } from "@/lib/ai/runner";
+import { executeRequest, type ExecutionClass } from "@/lib/ai/router";
+import type { ReplyLanguage } from "@/lib/ai/router/policy";
 import { VOICE_LANGUAGES, toSpeech, voiceChannelHint, wantsBackground, type VoiceLanguage } from "./languages";
 import { estimateVoiceCost, VOICE_PROVIDERS, voiceProvider } from "./provider";
 
@@ -27,6 +28,7 @@ export interface VoiceTurnResult {
   executionId: string | null;
   taskId?: string;
   provider: string;
+  route: ExecutionClass;
 }
 
 async function assertCanTalk(user: SessionUser, agentSlug: string) {
@@ -89,27 +91,22 @@ export async function voiceTurn(user: SessionUser, sessionId: string, text: stri
   const t0 = Date.now();
   await db.voiceMessage.create({ data: { sessionId, role: "user", text: text.slice(0, 4000), latencyMs: opts.sttLatencyMs ?? null } });
 
-  if (opts.background || wantsBackground(text)) {
-    const task = await createEmployeeTask({ agentSlug: s.agentSlug, title: text.slice(0, 160), instructions: `Requested by voice.${context ? ` Context: ${context.entity} ${context.id}.` : ""}\n\n${text}`, requestedById: user.id, source: "voice", entity: context?.entity ?? null, entityId: context?.id ?? null });
-    const reply = lang === "hi-IN" ? "ठीक है, मैंने इसे बैकग्राउंड टास्क के रूप में जोड़ दिया है। प्रगति AI टास्क में दिखेगी, और जिन कामों के लिए मंज़ूरी चाहिए वे आपके पास आएँगे।" : lang === "hinglish" ? "Theek hai, maine isko background task bana diya hai. Progress AI Tasks mein dikhega, aur approval wale kaam aapke paas aayenge." : "Okay, I've added that as a background task. You can follow it in AI Tasks, and anything that needs approval will come to you.";
-    const m = await db.voiceMessage.create({ data: { sessionId, role: "assistant", text: reply, data: { taskId: task.id }, latencyMs: Date.now() - t0 } });
-    await bump(s, opts.audioSec ?? 0, reply.length, 0, 0, 0);
-    await audit({ userId: user.id, action: "voice.task.delegated", entity: "AITask", entityId: task.id, metadata: { sessionId, agent: s.agentSlug } });
-    return { messageId: m.id, text: reply, spoken: reply, status: "QUEUED", agent: s.agentSlug, actions: [], toolsUsed: [], executionId: null, taskId: task.id, provider: s.provider };
-  }
-
-  const r = await runAgent({ agentSlug: s.agentSlug, request: text, user, context, conversationId: s.conversationId, channelHint: voiceChannelHint(lang) });
+  // One global router decides how this is handled; voice only adds its spoken-answer style and language.
+  const r = await executeRequest({ user, text, channel: "voice", agentSlug: s.agentSlug, context, conversationId: s.conversationId, channelHint: voiceChannelHint(lang), explicitBackground: !!opts.background || wantsBackground(text), language: REPLY_LANGUAGE[lang] });
   const exec = r.executionId ? await db.aIExecution.findUnique({ where: { id: r.executionId }, select: { inputTokens: true, outputTokens: true, costUsd: true } }) : null;
   const spoken =
     r.provider === "none" && r.status === "SUCCEEDED"
       ? "The AI provider isn't connected, so I can't reason about this yet. I've put the live data I would use on screen."
-      : toSpeech(r.text || r.error || "Sorry, I couldn't do that.");
+      : toSpeech(r.spoken || r.error || "Sorry, I couldn't do that.");
   const actions = r.actions.map((a) => ({ tool: a.tool, summary: a.summary, status: a.status, approvalId: a.approvalId }));
-  const m = await db.voiceMessage.create({ data: { sessionId, role: "assistant", text: r.text.slice(0, 20_000), executionId: r.executionId, data: { status: r.status, agent: r.agent, actions, toolsUsed: r.toolsUsed, spoken }, latencyMs: Date.now() - t0 } });
+  const m = await db.voiceMessage.create({ data: { sessionId, role: "assistant", text: r.text.slice(0, 20_000), executionId: r.executionId, data: { status: r.status, agent: r.agent, actions, toolsUsed: r.toolsUsed, spoken, route: r.cls, ...(r.taskId ? { taskId: r.taskId } : {}) }, latencyMs: Date.now() - t0 } });
   if (!s.conversationId && r.conversationId) await db.voiceSession.update({ where: { id: s.id }, data: { conversationId: r.conversationId } });
   await bump(s, opts.audioSec ?? 0, spoken.length, exec?.inputTokens ?? 0, exec?.outputTokens ?? 0, Number(exec?.costUsd ?? 0));
-  return { messageId: m.id, text: r.text, spoken, status: r.status, agent: r.agent, actions, toolsUsed: r.toolsUsed, executionId: r.executionId, provider: s.provider };
+  if (r.taskId) await audit({ userId: user.id, action: "voice.task.delegated", entity: "AITask", entityId: r.taskId, metadata: { sessionId, agent: s.agentSlug } });
+  return { messageId: m.id, text: r.text, spoken, status: r.status, agent: r.agent, actions, toolsUsed: r.toolsUsed, executionId: r.executionId, taskId: r.taskId, provider: s.provider, route: r.cls };
 }
+
+const REPLY_LANGUAGE: Record<VoiceLanguage, ReplyLanguage> = Object.fromEntries(Object.keys(VOICE_LANGUAGES).map((k) => [k, k === "hi-IN" ? "hi" : k === "hinglish" ? "hinglish" : "en"])) as Record<VoiceLanguage, ReplyLanguage>;
 
 async function bump(s: { id: string; provider: string }, audioSec: number, outChars: number, inTok: number, outTok: number, cost: number) {
   const secs = Math.max(0, Math.min(600, Math.round(audioSec)));

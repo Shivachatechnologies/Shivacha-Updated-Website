@@ -18,6 +18,7 @@ import { saveMemory } from "./memory";
 import { MEMORY_KINDS, OPEN_TASK_STATUSES, SCHEDULES, TASK_PRIORITIES, type MemoryKind, type ScheduleTrigger } from "./profiles";
 import { generateCeoBriefing, generateEndOfDayReports, generateMorningPlans } from "./reports";
 import { pumpWorkforce } from "./scheduler";
+import { executeRequest } from "@/lib/ai/router";
 
 const agentSlug = z.string().refine((s) => AGENTS.some((a) => a.slug === s), "Choose an AI employee");
 
@@ -63,17 +64,25 @@ export async function assignTaskAction(_: ActionState, form: FormData): Promise<
 
 const instructionSchema = z.object({ agent: agentSlug, instruction: z.string().trim().min(5, "Write the instruction").max(4000), priority: z.enum(TASK_PRIORITIES).default("MEDIUM") });
 
-/** ASSIGN INSTRUCTION: a CEO instruction becomes a task the employee executes and reports on. */
+/**
+ * ASSIGN INSTRUCTION goes through the global execution router like every other request: a question is answered on the
+ * spot, a simple change is made now, and only long or multi-step work becomes a task the employee reports on.
+ */
 export async function assignInstructionAction(_: ActionState, form: FormData): Promise<ActionState> {
   try {
     const user = await authorizeAccess("ai:execute", "AI_WORKFORCE");
     const d = instructionSchema.parse({ agent: form.get("agent"), instruction: form.get("instruction"), priority: form.get("priority") || undefined });
     assertCanDirect(user, d.agent);
     await ensureEmployees();
-    const firstLine = d.instruction.split(/\n|(?<=[.!?])\s/)[0].slice(0, 160);
-    const task = await createEmployeeTask({ agentSlug: d.agent, title: firstLine.length < d.instruction.length ? `${firstLine}…` : firstLine, instructions: d.instruction, priority: d.priority, kind: "INSTRUCTION", requestedById: user.id });
-    await audit({ userId: user.id, action: "ai.instruction.assigned", entity: "AITask", entityId: task.id, metadata: { agent: d.agent } });
-    return { ok: `Instruction assigned to ${agentBySlug(d.agent)!.name.replace(/^AI\s+/, "")}. Follow its progress on the task board.`, redirect: `/admin/ai/tasks/${task.id}` };
+    const r = await executeRequest({ user, text: d.instruction, channel: "instruction", agentSlug: d.agent, priority: d.priority });
+    const who = agentBySlug(d.agent)!.name.replace(/^AI\s+/, "");
+    if (r.taskId) {
+      await audit({ userId: user.id, action: "ai.instruction.assigned", entity: "AITask", entityId: r.taskId, metadata: { agent: d.agent, route: r.cls } });
+      return { ok: `Instruction assigned to ${who}. Follow its progress on the task board.`, redirect: `/admin/ai/tasks/${r.taskId}` };
+    }
+    if (r.status === "BLOCKED" && !r.executionId) throw new UserError(r.text);
+    const done = r.cls === "INSTANT_READ" ? "answered it now" : r.cls === "CLARIFICATION_REQUIRED" ? "needs one detail from you" : r.status === "AWAITING_APPROVAL" ? "prepared it; it is waiting for approval" : "did it now";
+    return { ok: `${who} ${done}.`, redirect: r.executionId ? `/admin/ai/logs/${r.executionId}` : undefined };
   } catch (e) {
     return fail(e, "workforce");
   }

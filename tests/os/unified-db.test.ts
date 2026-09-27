@@ -149,7 +149,10 @@ test("voice: permissions are enforced, turns go through the orchestrator, backgr
   const r = await voiceTurn(users.SALES_MANAGER, s.id, "Show me my open leads", { audioSec: 3 });
   assert.equal(r.agent, "sales");
   assert.ok(r.executionId, "an orchestrator execution is recorded");
-  assert.match(r.spoken, /provider isn't connected/);
+  // The global router answers a plain question straight from the database: no model call, no background task.
+  assert.equal(r.route, "INSTANT_READ");
+  assert.equal(r.taskId, undefined);
+  assert.match(r.spoken, /open leads assigned/);
   const exec = await db.aIExecution.findUniqueOrThrow({ where: { id: r.executionId! } });
   assert.equal(exec.userId, users.SALES_MANAGER.id);
   await interruptVoice(users.SALES_MANAGER, s.id, r.messageId);

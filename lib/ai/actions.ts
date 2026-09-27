@@ -13,13 +13,14 @@ import { decideApproval } from "./approvals";
 import { generateBriefing } from "./briefing";
 import { generateInsights } from "./insights";
 import { MODEL_OPTIONS } from "./provider";
-import { runAgent, type EntityRef, type ProposedAction } from "./runner";
+import { type EntityRef, type ProposedAction } from "./runner";
+import { executeRequest, type ExecutionClass } from "./router";
 import { processTasks } from "./tasks";
 
 export type AskState =
   | {
       error?: string;
-      result?: { executionId: string | null; agent: string; status: string; text: string; provider: string; drafts: { tool: string; draft: unknown }[]; actions: ProposedAction[]; toolsUsed: string[] };
+      result?: { executionId: string | null; agent: string; status: string; text: string; provider: string; drafts: { tool: string; draft: unknown }[]; actions: ProposedAction[]; toolsUsed: string[]; route: ExecutionClass; taskId?: string };
       conversationId?: string | null;
       question?: string;
     }
@@ -38,8 +39,8 @@ export async function askAIAction(_: AskState, form: FormData): Promise<AskState
     const user = await authorizeAccess("ai:execute", "AI_WORKFORCE");
     const d = askSchema.parse({ q: form.get("q"), agent: form.get("agent") || undefined, conversationId: form.get("conversationId") || undefined, entity: form.get("entity") || undefined, entityId: form.get("entityId") || undefined });
     const context: EntityRef | null = d.entity && d.entityId ? { entity: d.entity, id: d.entityId } : null;
-    const r = await runAgent({ agentSlug: d.agent && d.agent !== "auto" ? d.agent : null, request: d.q, user, context, conversationId: d.conversationId });
-    return { result: { executionId: r.executionId, agent: r.agent, status: r.status, text: r.text, provider: r.provider, drafts: r.drafts, actions: r.actions, toolsUsed: r.toolsUsed }, conversationId: r.conversationId, question: d.q };
+    const r = await executeRequest({ user, text: d.q, channel: "chat", agentSlug: d.agent && d.agent !== "auto" ? d.agent : null, context, conversationId: d.conversationId });
+    return { result: { executionId: r.executionId, agent: r.agent, status: r.status, text: r.text, provider: r.provider, drafts: r.drafts, actions: r.actions, toolsUsed: r.toolsUsed, route: r.cls, taskId: r.taskId }, conversationId: r.conversationId, question: d.q };
   } catch (e) {
     return { error: fail(e, "ai")?.error };
   }

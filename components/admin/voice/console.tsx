@@ -184,6 +184,8 @@ export function VoiceConsole({ agents, initialAgent, context = null, contextLabe
     setThinking(true);
     const r = await voiceTurnAction({ sessionId: s.id, text: q, background, audioSec: meta.audioSec ?? null, sttLatencyMs: meta.sttLatencyMs ?? null }).catch(() => ({ error: "Network error. Try again.", result: undefined }));
     setThinking(false);
+    // The toggle applies to one request only; it never stays on for later questions.
+    setBackground(false);
     if (r.error || !r.result) {
       setError(r.error ?? "Something went wrong.");
       if (/ended|timed out/i.test(r.error ?? "")) setSession(null);
@@ -411,7 +413,7 @@ export function VoiceConsole({ agents, initialAgent, context = null, contextLabe
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-dim">
         {listening && <span className="flex items-center gap-1 font-medium text-red-700"><span className="size-2 rounded-full bg-red-600" aria-hidden /> Microphone on</span>}
         <label className="flex items-center gap-1"><input type="checkbox" checked={handsFree} onChange={(e) => setHandsFree(e.target.checked)} /> Conversation mode (listen again after each answer)</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={background} onChange={(e) => setBackground(e.target.checked)} /> Run next request as a background task</label>
+        <label className="flex items-center gap-1"><input type="checkbox" checked={background} onChange={(e) => setBackground(e.target.checked)} /> Run next request as a background task (questions are still answered instantly)</label>
         <span>Transcripts are saved; raw audio is never stored.</span>
       </div>
     </div>
