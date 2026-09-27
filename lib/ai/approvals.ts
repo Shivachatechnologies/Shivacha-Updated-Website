@@ -6,6 +6,7 @@ import type { SessionUser } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { UserError } from "@/lib/os/action";
 import { getTool, toolPermissions } from "./tools";
+import { onApprovalDecided } from "./workforce/engine";
 
 const json = (v: unknown) => JSON.parse(JSON.stringify(v ?? null)) as Prisma.InputJsonValue;
 /** Automation-created inputs may contain nulls for "not linked"; tool schemas use optional fields. */
@@ -40,6 +41,7 @@ export async function decideApproval(id: string, user: SessionUser, d: Decision)
     if (!r.count) throw new UserError("This request was decided by someone else.");
     await audit({ userId: user.id, action: "ai.approval.rejected", entity: "AIApproval", entityId: id, metadata: { tool: a.tool, agent: a.agentSlug, note: d.note } });
     await settleExecution(a.executionId);
+    await onApprovalDecided(a, "REJECTED", user.id).catch(() => null);
     return { status: "REJECTED" as const };
   }
 
@@ -58,12 +60,14 @@ export async function decideApproval(id: string, user: SessionUser, d: Decision)
     await db.aIApproval.update({ where: { id }, data: { status: "EXECUTED", executedAt: new Date(), executionResult: json(r.data) } });
     await audit({ userId: user.id, action: edited ? "ai.approval.edited_and_executed" : "ai.approval.executed", entity: "AIApproval", entityId: id, metadata: { tool: a.tool, agent: a.agentSlug, records: r.records } });
     await settleExecution(a.executionId, { tool: a.tool, approvalId: id, summary: a.action, status: "EXECUTED", by: user.id });
+    await onApprovalDecided(a, "EXECUTED", user.id, r.records).catch(() => null);
     return { status: "EXECUTED" as const, result: r.data };
   } catch (e) {
     const msg = (e as Error).message.slice(0, 500);
     await db.aIApproval.update({ where: { id }, data: { status: "FAILED", executionResult: json({ error: msg }) } });
     await audit({ userId: user.id, action: "ai.approval.failed", entity: "AIApproval", entityId: id, metadata: { tool: a.tool, error: msg } });
     await settleExecution(a.executionId);
+    await onApprovalDecided(a, "FAILED", user.id).catch(() => null);
     throw new UserError(`Approved, but the action failed: ${msg}`);
   }
 }

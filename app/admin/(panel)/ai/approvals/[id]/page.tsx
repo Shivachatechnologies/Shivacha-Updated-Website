@@ -30,7 +30,7 @@ export default async function ApprovalDetail({ params }: { params: Promise<{ id:
   const action = decideApprovalAction.bind(null, a.id);
   return (
     <>
-      <PageHeader title={a.action} description={a.reason ?? undefined} crumbs={[{ label: "AI", href: "/admin/ai" }, { label: "Approvals", href: "/admin/ai/approvals" }, { label: "Request" }]} />
+      <PageHeader title={a.action} description={a.reason ? `Reason: ${a.reason}` : undefined} crumbs={[{ label: "AI", href: "/admin/ai/command-center" }, { label: "Approvals", href: "/admin/ai/approvals" }, { label: "Request" }]} />
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-5">
           {changes && Object.keys(changes).length > 0 && (
@@ -91,7 +91,8 @@ export default async function ApprovalDetail({ params }: { params: Promise<{ id:
             <KV cols={1} items={[
               ["Status", <StatusBadge key="s" value={a.status} />],
               ["Risk", <StatusBadge key="r" value={a.risk} />],
-              ["Requested by", a.agentSlug === "automation" ? "Automation" : agentBySlug(a.agentSlug)?.name ?? a.agentSlug],
+              ["AI employee", a.agentSlug === "automation" ? "Automation" : agentBySlug(a.agentSlug) ? <Link key="emp" href={`/admin/ai/employees/${a.agentSlug}`} className="text-brand-blue hover:underline">{agentBySlug(a.agentSlug)!.name}</Link> : a.agentSlug],
+              ["Task", a.taskId ? <Link key="task" href={`/admin/ai/tasks/${a.taskId}`} className="text-brand-blue hover:underline">View task progress</Link> : "—"],
               ["On behalf of", a.requestedBy?.name ?? "—"],
               ["Action", <span key="t" className="font-mono text-xs">{a.tool}</span>],
               ["Required permission", <span key="p" className="font-mono text-xs">{a.requiredPermission}</span>],

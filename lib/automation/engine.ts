@@ -67,7 +67,7 @@ async function runRule(id: string, name: string, rawConds: unknown, rawActions: 
     } else {
       for (const a of acts.data) {
         try {
-          steps.push(await execute(a, ev, name));
+          steps.push(await execute(a, ev, name, id));
         } catch (e) {
           steps.push({ action: a.type, status: "failed", detail: (e as Error).message.slice(0, 300) });
         }
@@ -102,7 +102,7 @@ async function resolveUsers(to: string, ev: AutomationEvent): Promise<string[]> 
   return u ? [u.id] : [];
 }
 
-async function execute(a: AutomationAction, ev: AutomationEvent, ruleName: string): Promise<Step> {
+async function execute(a: AutomationAction, ev: AutomationEvent, ruleName: string, automationId: string): Promise<Step> {
   const t = (s: string) => render(s, ev.payload);
   switch (a.type) {
     case "CREATE_TASK": {
@@ -214,8 +214,11 @@ async function execute(a: AutomationAction, ev: AutomationEvent, ruleName: strin
     }
     case "AI_AGENT": {
       if (!(await isEnabled("AI_WORKFORCE"))) return { action: a.type, status: "skipped", detail: "AI workforce is switched off" };
-      await db.aITask.create({ data: { agentSlug: a.agent, title: `${ruleName}: ${a.agent}`.slice(0, 200), request: t(a.instruction), entity: ev.entity, entityId: ev.entityId, source: `automation:${ruleName}`.slice(0, 120) } });
-      return { action: a.type, status: "ok", detail: "AI task queued (runs in ASSIST mode — sensitive actions need approval)" };
+      // Loaded lazily: the AI runtime imports modules that themselves queue automation events.
+      const { createEmployeeTask } = await import("@/lib/ai/workforce/engine");
+      const scheduled = ev.entity === "Schedule";
+      const task = await createEmployeeTask({ agentSlug: a.agent, title: (scheduled ? ruleName : `${ruleName}: ${a.agent}`).slice(0, 200), instructions: t(a.instruction), kind: scheduled ? "RECURRING" : "TASK", automationId, entity: scheduled ? null : ev.entity, entityId: scheduled ? null : ev.entityId, source: `automation:${ruleName}` });
+      return { action: a.type, status: "ok", detail: `AI employee task ${task.id} assigned (sensitive actions need approval)` };
     }
     case "WEBHOOK": {
       if (!isPublicHttpsUrl(a.url)) throw new Error("Webhook URL must be a public https:// address");
@@ -248,6 +251,6 @@ const getClientId = (ev: AutomationEvent) => {
 
 
 const notificationTypeFor = (t: Trigger) =>
-  (({ NEW_LEAD: "lead.new", DEAL_WON: "deal.won", PROPOSAL_SENT: "proposal.viewed", PROPOSAL_EXPIRING: "proposal.expiring", INVOICE_OVERDUE: "invoice.overdue", PAYMENT_RECEIVED: "payment.received", TICKET_CREATED: "ticket.created", PROJECT_DELAYED: "milestone.due", FOLLOW_UP_DUE: "followup.due" }) as const)[t];
+  (({ NEW_LEAD: "lead.new", DEAL_WON: "deal.won", PROPOSAL_SENT: "proposal.viewed", PROPOSAL_EXPIRING: "proposal.expiring", INVOICE_OVERDUE: "invoice.overdue", PAYMENT_RECEIVED: "payment.received", TICKET_CREATED: "ticket.created", PROJECT_DELAYED: "milestone.due", FOLLOW_UP_DUE: "followup.due", SCHEDULE_MORNING: "ai.task", SCHEDULE_EVENING: "ai.task", SCHEDULE_WEEKLY_MONDAY: "ai.task", SCHEDULE_CONTINUOUS: "ai.task" }) as const)[t];
 
 export { hrefFor };

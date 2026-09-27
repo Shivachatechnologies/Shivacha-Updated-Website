@@ -22,6 +22,7 @@ export const NOTIFICATION_TYPES = {
   "security.alert": "Security alert",
   "ai.approval": "AI approval required",
   "ai.briefing": "CEO briefing ready",
+  "ai.task": "AI employee task update",
 } as const;
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
 

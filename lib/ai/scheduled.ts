@@ -6,6 +6,7 @@ import { ensureAgents } from "./agents";
 import { generateBriefing } from "./briefing";
 import { generateInsights } from "./insights";
 import { processTasks } from "./tasks";
+import { pumpWorkforce } from "./workforce/scheduler";
 
 const whenOn = (run: () => Promise<number>) => async () => ((await isEnabled("AI_WORKFORCE")) ? run() : 0);
 
@@ -15,6 +16,7 @@ export function aiDailyJobs(): { name: string; run: () => Promise<number> }[] {
     { name: "ai.agents.ensure", run: whenOn(async () => (await ensureAgents(), 0)) },
     { name: "ai.approvals.expire", run: expireApprovals },
     { name: "ai.insights", run: whenOn(generateInsights) },
+    { name: "ai.workforce", run: whenOn(async () => { const r = await pumpWorkforce(); return r.fired.length + r.reports + r.tasks; }) },
     { name: "ai.tasks", run: whenOn(() => processTasks(20)) },
     { name: "ai.briefing", run: whenOn(() => generateBriefing()) },
     { name: "ai.conversations.retention", run: async () => (await db.aIConversation.deleteMany({ where: { expiresAt: { lt: new Date() } } })).count },

@@ -16,6 +16,7 @@ import { funnelBy } from "@/lib/marketing/attribution";
 import { sendEmailMessage } from "@/lib/communication/providers";
 import { logActivity } from "@/lib/os/activity";
 import { notify } from "@/lib/os/notify";
+import { newLeadId } from "@/lib/leads/id";
 
 /**
  * Controlled tools — the only way an agent can touch data. Every call is checked against the requesting user's
@@ -593,6 +594,25 @@ const TOOLS: ToolDef[] = [
         db.leadActivity.create({ data: { leadId: lead.id, actorId: c.user.id, type: "FOLLOWUP_SCHEDULED", data: { dueAt: dueAt.toISOString(), aiAgent: c.agentSlug } } }),
       ]);
       return { data: { ok: true, dueAt }, records: [`Lead:${lead.id}`] };
+    },
+  }),
+  def({
+    name: "createLead",
+    description: "Add a prospect to the CRM as a NEW lead owned by the requesting user. Only use real, sourced contact details (name the source). Existing leads with the same email are never duplicated.",
+    input: z.object({ name: z.string().trim().min(1).max(160), email: z.string().trim().email().max(160), company: z.string().trim().max(160).optional(), country: z.string().trim().max(80).optional(), website: z.string().trim().max(300).optional(), service: z.string().trim().max(160).optional(), source: z.string().trim().min(2).max(300), notes: z.string().trim().max(4000).optional() }),
+    permissions: ["leads:create"],
+    kind: "write",
+    risk: "LOW",
+    preview: async (i) => ({ summary: `Create lead ${i.name}${i.company ? ` (${i.company})` : ""}`, affected: [], content: [`Email: ${i.email}`, i.country && `Country: ${i.country}`, i.website && `Website: ${i.website}`, `Source: ${i.source}`, i.notes].filter(Boolean).join("\n") }),
+    run: async (c, i) => {
+      const dup = await db.lead.findFirst({ where: { email: { equals: i.email, mode: "insensitive" }, archivedAt: null }, select: { id: true, ref: true } });
+      if (dup) return { data: { created: false, duplicateOf: dup.ref, href: `/admin/leads/${dup.id}` }, records: [`Lead:${dup.id}`] };
+      const owner = c.user.id === "system" ? null : c.user.id;
+      const lead = await db.lead.create({
+        data: { ref: newLeadId(), name: i.name, email: i.email, company: i.company, country: i.country, website: i.website, service: i.service, message: i.notes, formType: "ai", source: `ai:${c.agentSlug}`, assignedToId: owner, activities: { create: { type: "CREATED", actorId: owner, data: { aiAgent: c.agentSlug, source: i.source } } } },
+        select: { id: true, ref: true },
+      });
+      return { data: { created: true, ref: lead.ref, href: `/admin/leads/${lead.id}` }, records: [`Lead:${lead.id}`] };
     },
   }),
   def({

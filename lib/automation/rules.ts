@@ -4,7 +4,7 @@ import { z } from "zod";
  * Automation rule definitions (pure — no database access, unit-tested).
  * Trigger → Conditions (all must match) → Actions (run in order) → Execution log.
  */
-export const TRIGGERS = ["NEW_LEAD", "DEAL_WON", "PROPOSAL_SENT", "PROPOSAL_EXPIRING", "INVOICE_OVERDUE", "PAYMENT_RECEIVED", "TICKET_CREATED", "PROJECT_DELAYED", "FOLLOW_UP_DUE"] as const;
+export const TRIGGERS = ["NEW_LEAD", "DEAL_WON", "PROPOSAL_SENT", "PROPOSAL_EXPIRING", "INVOICE_OVERDUE", "PAYMENT_RECEIVED", "TICKET_CREATED", "PROJECT_DELAYED", "FOLLOW_UP_DUE", "SCHEDULE_MORNING", "SCHEDULE_EVENING", "SCHEDULE_WEEKLY_MONDAY", "SCHEDULE_CONTINUOUS"] as const;
 export type Trigger = (typeof TRIGGERS)[number];
 
 export const TRIGGER_INFO: Record<Trigger, { label: string; entity: string; fields: string[] }> = {
@@ -17,6 +17,10 @@ export const TRIGGER_INFO: Record<Trigger, { label: string; entity: string; fiel
   TICKET_CREATED: { label: "Support ticket created", entity: "Ticket", fields: ["ticket.category", "ticket.priority", "ticket.source"] },
   PROJECT_DELAYED: { label: "Project delayed", entity: "Project", fields: ["project.status", "project.daysLate", "project.health"] },
   FOLLOW_UP_DUE: { label: "Follow-up due today", entity: "FollowUp", fields: ["followUp.leadName"] },
+  SCHEDULE_MORNING: { label: "Every morning (AI employee schedule)", entity: "Schedule", fields: ["schedule.period"] },
+  SCHEDULE_EVENING: { label: "Every evening (AI employee schedule)", entity: "Schedule", fields: ["schedule.period"] },
+  SCHEDULE_WEEKLY_MONDAY: { label: "Every Monday (AI employee schedule)", entity: "Schedule", fields: ["schedule.period"] },
+  SCHEDULE_CONTINUOUS: { label: "Continuously, every scheduler tick (AI employee schedule)", entity: "Schedule", fields: ["schedule.period"] },
 };
 
 export const OPS = ["eq", "neq", "gt", "gte", "lt", "lte", "contains", "in", "exists"] as const;
