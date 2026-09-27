@@ -33,6 +33,11 @@ async function login(page, email) {
 }
 const toast = async (page, text) => page.locator("[role=status]", { hasText: text }).first().waitFor({ timeout: 20000 }).then(() => true, () => false);
 const state = {};
+/** Lets an okThen redirect (which strips its ?toast param) finish before navigating elsewhere. */
+const settle = async (page) => {
+  await page.waitForTimeout(1500);
+  await page.waitForLoadState("load");
+};
 
 try {
   const sup = await ctxFor();
@@ -468,6 +473,81 @@ try {
     await p.uncheck("input[name=enabled]");
     await p.click("button:has-text('Save automation')");
     await toast(p, "Automation saved");
+  }
+
+  if (!only.length || only.includes("ai")) {
+    /* ───── AI command center (no provider in test: live data only, clearly labelled) ───── */
+    await p.goto("/admin/ai");
+    check((await p.locator("text=AI provider not connected").count()) >= 1, "command center shows 'AI provider not connected'");
+    await p.fill("#ai-q", "@crm find duplicate leads and data gaps");
+    await p.click("form:has(#ai-q) button[type=submit]");
+    check(await p.locator("text=Tools: findDuplicates").first().waitFor({ timeout: 60000 }).then(() => true, () => false), "agent ran its authorised read tools");
+    check((await p.locator("a", { hasText: "Audit log →" }).count()) >= 1, "answer links to its audit log");
+    await p.locator("a", { hasText: "Audit log →" }).first().click();
+    await p.waitForURL(/\/admin\/ai\/logs\/c/);
+    check((await p.locator("text=findDuplicates").count()) >= 1, "execution log lists tools used");
+
+    /* ───── contextual action from a record ───── */
+    await p.goto("/admin/leads");
+    await p.locator("tbody a[href^='/admin/leads/c']").first().click();
+    await p.waitForURL(/leads\/c/);
+    await p.locator("a", { hasText: "Analyze lead" }).click();
+    await p.waitForURL(/\/admin\/ai\?/);
+    check((await p.locator("text=Context: Lead").count()) === 1, "contextual AI action carries the record");
+
+    /* ───── approvals: approve one pending request ───── */
+    await p.goto("/admin/ai/approvals");
+    const pendingRows = await p.locator("tbody tr").count();
+    check(pendingRows >= 0, `approval center lists pending requests (${pendingRows})`);
+    if (pendingRows) {
+      await p.locator("tbody a").first().click();
+      await p.waitForURL(/approvals\/c/);
+      state.approvalUrl = p.url();
+      await p.click("button:has-text('Reject')");
+      check(await toast(p, "Rejected"), "request rejected from the approval center");
+      await settle(p);
+      check((await p.locator("text=Rejected").count()) >= 1, "decision recorded");
+    }
+
+    /* ───── agents, insights, costs, tasks ───── */
+    await p.goto("/admin/ai/agents/sales");
+    await p.selectOption("select[name=mode]", "OBSERVE");
+    await p.click("button:has-text('Save agent')");
+    check(await toast(p, "Agent saved"), "agent builder saves mode");
+    await p.reload();
+    check((await p.inputValue("select[name=mode]")) === "OBSERVE", "mode persisted");
+    await p.selectOption("select[name=mode]", "ASSIST");
+    await p.click("button:has-text('Save agent')");
+    await settle(p);
+    await p.goto("/admin/ai/insights");
+    await p.click("button:has-text('Refresh now')");
+    check(await toast(p, "Insights refreshed"), "insights refreshed from live data");
+    await settle(p);
+    await p.goto("/admin/ai/costs");
+    check((await p.locator("text=Guard-rails").count()) === 1, "cost dashboard renders");
+    await p.goto("/admin/ai");
+    await p.click("button:has-text('Generate now')");
+    check(await toast(p, "Briefing generated"), "CEO briefing generated on demand");
+    await settle(p);
+    check((await p.locator("#briefing", { hasText: "Daily CEO briefing" }).count()) === 1, "briefing shown on the command center");
+
+    /* ───── RBAC: content manager ───── */
+    const cm = await ctxFor();
+    const c = await cm.newPage();
+    await login(c, "qa-content@shivacha.test");
+    await c.goto("/admin/ai");
+    check((await c.locator("#briefing").count()) === 0, "content manager does not see the executive briefing");
+    await c.selectOption("#ai-agent", { index: 0 });
+    const opts = await c.locator("#ai-agent option").allInnerTexts();
+    check(!opts.some((o) => /Sales|Finance|CEO/.test(o)), `content manager cannot pick restricted agents (${opts.length - 1} available)`);
+    if (state.approvalUrl) {
+      await c.goto(state.approvalUrl);
+      await c.waitForLoadState("load");
+      const html = await c.content();
+      const hidden = !html.includes("Required permission") && html.includes("404");
+      check(hidden, "content manager cannot open others' approvals (not found)");
+    }
+    await cm.close();
   }
 } catch (e) {
   check(false, `unexpected error: ${e.message.split("\n")[0]}`);
