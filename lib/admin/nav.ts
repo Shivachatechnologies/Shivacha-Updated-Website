@@ -156,6 +156,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { label: "Ask an Employee", href: "/admin/ai", icon: "Bot", permission: "ai:view" },
       { label: "Talk (Voice)", href: "/admin/ai/voice", icon: "Mic", permission: "voice:use" },
       { label: "Conversations", href: "/admin/ai/conversations", icon: "AudioLines", permission: "ai:view" },
+      { label: "Control Center", href: "/admin/ai/settings", icon: "ToggleRight", permission: "ai:view" },
       { label: "Agent Config", href: "/admin/ai/agents", icon: "Users2", permission: "ai:view" },
       { label: "Insights", href: "/admin/ai/insights", icon: "Lightbulb", permission: "ai:view" },
       { label: "AI Costs", href: "/admin/ai/costs", icon: "Coins", permission: "ai:view" },

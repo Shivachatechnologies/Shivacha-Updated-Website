@@ -11,6 +11,7 @@ import { routeRequest, runAgent, type EntityRef, type ProposedAction, type RunOu
 import { createEmployeeTask } from "../workforce/engine";
 import { ensureEmployees } from "../workforce/employees";
 import { instantAnswer, ownerOf, type Call } from "./instant";
+import { checkAIWorkforcePermission, logBlocked, type ControlCode } from "../control";
 import { classifyRequest, type Classification, type ExecutionClass, type ReplyLanguage } from "./policy";
 
 export { classifyRequest, EXECUTION_CLASS_LABELS, EXECUTION_CLASSES, type ExecutionClass } from "./policy";
@@ -59,6 +60,8 @@ export interface RouteOutput {
   actions: ProposedAction[];
   toolsUsed: string[];
   error?: string;
+  /** Set when the AI Workforce Control Center blocked the request. */
+  control?: ControlCode;
 }
 
 const json = (v: unknown) => JSON.parse(JSON.stringify(v ?? null)) as Prisma.InputJsonValue;
@@ -127,6 +130,14 @@ export async function executeRequest(i: RouteInput): Promise<RouteOutput> {
   if (!canRunAgent(i.user.role, spec)) return blocked(c, spec.slug, `You do not have permission to use the ${spec.name}.`, convId);
   const request = routed.request;
 
+  // AI Workforce Control Center, before anything else runs (instant reads included).
+  const channel = i.channel === "api" ? "api" : i.channel;
+  const gate = await checkAIWorkforcePermission({ kind: i.channel === "voice" ? "voice" : "execute", agentSlug: spec.slug, channel });
+  if (!gate.ok) {
+    await logBlocked(gate, { kind: "execute", agentSlug: spec.slug, channel }, i.user.id);
+    return { ...blocked(c, spec.slug, gate.message, convId), control: gate.code };
+  }
+
   await audit({ userId: i.user.id, action: "ai.route", entity: "AIAgent", entityId: spec.slug, metadata: { cls: c.cls, reason: c.reason, channel: i.channel, language: c.language } });
 
   const base = { cls: c.cls, reason: c.reason, language: c.language, agent: spec.slug };
@@ -156,6 +167,11 @@ export async function executeRequest(i: RouteInput): Promise<RouteOutput> {
   }
 
   if (c.cls === "BACKGROUND_TASK") {
+    const bg = await checkAIWorkforcePermission({ kind: "background", agentSlug: spec.slug, channel });
+    if (!bg.ok) {
+      await logBlocked(bg, { kind: "background", agentSlug: spec.slug, channel }, i.user.id);
+      return { ...blocked(c, spec.slug, `${bg.message} Nothing was queued.`, convId), control: bg.code };
+    }
     await ensureEmployees();
     const firstLine = request.split(/\n|(?<=[.!?])\s/)[0].slice(0, 160);
     const task = await createEmployeeTask({
@@ -174,6 +190,6 @@ export async function executeRequest(i: RouteInput): Promise<RouteOutput> {
     return { ...base, status: "QUEUED", text, spoken: text, executionId: null, conversationId: convId, taskId: task.id, provider: "router", drafts: [], actions: [], toolsUsed: [] };
   }
 
-  const r = await runAgent({ agentSlug: spec.slug, request, user: i.user, context: i.context ?? null, conversationId: i.conversationId ?? null, channelHint: i.channelHint, route: { cls: c.cls, reason: c.reason }, provider: i.provider });
-  return { ...base, status: r.status, text: r.text, spoken: r.text, executionId: r.executionId, conversationId: r.conversationId, provider: r.provider, drafts: r.drafts, actions: r.actions, toolsUsed: r.toolsUsed, error: r.error };
+  const r = await runAgent({ agentSlug: spec.slug, request, user: i.user, context: i.context ?? null, conversationId: i.conversationId ?? null, channelHint: i.channelHint, route: { cls: c.cls, reason: c.reason }, provider: i.provider, channel });
+  return { ...base, status: r.status, text: r.text, spoken: r.text, executionId: r.executionId, conversationId: r.conversationId, provider: r.provider, drafts: r.drafts, actions: r.actions, toolsUsed: r.toolsUsed, error: r.error, control: r.control };
 }

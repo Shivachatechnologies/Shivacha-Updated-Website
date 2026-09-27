@@ -6,6 +6,7 @@ import type { SessionUser } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { UserError } from "@/lib/os/action";
 import { getTool, toolPermissions } from "./tools";
+import { checkAIWorkforcePermission, logBlocked } from "./control";
 import { onApprovalDecided } from "./workforce/engine";
 
 const json = (v: unknown) => JSON.parse(JSON.stringify(v ?? null)) as Prisma.InputJsonValue;
@@ -51,6 +52,15 @@ export async function decideApproval(id: string, user: SessionUser, d: Decision)
   // Edits may not widen the action beyond what the approver may do.
   const needed = toolPermissions(tool, parsed.data);
   if (!needed.every((p) => can(user.role, p))) throw new UserError(`You lack ${needed.filter((p) => !can(user.role, p)).join(", ")} for this action.`);
+
+  // AI Workforce Control Center: an AI-proposed action does not execute during an emergency stop or pause, or (for
+  // emails and other external actions) while external actions are off. The request stays pending for later.
+  const kind = tool.alwaysApprove || tool.external ? "external" : "tool";
+  const gate = await checkAIWorkforcePermission({ kind, agentSlug: a.agentSlug, channel: "approval", tool: a.tool });
+  if (!gate.ok) {
+    await logBlocked(gate, { kind, agentSlug: a.agentSlug, channel: "approval", tool: a.tool }, user.id);
+    throw new UserError(`${gate.message} The request is still pending.`);
+  }
 
   const claimed = await db.aIApproval.updateMany({ where: { id, status: "PENDING" }, data: { status: "APPROVED", decidedById: user.id, decidedAt: new Date(), decisionNote: d.note?.slice(0, 1000), input: edited ? json(parsed.data) : undefined } });
   if (!claimed.count) throw new UserError("This request was decided by someone else.");

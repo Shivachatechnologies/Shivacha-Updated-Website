@@ -57,6 +57,8 @@ export interface ToolDef<S extends z.ZodType = z.ZodType> {
   risk: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   /** External communication: approval is required in every mode. */
   alwaysApprove?: boolean;
+  /** Reaches outside Shivacha (web requests, third-party APIs); blocked when the Control Center turns external actions off. */
+  external?: boolean;
   preview?: (input: z.infer<S>) => Promise<ApprovalPreview>;
   run: (ctx: ToolCtx, input: z.infer<S>) => Promise<ToolResult>;
 }
@@ -513,6 +515,7 @@ const TOOLS: ToolDef[] = [
     permissions: ["ai:execute"],
     kind: "read",
     risk: "LOW",
+    external: true,
     run: async () => ({ data: { connected: false, message: "Web research provider not connected (set AI_WEB_SEARCH=true with an Anthropic key). Only internal records can be used — label anything else as AI inference." } }),
   }),
 

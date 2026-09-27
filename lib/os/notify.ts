@@ -23,6 +23,7 @@ export const NOTIFICATION_TYPES = {
   "ai.approval": "AI approval required",
   "ai.briefing": "CEO briefing ready",
   "ai.task": "AI employee task update",
+  "ai.control": "AI workforce control change",
   "leave.requested": "Leave request awaiting approval",
   "leave.decided": "Leave request decided",
   "timesheet.decided": "Timesheet decided",

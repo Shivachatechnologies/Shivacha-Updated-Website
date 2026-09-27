@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/permissions";
 import { rateLimited } from "@/lib/os/ratelimit";
 import { voiceProvider } from "@/lib/voice/provider";
+import { checkAIWorkforcePermission } from "@/lib/ai/control";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,8 +22,11 @@ export async function POST(req: Request) {
   const sessionId = String(form?.get("sessionId") ?? "");
   if (!(audio instanceof Blob) || audio.size === 0) return NextResponse.json({ error: "No audio." }, { status: 400 });
   if (audio.size > MAX_BYTES || !TYPES.test(audio.type)) return NextResponse.json({ error: "Unsupported or too large audio." }, { status: 413 });
-  const s = await db.voiceSession.findFirst({ where: { id: sessionId, userId: user.id, status: "ACTIVE" }, select: { id: true, provider: true, language: true } });
+  const s = await db.voiceSession.findFirst({ where: { id: sessionId, userId: user.id, status: "ACTIVE" }, select: { id: true, provider: true, language: true, agentSlug: true } });
   if (!s) return NextResponse.json({ error: "Voice session not found." }, { status: 404 });
+  // AI Workforce Control Center: no speech provider calls while voice is off or the workforce is stopped.
+  const gate = await checkAIWorkforcePermission({ kind: "voice", agentSlug: s.agentSlug, channel: "voice" });
+  if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: 423 });
   const provider = voiceProvider(s.provider);
   if (!provider.serverAudio) return NextResponse.json({ error: "This session transcribes in the browser." }, { status: 400 });
   try {
