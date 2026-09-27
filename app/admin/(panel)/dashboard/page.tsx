@@ -7,7 +7,7 @@ import { BarList, ColumnChart } from "@/components/admin/charts";
 
 export const metadata = { title: "Dashboard" };
 
-const STATUSES = ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL_SENT", "NEGOTIATION", "WON", "LOST", "ON_HOLD"] as const;
+const STATUSES = ["NEW", "CONTACTED", "QUALIFIED", "MEETING", "PROPOSAL_SENT", "NEGOTIATION", "WON", "LOST", "ON_HOLD"] as const;
 
 async function breakdown(field: "country" | "service" | "product" | "source") {
   const rows = await db.lead.groupBy({ by: [field], where: { archivedAt: null, [field]: { not: null } }, _count: { _all: true }, orderBy: { _count: { [field]: "desc" } }, take: 8 });
@@ -66,9 +66,10 @@ export default async function Dashboard() {
             <Stat label="Won" value={counts.WON} href="/admin/leads?status=WON" />
             <Stat label="Lost" value={counts.LOST} href="/admin/leads?status=LOST" />
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-5">
             <Stat label="Contacted" value={counts.CONTACTED} href="/admin/leads?status=CONTACTED" />
             <Stat label="Qualified" value={counts.QUALIFIED} href="/admin/leads?status=QUALIFIED" />
+            <Stat label="Meeting" value={counts.MEETING} href="/admin/leads?status=MEETING" />
             <Stat label="Proposal sent" value={counts.PROPOSAL_SENT} href="/admin/leads?status=PROPOSAL_SENT" />
             <Stat label="Negotiation" value={counts.NEGOTIATION} href="/admin/leads?status=NEGOTIATION" />
           </div>

@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { Toaster } from "@/components/admin/client";
 
 export const metadata: Metadata = {
-  title: { default: "Shivacha Admin", template: "%s · Shivacha Admin" },
+  title: { default: "Shivacha OS", template: "%s · Shivacha OS" },
   robots: { index: false, follow: false },
 };
 

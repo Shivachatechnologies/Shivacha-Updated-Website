@@ -138,17 +138,22 @@ export function SidebarNav({ groups, footer }: { groups: NavGroup[]; footer: Rea
     setPrev(pathname);
     setOpen(false);
   }
+  // The most specific matching item is active (so /admin/ai/agents does not also light up /admin/ai).
+  const activeHref = groups
+    .flatMap((g) => g.items.map((i) => i.href))
+    .filter((h) => pathname === h || pathname.startsWith(`${h}/`))
+    .sort((a, b) => b.length - a.length)[0];
   const nav = (
-    <nav aria-label="Admin" className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-      {groups.map((g, i) => (
-        <div key={g.title ?? i}>
-          {g.title && <p className="mb-1.5 px-2 font-mono text-[10.5px] tracking-[0.08em] text-dim uppercase">{g.title}</p>}
-          <ul className="space-y-0.5">
+    <nav aria-label="Admin" className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
+      {groups.map((g, i) => {
+        const hasActive = g.items.some((it) => it.href === activeHref);
+        const list = (
+          <ul className="space-y-0.5 pb-2">
             {g.items.map((it) => {
-              const active = pathname === it.href || pathname.startsWith(`${it.href}/`);
+              const active = it.href === activeHref;
               return (
                 <li key={it.href}>
-                  <Link href={it.href} aria-current={active ? "page" : undefined} className={cn("flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13.5px] transition-colors", active ? "bg-ink-800 font-medium text-fg" : "text-muted hover:bg-ink-850 hover:text-fg")}>
+                  <Link href={it.href} aria-current={active ? "page" : undefined} className={cn("flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] transition-colors", active ? "bg-ink-800 font-medium text-fg" : "text-muted hover:bg-ink-850 hover:text-fg")}>
                     <AdminIcon name={it.icon} className="size-4 shrink-0" />
                     {it.label}
                   </Link>
@@ -156,8 +161,18 @@ export function SidebarNav({ groups, footer }: { groups: NavGroup[]; footer: Rea
               );
             })}
           </ul>
-        </div>
-      ))}
+        );
+        if (!g.title || g.title === "Overview") return <div key={g.title ?? i}>{list}</div>;
+        return (
+          <details key={g.title} open={hasActive || undefined} className="group/nav">
+            <summary className="flex cursor-pointer list-none items-center justify-between rounded-md px-2 py-1.5 font-mono text-[10.5px] tracking-[0.08em] text-dim uppercase select-none hover:text-fg [&::-webkit-details-marker]:hidden">
+              {g.title}
+              <span aria-hidden className="transition-transform group-open/nav:rotate-90">›</span>
+            </summary>
+            {list}
+          </details>
+        );
+      })}
     </nav>
   );
   return (
@@ -195,7 +210,7 @@ function Brand() {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/brand/shivacha-mark.svg" alt="" className="size-6" />
       <span className="text-[14px] font-semibold tracking-tight text-fg">
-        Shivacha <span className="font-normal text-muted">Admin</span>
+        Shivacha <span className="font-normal text-muted">OS</span>
       </span>
     </Link>
   );
@@ -205,7 +220,7 @@ function Brand() {
 
 export type SearchHit = { type: string; label: string; sub?: string; href: string };
 
-export function GlobalSearch({ search }: { search: (q: string) => Promise<SearchHit[]> }) {
+export function GlobalSearch({ search, ai = false }: { search: (q: string) => Promise<SearchHit[]>; ai?: boolean }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
@@ -242,7 +257,7 @@ export function GlobalSearch({ search }: { search: (q: string) => Promise<Search
     <>
       <button type="button" onClick={() => setOpen(true)} className="flex h-9 w-full max-w-sm items-center gap-2 rounded-md border border-line bg-ink-900 px-2.5 text-sm text-dim hover:border-line-strong">
         <Search className="size-4" aria-hidden />
-        <span className="flex-1 truncate text-left">Search leads, content…</span>
+        <span className="flex-1 truncate text-left">Search or ask Shivacha AI…</span>
         <kbd className="hidden rounded border border-line px-1.5 font-mono text-[10.5px] sm:inline">⌘K</kbd>
       </button>
       {open && (
@@ -250,10 +265,18 @@ export function GlobalSearch({ search }: { search: (q: string) => Promise<Search
           <div role="dialog" aria-label="Search" className="w-full max-w-lg overflow-hidden rounded-xl border border-line bg-ink-900 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 border-b border-line px-3">
               <Search className="size-4 text-dim" aria-hidden />
-              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search leads, services, products, pages, blog…" className="h-12 flex-1 bg-transparent text-sm text-fg outline-none" aria-label="Search query" />
+              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search leads, deals, clients, invoices, tickets…" className="h-12 flex-1 bg-transparent text-sm text-fg outline-none" aria-label="Search query" />
               {loading && <Loader2 className="size-4 animate-spin text-dim" />}
             </div>
             <ul className="max-h-[50vh] overflow-y-auto p-1.5">
+              {ai && q.trim().length >= 2 && (
+                <li>
+                  <button type="button" onClick={() => { setOpen(false); router.push(`/admin/ai?q=${encodeURIComponent(q.trim())}`); }} className="flex w-full items-center gap-3 rounded-md border border-dashed border-line px-3 py-2 text-left hover:bg-ink-850">
+                    <span className="w-20 shrink-0 font-mono text-[10.5px] text-brand-blue uppercase">Ask AI</span>
+                    <span className="min-w-0 truncate text-sm text-fg">{q.trim()}</span>
+                  </button>
+                </li>
+              )}
               {q.trim().length < 2 ? (
                 <li className="px-3 py-6 text-center text-sm text-dim">Type at least two characters.</li>
               ) : hits.length === 0 && !loading ? (

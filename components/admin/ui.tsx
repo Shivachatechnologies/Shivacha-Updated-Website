@@ -61,7 +61,7 @@ export function Badge({ tone = "gray", children, className }: { tone?: keyof typ
   return <span className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 text-[11.5px] font-medium whitespace-nowrap", tones[tone], className)}>{children}</span>;
 }
 
-export const LEAD_STATUS_TONE: Record<string, keyof typeof tones> = { NEW: "blue", CONTACTED: "violet", QUALIFIED: "amber", PROPOSAL_SENT: "amber", NEGOTIATION: "amber", WON: "green", LOST: "red", ON_HOLD: "gray" };
+export const LEAD_STATUS_TONE: Record<string, keyof typeof tones> = { NEW: "blue", CONTACTED: "violet", QUALIFIED: "amber", MEETING: "violet", PROPOSAL_SENT: "amber", NEGOTIATION: "amber", WON: "green", LOST: "red", ON_HOLD: "gray" };
 export const PRIORITY_TONE: Record<string, keyof typeof tones> = { LOW: "gray", MEDIUM: "blue", HIGH: "amber", URGENT: "red" };
 export const CONTENT_TONE: Record<string, keyof typeof tones> = { DRAFT: "gray", PUBLISHED: "green", ARCHIVED: "red" };
 

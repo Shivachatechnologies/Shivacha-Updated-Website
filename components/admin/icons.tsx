@@ -1,6 +1,16 @@
-import { ArrowRightLeft, Boxes, Briefcase, Building2, CalendarClock, Cpu, FileText, HelpCircle, ImageIcon, Inbox, Layers, LayoutDashboard, ListTree, Newspaper, ScrollText, Search, Settings, Sparkles, Users, type LucideIcon } from "lucide-react";
+import {
+  Activity, AlertTriangle, ArrowRightLeft, BarChart3, Bell, BookOpen, Bot, Boxes, Briefcase, Bug, Building, Building2, CalendarClock, Coins, Columns3, Contact, Copy, Cpu, CreditCard,
+  FileBarChart, FileSignature, FileText, Flag, FolderKanban, FolderOpen, Gauge, GitPullRequest, Handshake, HeartPulse, HelpCircle, History, ImageIcon, Inbox, KeyRound, Layers,
+  LayoutDashboard, LifeBuoy, Lightbulb, ListChecks, ListTodo, ListTree, Lock, Mail, Megaphone, MessageCircle, MessagesSquare, Newspaper, PanelsTopLeft, Phone, Plug, Receipt,
+  ReceiptText, ScrollText, Search, Settings, ShieldCheck, Sparkles, ToggleRight, TrendingUp, Trophy, Upload, Users, Users2, Video, Wallet, Workflow, type LucideIcon,
+} from "lucide-react";
 
-const icons: Record<string, LucideIcon> = { LayoutDashboard, Inbox, CalendarClock, FileText, Layers, Boxes, Newspaper, Briefcase, Building2, Cpu, HelpCircle, ImageIcon, Search, ArrowRightLeft, Users, ListTree, Settings, ScrollText };
+const icons: Record<string, LucideIcon> = {
+  Activity, AlertTriangle, ArrowRightLeft, BarChart3, Bell, BookOpen, Bot, Boxes, Briefcase, Bug, Building, Building2, CalendarClock, Coins, Columns3, Contact, Copy, Cpu, CreditCard,
+  FileBarChart, FileSignature, FileText, Flag, FolderKanban, FolderOpen, Gauge, GitPullRequest, Handshake, HeartPulse, HelpCircle, History, ImageIcon, Inbox, KeyRound, Layers,
+  LayoutDashboard, LifeBuoy, Lightbulb, ListChecks, ListTodo, ListTree, Lock, Mail, Megaphone, MessageCircle, MessagesSquare, Newspaper, PanelsTopLeft, Phone, Plug, Receipt,
+  ReceiptText, ScrollText, Search, Settings, ShieldCheck, ToggleRight, TrendingUp, Trophy, Upload, Users, Users2, Video, Wallet, Workflow,
+};
 
 export function AdminIcon({ name, className }: { name: string; className?: string }) {
   const C = icons[name] ?? Sparkles;
