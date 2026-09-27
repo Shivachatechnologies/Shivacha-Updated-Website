@@ -13,6 +13,9 @@ import { SubmitButton } from "@/components/admin/client";
 import { Kpi, KpiGrid, NotConnected, StatusBadge, str, type SP } from "@/components/admin/os";
 import { CommandCenter } from "@/components/admin/ai/command";
 import { Markdown } from "@/components/admin/ai/markdown";
+import { agentWorkforce, aiOperations } from "@/lib/admin/command";
+import { AgentGrid, AIOperationsFlow } from "@/components/admin/command/workforce";
+import { OpsPanel } from "@/components/admin/command/section";
 
 export const metadata = { title: "AI Command Center" };
 
@@ -22,13 +25,17 @@ export default async function AICommandCenter({ searchParams }: { searchParams: 
   const provider = providerStatus();
   const exec = can(user.role, "executive:view");
   const agents = runnableAgents(user.role);
-  const [spent, pending, insights, briefing, recent] = await Promise.all([
+  const now = new Date();
+  const [spent, pending, insights, briefing, recent, workforce, ops] = await Promise.all([
     spentToday(),
     db.aIApproval.count({ where: { status: "PENDING" } }),
     db.aIRecommendation.findMany({ where: { status: "OPEN" }, orderBy: [{ severity: "desc" }, { createdAt: "desc" }], take: 60 }),
     exec ? latestBriefing() : null,
     db.aIExecution.findMany({ where: { userId: user.id }, orderBy: { startedAt: "desc" }, take: 8, select: { id: true, agentSlug: true, request: true, status: true, startedAt: true } }),
+    agentWorkforce(now),
+    aiOperations(8),
   ]);
+  const online = workforce.filter((a) => a.status === "ONLINE").length;
   const visible = insights.filter((r) => can(user.role, r.permission as Parameters<typeof can>[1]));
   const limits = aiLimits();
   const bText = (briefing?.result as { text?: string } | null)?.text;
@@ -47,6 +54,17 @@ export default async function AICommandCenter({ searchParams }: { searchParams: 
         <Kpi label="Pending approvals" value={pending} href="/admin/ai/approvals" tone={pending ? "amber" : undefined} />
         <Kpi label="Open insights" value={visible.length} href="/admin/ai/insights" />
       </KpiGrid>
+
+      <OpsPanel dark eyebrow="AI workforce" title={`${workforce.length} agents · ${online} online now`} className="mt-5 border-violet-400/15" actions={<Link href="/admin/ai/agents" className="text-xs font-medium text-violet-200 hover:underline">Configure agents</Link>}>
+        <AgentGrid agents={workforce} now={now} />
+        <div className="mt-5 border-t border-white/[0.06] pt-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="font-mono text-[10px] tracking-[0.16em] text-[#6f86a6] uppercase">AI operations · Agent → Task → Tool → Result</p>
+            <Link href="/admin/ai/logs" className="text-xs text-violet-200 hover:underline">All logs</Link>
+          </div>
+          <AIOperationsFlow ops={ops} names={Object.fromEntries(workforce.map((a) => [a.slug, a.name]))} now={now} />
+        </div>
+      </OpsPanel>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-5">
