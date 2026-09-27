@@ -197,3 +197,70 @@ The site deliberately publishes **no** client names, logos, testimonials, metric
 4. **Product screenshots / demo environments:** add real assets and demo URLs in `data/demoLinks.ts`.
 5. **Trust signals:** add verified client logos, testimonials, certifications or metrics to `siteConfig.trust`.
 6. **Contact details:** email and phone are taken from the current public site; confirm they are still correct.
+
+## Admin panel, CRM & CMS
+
+`/admin` is a server-rendered admin panel backed by **Neon PostgreSQL** through **Prisma 7** (`@prisma/adapter-pg`).
+The public website keeps working without a database (it falls back to the built-in content in `data/`).
+
+### Setup (production — Vercel + Neon)
+
+1. In Vercel → Project → Settings → Environment Variables, add `DATABASE_URL` (Neon **pooled** connection string,
+   `?sslmode=require`). Never commit it; it is only read on the server (`lib/db/client.ts`, `prisma.config.ts`).
+2. Optional: `BLOB_READ_WRITE_TOKEN` (media uploads via Vercel Blob) and `WHATSAPP_SALES_NUMBER`.
+3. Deploy. `npm run build` runs `prisma generate` and `prisma migrate deploy` (pending migrations only — it never
+   resets or drops data). Set `SKIP_DB_MIGRATE=1` to skip.
+4. Create the first Super Admin from a machine that can reach Neon (the password is prompted, hidden):
+
+   ```bash
+   DATABASE_URL="…neon…" npm run admin:create -- --email you@shivacha.com --name "Your Name"
+   ```
+5. Verify the integration (read-only; its write checks run in a rolled-back transaction):
+
+   ```bash
+   DATABASE_URL="…neon…" npm run db:verify
+   ```
+6. Optional: copy the built-in content into the CMS as drafts with `npm run db:import`
+   (`-- --status PUBLISHED` to publish immediately). Idempotent; never overwrites.
+
+**Never run `prisma migrate reset` or `prisma db push --force-reset` against production.**
+
+### Existing databases
+
+If the Neon database already contains other tables, `migrate deploy` stops with **P3005** and changes nothing.
+Inspect with `npm run db:verify`. If the Shivacha tables do not exist yet, apply the migration explicitly with
+`npx prisma db execute --file prisma/migrations/20260927021117_init/migration.sql` and then mark it applied with
+`npx prisma migrate resolve --applied 20260927021117_init` (review the SQL first; it only creates new types, tables
+and indexes). If tables with the same names already exist, reconcile them before migrating — do not drop data.
+
+### What is stored where
+
+| Data | Table(s) |
+| --- | --- |
+| Admin users, sessions, password resets, login attempts | `User`, `Session`, `PasswordResetToken`, `LoginAttempt` |
+| Leads from every website form (`/api/lead` → `lib/leads/db-store.ts`) | `Lead`, `LeadNote`, `LeadActivity`, `FollowUp` |
+| CMS | `Service`, `Product`, `Page`, `PageSection`, `BlogPost`, `CaseStudy`, `Industry`, `Technology`, `Faq`, `Media` |
+| Site config | `NavigationItem`, `SeoEntry`, `Redirect`, `Setting` (non-secret only) |
+| Audit trail | `AuditLog` (credentials are stripped before writing) |
+
+### Security
+
+- Sessions: random token in an HTTP-only, `Secure`, `SameSite=Lax` `__Host-` cookie; only its SHA-256 is stored.
+  8 h idle / 7 day absolute expiry; revoked on password change or when a user is disabled.
+- Passwords: bcrypt (cost 12), 12+ characters. Login throttling: 5 failures per email / 20 per IP per 15 minutes;
+  accounts lock for 30 minutes after 10 consecutive failures. Generic error messages.
+- RBAC (`lib/auth/permissions.ts`) is enforced on the server in every page, Server Action and route handler.
+  Only a Super Admin can grant the Super Admin role; the last active Super Admin cannot be demoted or disabled.
+- Uploads are validated by content (JPG, PNG, WebP, AVIF, GIF, PDF; SVG rejected), stripped of metadata, max 4 MB.
+- CSV exports neutralise spreadsheet formulas. CMS content is rendered as text (no raw HTML).
+
+### Tests
+
+```bash
+npm run test:admin                     # unit tests (RBAC, validation, CSV, sections, mappers)
+DATABASE_URL=<test db> npx next dev -p 3100   # then, with qa-*@shivacha.test users created:
+ADMIN_E2E_PASSWORD=… npm run test:admin:e2e   # 64 end-to-end checks (auth, CRM, CMS → public, RBAC, media, SEO)
+```
+
+Run the e2e suite only against a test database — it creates and deletes content.
+Header mega-menu navigation stays code-managed (`data/navigation.ts`); the footer menu is editable in the CMS.

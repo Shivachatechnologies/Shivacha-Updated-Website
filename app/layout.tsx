@@ -3,16 +3,6 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import { siteConfig } from "@/data/siteConfig";
-import { mainNav } from "@/data/navigation";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
-import { CommandPalette } from "@/components/layout/CommandPalette";
-import { TalkToShivacha } from "@/components/leads/TalkToShivacha";
-import { CalendlyModalHost } from "@/components/leads/BookCall";
-import { ExitIntent } from "@/components/leads/ExitIntent";
-import { Analytics } from "@/components/layout/Analytics";
-import { JsonLd } from "@/components/ui/primitives";
-import { organizationSchema, websiteSchema } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -38,17 +28,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-theme="light" className={`${GeistSans.variable} ${GeistMono.variable}`}>
-      <body className="min-h-screen font-sans">
-        <JsonLd data={[organizationSchema(), websiteSchema()]} />
-        <Header nav={mainNav} contact={{ email: siteConfig.contact.email, phone: siteConfig.contact.phone, phoneHref: siteConfig.contact.phoneHref }} />
-        <main id="main">{children}</main>
-        <Footer />
-        <TalkToShivacha />
-        <CalendlyModalHost />
-        <ExitIntent />
-        <CommandPalette />
-        <Analytics />
-      </body>
+      <body className="min-h-screen font-sans">{children}</body>
     </html>
   );
 }

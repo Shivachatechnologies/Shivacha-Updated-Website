@@ -1,10 +1,12 @@
 /* Server-only module: the lead pipeline used by app/api/lead. */
 import type { LeadType } from "@/lib/validation";
 import { sendMail } from "@/lib/email/mailer";
+import { siteConfig } from "@/data/siteConfig";
 import { applicantConfirmation, followUpIcs, salesNotification, visitorConfirmation } from "@/lib/email/templates";
 import { newLeadId } from "./id";
 import { nextFollowUp, scoreLead } from "./score";
 import { forwardToWebhook, saveLead } from "./store";
+import { saveLeadToDatabase } from "./db-store";
 import type { LeadRecord } from "./types";
 
 const CORE = new Set(["name", "email", "phone", "company", "service", "budget", "message", "source", "utm_source", "utm_medium", "utm_campaign", "landing_page", "referrer", "type", "_t", "company_fax", "cf-turnstile-response"]);
@@ -96,13 +98,16 @@ export const hrInbox = () => process.env.HR_NOTIFY_TO || "hr@shivacha.com";
  * Returns the work that can finish after the response (confirmation email, webhook).
  */
 export async function processLead(lead: LeadRecord) {
-  const store = await saveLead(lead);
+  // CRM database (primary when DATABASE_URL is set) and the existing sheet/file store run side by side.
+  const [store, crm] = await Promise.all([saveLead(lead), saveLeadToDatabase(lead)]);
   if (store.error) console.error("[lead] store failed", { id: lead.id, driver: store.driver, error: store.error });
+  if (crm.error) console.error("[lead] CRM database save failed", { id: lead.id, error: crm.error });
 
   const newsletter = lead.formType === "newsletter";
   let notified = false;
   if (!newsletter) {
-    const n = salesNotification(lead, store.viewUrl);
+    // "View Lead" opens the CRM record when the database is configured, otherwise the sheet row.
+    const n = salesNotification(lead, crm.id ? `${siteConfig.url}/admin/leads/${crm.id}` : store.viewUrl);
     const res = await sendMail({
       to: lead.formType === "job" ? hrInbox() : salesInbox(),
       replyTo: lead.email,
@@ -118,7 +123,7 @@ export async function processLead(lead: LeadRecord) {
     if (!res.sent) console.error("[lead] sales notification failed", { id: lead.id, error: res.error });
   }
 
-  const accepted = store.stored || notified;
+  const accepted = store.stored || crm.stored || notified;
 
   const background = async () => {
     if (!newsletter) {
@@ -129,5 +134,5 @@ export async function processLead(lead: LeadRecord) {
     await forwardToWebhook(lead).catch((e) => console.error("[lead] webhook failed", { id: lead.id, error: (e as Error).message }));
   };
 
-  return { accepted, store, notified, background };
+  return { accepted, store, crm, notified, background };
 }

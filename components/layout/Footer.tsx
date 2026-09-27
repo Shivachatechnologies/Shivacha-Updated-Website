@@ -3,6 +3,7 @@ import Link from "next/link";
 import { siFacebook, siInstagram, siThreads, siX, siYoutube } from "simple-icons";
 import { MessageCircle, Briefcase, Mail, MapPin, MessageSquare, Phone, Users } from "lucide-react";
 import { footerNav } from "@/data/navigation";
+import type { NavColumn } from "@/data/types";
 import { siteConfig } from "@/data/siteConfig";
 import { NewsletterForm } from "@/components/forms/NewsletterForm";
 import { Flag } from "@/components/graphics/Flag";
@@ -40,7 +41,7 @@ function LinkedInIcon({ className }: { className?: string }) {
   );
 }
 
-export function Footer() {
+export function Footer({ nav = footerNav }: { nav?: NavColumn[] }) {
   const countries = new Set(siteConfig.offices.map((o) => o.country)).size;
   return (
     <footer data-theme="dark" className="band-brand relative overflow-hidden pt-16 pb-28 text-fg sm:pb-10 lg:pt-20">
@@ -167,7 +168,7 @@ export function Footer() {
 
         {/* Sitemap */}
         <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-10 border-b border-line py-14 sm:grid-cols-3 lg:grid-cols-6">
-          {footerNav.map((col) => (
+          {nav.map((col) => (
             <div key={col.title} className="min-w-0">
               <p className="label-tech mb-4 text-muted">{col.title}</p>
               <ul className="space-y-2.5">

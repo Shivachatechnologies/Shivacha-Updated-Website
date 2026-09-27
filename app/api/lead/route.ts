@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
   }
   // Visitor confirmation and CRM webhook finish after the response is sent.
   after(result.background);
-  console.info("[lead] accepted", { id: lead.id, type, stored: result.store.driver, notified: result.notified, score: lead.score });
+  console.info("[lead] accepted", { id: lead.id, type, stored: result.store.driver, crm: result.crm.stored, notified: result.notified, score: lead.score });
   return NextResponse.json({ ok: true, id: lead.id });
 }
 

@@ -67,6 +67,11 @@ const whiteLabelRedirects: [string, string][] = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // WHATSAPP_SALES_NUMBER (server env, digits only) is the single source for the primary sales line;
+  // it is inlined as a public value because wa.me links are rendered in the browser.
+  env: { NEXT_PUBLIC_WHATSAPP_SALES_NUMBER: process.env.WHATSAPP_SALES_NUMBER || process.env.NEXT_PUBLIC_WHATSAPP_SALES_NUMBER || "" },
+  // Media uploads go through a Server Action; stay under Vercel's 4.5 MB function request limit.
+  experimental: { serverActions: { bodySizeLimit: "4.5mb" } },
   images: { formats: ["image/avif", "image/webp"] },
   async headers() {
     return [
