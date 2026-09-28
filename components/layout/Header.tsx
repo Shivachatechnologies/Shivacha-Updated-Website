@@ -80,7 +80,7 @@ export function Header({ nav, contact }: { nav: NavItem[]; contact: { email: str
         </Link>
 
         <nav aria-label="Main" className="hidden xl:block">
-          <ul className="flex items-center gap-1">
+          <ul className="flex items-center gap-1 2xl:gap-2">
             {nav.map((item) => {
               const isOpen = open === item.label;
               const current = pathname.startsWith(item.href);

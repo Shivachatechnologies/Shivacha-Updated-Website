@@ -23,7 +23,7 @@ export function TechnologyExplorer({ items, categories }: { items: TechItem[]; c
 
   return (
     <div>
-      <div className="sticky top-16 z-20 -mx-4 mb-10 border-b border-line bg-ink-950/90 px-4 py-4 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:px-4">
+      <div className="sticky top-16 z-20 -mx-(--gutter) mb-10 border-b border-line bg-ink-950/90 px-(--gutter) py-4 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:px-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <label className="relative block lg:w-64">
             <span className="sr-only">Search technologies</span>
@@ -52,7 +52,7 @@ export function TechnologyExplorer({ items, categories }: { items: TechItem[]; c
               <h2 className="text-xl font-semibold text-fg">{c.name}</h2>
               <p className="text-sm text-dim">{c.description}</p>
             </div>
-            <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 scrollbar-none sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
+            <div className="-mx-(--gutter) flex snap-x gap-3 overflow-x-auto px-(--gutter) pb-2 scrollbar-none sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
               {filtered
                 .filter((t) => t.category === c.id)
                 .map((t) => (

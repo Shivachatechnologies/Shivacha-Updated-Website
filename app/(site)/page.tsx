@@ -55,13 +55,13 @@ export default function HomePage() {
       {/* HERO */}
       <section className="relative overflow-hidden pt-28 pb-12 sm:pt-32 lg:pt-36 lg:pb-16">
         <div aria-hidden className="grid-bg grid-fade pointer-events-none absolute inset-0 opacity-70" />
-        <div className="container-x relative grid items-center gap-10 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,1fr)] lg:gap-14 xl:gap-20">
+        <div className="container-x relative grid items-center gap-10 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,1fr)] lg:gap-[clamp(3rem,4.5vw,5.5rem)] xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
           <div className="min-w-0">
             <p className="eyebrow mb-7">Global technology infrastructure</p>
-            <h1 className="text-[2.2rem] leading-[1.05] font-medium tracking-[-0.04em] text-balance text-fg sm:text-[3rem] lg:text-[3.35rem] xl:text-[3.75rem]">
+            <h1 className="text-[2.2rem] leading-[1.05] font-medium tracking-[-0.04em] text-balance text-fg sm:text-[clamp(3rem,2.25rem+1.875vw,4.25rem)] lg:text-[clamp(3rem,1rem+3.4vw,4.25rem)]">
               Engineering the systems behind the next generation of <span className="text-brand-blue">digital finance, Web3 and intelligent technology.</span>
             </h1>
-            <p className="lede mt-6 max-w-xl">
+            <p className="lede mt-6 max-w-xl 2xl:max-w-2xl">
               Shivacha designs, builds and operates Web3, FinTech, digital asset, AI and cloud platforms — from white-label foundations to fully custom infrastructure — for companies across the USA, UK, Europe, the Middle East and Asia-Pacific.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
@@ -72,7 +72,7 @@ export default function HomePage() {
                 Explore Capabilities
               </LinkButton>
             </div>
-            <dl className="mt-12 grid max-w-xl grid-cols-1 gap-y-4 border-t border-line pt-6 sm:grid-cols-3 sm:gap-x-6">
+            <dl className="mt-12 grid max-w-xl grid-cols-1 2xl:max-w-2xl gap-y-4 border-t border-line pt-6 sm:grid-cols-3 sm:gap-x-6">
               <div className="min-w-0">
                 <dt className="label-tech">Divisions</dt>
                 <dd className="mt-1.5 text-[14px] leading-snug text-fg">Web3 · FinTech · Digital Assets · AI · Cloud</dd>

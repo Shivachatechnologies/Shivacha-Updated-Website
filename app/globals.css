@@ -101,6 +101,13 @@
 
 :root {
   color-scheme: dark;
+  /*
+   * Public-site layout rhythm. The gutter grows with the viewport (16px on phones → 72px on large monitors)
+   * and content caps at --container-max, so sections can paint full-bleed backgrounds while the content
+   * stays in one wide, controlled column: ~1280px at 1366, ~1500px at 1600, 1680px from ~1800px up.
+   */
+  --gutter: clamp(1rem, 0.5rem + 2.5vw, 4.5rem);
+  --container-max: 1680px;
 }
 
 /* Dark is the default theme (tokens above). Repeated here so a subtree can opt back into dark inside light mode. */
@@ -196,7 +203,10 @@ body {
 
 @layer components {
   .container-x {
-    @apply mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-8;
+    margin-inline: auto;
+    width: 100%;
+    max-width: calc(var(--container-max) + 2 * var(--gutter));
+    padding-inline: var(--gutter);
   }
   /* Type system: display (hero statements) · editorial (section narratives) · technical (mono metadata) · body. */
   .eyebrow {
@@ -209,16 +219,16 @@ body {
     @apply text-[2.4rem] leading-[1.03] font-medium tracking-[-0.04em] text-balance sm:text-[3.5rem] lg:text-[4.1rem] xl:text-[4.5rem];
   }
   .h-page {
-    @apply text-[2.1rem] leading-[1.06] font-medium tracking-[-0.035em] text-balance sm:text-[2.9rem] lg:text-[3.35rem];
+    @apply text-[2.1rem] leading-[1.06] font-medium tracking-[-0.035em] text-balance sm:text-[2.9rem] lg:text-[3.35rem] 2xl:text-[3.7rem];
   }
   .h-section {
-    @apply text-[1.8rem] leading-[1.1] font-medium tracking-[-0.03em] text-balance sm:text-[2.35rem] lg:text-[2.7rem];
+    @apply text-[1.8rem] leading-[1.1] font-medium tracking-[-0.03em] text-balance sm:text-[2.35rem] lg:text-[2.7rem] 2xl:text-[3rem];
   }
   .h-card {
     @apply text-lg leading-snug font-semibold tracking-[-0.01em];
   }
   .lede {
-    @apply text-[1.05rem] leading-relaxed text-pretty text-muted sm:text-[1.125rem];
+    @apply text-[1.05rem] leading-relaxed text-pretty text-muted sm:text-[1.125rem] 2xl:text-[1.1875rem];
   }
   /* Surfaces: fine 1px borders; depth from contrast and layering rather than shadow. */
   .card {
