@@ -7,11 +7,14 @@ const FEATURED = [
   "kafka", "kubernetes", "docker", "terraform", "google-cloud", "cloudflare", "ethereum", "solana", "polygon", "solidity", "chainlink", "graphql",
 ];
 
-/** Continuous logo strip of the technologies we build with. */
+/**
+ * Continuous logo strip of the technologies we build with. Rendered inside the content container so one copy of the
+ * list is always wider than the strip (no empty gap at the end of the loop on ultra-wide screens).
+ */
 export function TechMarquee() {
   const items = FEATURED.map((s) => technologies.find((t) => t.slug === s)).filter((t) => !!t);
   return (
-    <div className="relative overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]">
+    <div className="marquee-viewport relative overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_6%,black_94%,transparent)]">
       <ul className="marquee flex w-max gap-3 py-1">
         {[...items, ...items].map((t, i) => (
           <li key={`${t.slug}-${i}`} aria-hidden={i >= items.length || undefined}>
