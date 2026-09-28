@@ -51,7 +51,7 @@ export function ProductMarketplace({ items }: { items: ProductCard[] }) {
   return (
     <div>
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 scrollbar-none" role="tablist" aria-label="Product categories">
+        <div className="-mx-(--gutter) flex gap-2 overflow-x-auto px-(--gutter) scrollbar-none" role="tablist" aria-label="Product categories">
           {tabs.map((t) => (
             <button
               key={t.id}

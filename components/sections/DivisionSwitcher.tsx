@@ -29,7 +29,7 @@ export function DivisionSwitcher({ panels }: { panels: SwitcherPanel[] }) {
 
   return (
     <div>
-      <div role="tablist" aria-label="Shivacha divisions" onKeyDown={onKey} className="-mx-4 flex gap-1 overflow-x-auto border-b border-line px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
+      <div role="tablist" aria-label="Shivacha divisions" onKeyDown={onKey} className="-mx-(--gutter) flex gap-1 overflow-x-auto border-b border-line px-(--gutter) [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
         {panels.map((p, i) => (
           <button
             key={p.id}

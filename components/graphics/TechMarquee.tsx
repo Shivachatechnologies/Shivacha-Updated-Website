@@ -11,7 +11,7 @@ const FEATURED = [
 export function TechMarquee() {
   const items = FEATURED.map((s) => technologies.find((t) => t.slug === s)).filter((t) => !!t);
   return (
-    <div className="relative overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]">
+    <div className="relative mx-auto max-w-[calc(var(--container-max)+2*var(--gutter))] overflow-hidden scrollbar-none [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)] motion-reduce:overflow-x-auto">
       <ul className="marquee flex w-max gap-3 py-1">
         {[...items, ...items].map((t, i) => (
           <li key={`${t.slug}-${i}`} aria-hidden={i >= items.length || undefined}>
