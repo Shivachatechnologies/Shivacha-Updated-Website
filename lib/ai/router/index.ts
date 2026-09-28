@@ -5,6 +5,7 @@ import { can } from "@/lib/auth/permissions";
 import type { SessionUser } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { isEnabled } from "@/lib/os/flags";
+import { growthStop } from "@/lib/growth/settings";
 import { agentBySlug } from "../catalog";
 import { canRunAgent, getAgentConfig } from "../agents";
 import { routeRequest, runAgent, type EntityRef, type ProposedAction, type RunOutput } from "../runner";
@@ -125,6 +126,8 @@ export async function executeRequest(i: RouteInput): Promise<RouteOutput> {
   const spec = agentBySlug(routed.slug);
   if (!spec) return blocked(c, routed.slug, `Unknown agent "${routed.slug}".`, convId);
   if (!canRunAgent(i.user.role, spec)) return blocked(c, spec.slug, `You do not have permission to use the ${spec.name}.`, convId);
+  const halted = await growthStop({ kind: "ai", agent: spec.slug });
+  if (halted) return blocked(c, spec.slug, `AI is stopped by a kill switch: ${halted}`, convId);
   const request = routed.request;
 
   await audit({ userId: i.user.id, action: "ai.route", entity: "AIAgent", entityId: spec.slug, metadata: { cls: c.cls, reason: c.reason, channel: i.channel, language: c.language } });

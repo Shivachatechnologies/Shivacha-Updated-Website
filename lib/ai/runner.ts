@@ -1,4 +1,5 @@
 import "server-only";
+import { growthStop } from "@/lib/growth/settings";
 import { db } from "@/lib/db/client";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { can, ROLE_LABELS, type Permission } from "@/lib/auth/permissions";
@@ -190,6 +191,9 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
   if (!cfg) return base(routed.slug, `Unknown agent "${routed.slug}".`);
   if (!isSystem(user) && !canRunAgent(user.role, cfg.spec)) return base(cfg.spec.slug, `You do not have permission to use the ${cfg.name}.`);
   if (!cfg.enabled) return base(cfg.spec.slug, `${cfg.name} is disabled by an administrator.`);
+  // Kill switches (Growth control): STOP ALL / Stop all AI / a stopped agent block every run, human or scheduled.
+  const halted = await growthStop({ kind: "ai", agent: cfg.spec.slug });
+  if (halted) return base(cfg.spec.slug, `AI is stopped by a kill switch: ${halted}`);
 
   // System (automation/scheduled) runs never act autonomously.
   const mode: AIModeName = isSystem(user) && cfg.mode === "AUTONOMOUS" ? "ASSIST" : cfg.mode;
@@ -252,7 +256,9 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
         const r = await tool.run(ctx, parsed.data);
         r.records?.forEach((x) => records.add(x));
         drafts.push({ tool: name, draft: parsed.data });
-        return done(true, { content: "Draft recorded and shown to the user for review. It has not been sent or saved anywhere." });
+        // Growth drafts are stored as inert review items (never published without a person); other drafts are not saved.
+        const stored = (r.data as { storedForReview?: string } | null)?.storedForReview;
+        return done(true, { content: stored ? `Draft saved for human review (${stored}). It has not been published or sent.` : "Draft recorded and shown to the user for review. It has not been sent or saved anywhere." });
       }
       // write
       const preview = tool.preview ? await tool.preview(parsed.data) : { summary: name, affected: [] };

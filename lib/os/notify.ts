@@ -30,6 +30,7 @@ export const NOTIFICATION_TYPES = {
   "attendance.exception": "Attendance exception",
   "announcement": "Announcement",
   "visitor.alert": "Website visitor alert",
+  "growth.salesReady": "Sales-ready lead (growth qualification)",
 } as const;
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
 
