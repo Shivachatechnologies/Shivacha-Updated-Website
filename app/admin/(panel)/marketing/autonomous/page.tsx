@@ -2,13 +2,13 @@ import { db } from "@/lib/db/client";
 import { can } from "@/lib/auth/permissions";
 import { requireAccess } from "@/lib/os/guard";
 import { AGENTS } from "@/lib/ai/catalog";
-import { BUDGET_KEYS, BUDGET_KINDS, CHANNEL_KEYS, GROWTH_CHANNELS, KILL_KEYS, KILL_SWITCHES, LANGUAGES, PLATFORM_LABELS, SOCIAL_PLATFORMS } from "@/lib/growth/policy";
+import { BUDGET_KEYS, BUDGET_KINDS, CHANNEL_KEYS, ENFORCED_BUDGETS, GROWTH_CHANNELS, KILL_KEYS, KILL_SWITCHES, LANGUAGES, PLATFORM_LABELS, SOCIAL_PLATFORMS } from "@/lib/growth/policy";
 import { getGrowthSettings } from "@/lib/growth/settings";
 import { usageOf } from "@/lib/growth/engine";
 import { providerStatuses } from "@/lib/growth/providers";
 import { GROWTH_ROLES } from "@/lib/growth/workforce-map";
 import { runGrowthLoopNowAction, saveGrowthControlAction, toggleKillSwitchAction } from "@/lib/growth/actions";
-import { CheckField, DataTable, SelectField, StatusBadge, TextArea, TextField } from "@/components/admin/os";
+import { CheckField, DataTable, StatusBadge, TextArea, TextField } from "@/components/admin/os";
 import { Badge, PageHeader, Panel, fmtDate } from "@/components/admin/ui";
 import { ActionForm } from "@/components/admin/forms";
 import { SubmitButton } from "@/components/admin/client";
@@ -24,9 +24,9 @@ export default async function AutonomousPage() {
   const [s, runs, usage] = await Promise.all([
     getGrowthSettings(),
     db.growthRun.findMany({ orderBy: { startedAt: "desc" }, take: 10 }),
-    Promise.all(BUDGET_KEYS.map(async (k) => [k, await usageOf(k)] as const)),
+    Promise.all(ENFORCED_BUDGETS.map(async (k) => [k, await usageOf(k)] as const)),
   ]);
-  const used = Object.fromEntries(usage) as Record<(typeof BUDGET_KEYS)[number], number>;
+  const used = Object.fromEntries(usage) as Record<(typeof ENFORCED_BUDGETS)[number], number>;
   const providers = providerStatuses();
   const anyStop = KILL_KEYS.some((k) => s.stops[k]);
   return (
@@ -92,13 +92,16 @@ export default async function AutonomousPage() {
                 </div>
               </Panel>
               <Panel title="Budgets">
-                <p className="mb-3 text-xs text-dim">A blank budget blocks that kind of spend or sending. Budgets are checked before every action and are never exceeded silently.</p>
+                <p className="mb-3 text-xs text-dim">These budgets are reserved in the database before every automated action of that kind, so they can never be exceeded, even with several servers running. A blank budget blocks that action entirely.</p>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  {BUDGET_KEYS.map((k) => (
-                    <TextField key={k} name={`budget_${k}`} type="number" label={BUDGET_KINDS[k].label} defaultValue={s.budgets[k]} hint={`Used ${BUDGET_KINDS[k].unit === "money" ? `${s.budgetCurrency} ` : ""}${used[k]} ${k.endsWith("Monthly") ? "this month" : "today"}`} />
+                  {ENFORCED_BUDGETS.map((k) => (
+                    <TextField key={k} name={`budget_${k}`} type="number" label={`${BUDGET_KINDS[k].label}${BUDGET_KINDS[k].unit === "money" ? " (USD)" : ""}`} defaultValue={s.budgets[k]} hint={`${BUDGET_KINDS[k].unit === "money" ? `USD ${used[k].toFixed(2)} reserved` : `${used[k]} used`} today${k === "aiDaily" ? " · each autonomous AI task reserves its maximum possible cost" : ""}`} />
                   ))}
-                  <SelectField name="budgetCurrency" label="Budget currency" options={["USD", "EUR", "GBP", "AED", "SAR", "INR", "SGD", "AUD", "CAD"].map((c) => [c, c] as const)} defaultValue={s.budgetCurrency} />
                   <TextField name="dailyQualifiedLeadTarget" type="number" label="Qualified leads per day (target)" defaultValue={s.dailyQualifiedLeadTarget} hint="A goal for the dashboard, not a guarantee." />
+                </div>
+                <div className="mt-4 rounded-md border border-dashed border-line-strong p-3 text-xs text-muted">
+                  <p className="font-medium text-fg">Not used by automated actions yet</p>
+                  <p className="mt-1">{BUDGET_KEYS.filter((k) => !BUDGET_KINDS[k].enforced).map((k) => BUDGET_KINDS[k].label).join(" · ")}. This release never buys ads or generates images or video automatically, so there is nothing for these budgets to control. Ad spend is entered on each campaign.</p>
                 </div>
               </Panel>
               <Panel title="Languages and brand voice">

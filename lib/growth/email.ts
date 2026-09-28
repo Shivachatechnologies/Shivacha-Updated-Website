@@ -4,7 +4,10 @@ import { siteConfig } from "@/data/siteConfig";
 import { classifyReply, isEmail, nextStepAt, normalizeEmail, renderStep, STOPS_SEQUENCE, SUPPRESSES, unsubscribeToken, type ReplyClass, type SequenceStep } from "./email-rules";
 import { emailProvider, unsubscribeSecret } from "./providers";
 import { growthStop } from "./settings";
-import { budgetGate, qualifyLeadById, recordTouch, recordUsage } from "./engine";
+import { qualifyLeadById, recordTouch, releaseBudget, reserveBudget } from "./engine";
+
+/** A claim older than this with no result means the worker died mid-send. */
+const STALE_CLAIM_MS = 30 * 60_000;
 
 export const SUPPRESSION_REASONS = ["UNSUBSCRIBE", "BOUNCE", "COMPLAINT", "NEGATIVE_REPLY", "MANUAL"] as const;
 export type SuppressionReason = (typeof SUPPRESSION_REASONS)[number];
@@ -96,8 +99,6 @@ export async function processDueEmails(opts: { autonomous: boolean; limit?: numb
     // Re-check the kill switch before every send: a human can stop email mid-run.
     const live = await growthStop({ kind: "channel", channel: "email", autonomous: opts.autonomous });
     if (live) return { ...out, blocked: live };
-    const budget = await budgetGate("emailDaily", 1);
-    if (!budget.ok) return { ...out, blocked: `Email budget: ${budget.reason}` };
     if (await isSuppressed(en.email)) {
       await db.sequenceEnrollment.update({ where: { id: en.id }, data: { status: "STOPPED", stopReason: "SUPPRESSED", nextAt: null } });
       out.skipped++;
@@ -109,18 +110,52 @@ export async function processDueEmails(opts: { autonomous: boolean; limit?: numb
       await db.sequenceEnrollment.update({ where: { id: en.id }, data: { status: "COMPLETED", nextAt: null } });
       continue;
     }
+    const advance = () => {
+      const next = en.step + 1;
+      const nextAt = nextStepAt(steps, next, en.createdAt);
+      // Guarded by the current step, so a late or repeated worker can never move the enrollment twice.
+      return db.sequenceEnrollment.updateMany({ where: { id: en.id, step: en.step }, data: { step: next, lastSentAt: new Date(), status: nextAt ? "ACTIVE" : "COMPLETED", nextAt, stopReason: null } });
+    };
+
+    // 1. Claim this exact step in the database BEFORE anything is sent. The unique (enrollmentId, step) row means only
+    //    one worker — on any server, cron or manual run — can hold it; everyone else skips.
+    let claimId: string;
+    try {
+      claimId = (await db.growthEmailSend.create({ data: { enrollmentId: en.id, step: en.step, email: en.email } })).id;
+    } catch (e) {
+      if ((e as { code?: string }).code !== "P2002") throw e;
+      const held = await db.growthEmailSend.findUnique({ where: { enrollmentId_step: { enrollmentId: en.id, step: en.step } } });
+      if (held?.status === "SENT") await advance(); // sent earlier but not advanced (crash) — repair, never resend
+      else if (held && Date.now() - held.claimedAt.getTime() > STALE_CLAIM_MS) {
+        // A worker died mid-send, so whether the email left is unknown: stop rather than risk a duplicate.
+        await db.sequenceEnrollment.updateMany({ where: { id: en.id, step: en.step, status: "ACTIVE" }, data: { status: "STOPPED", stopReason: "SEND_OUTCOME_UNKNOWN — check the mailbox before re-enrolling", nextAt: null } });
+      }
+      out.skipped++;
+      continue;
+    }
+
+    // 2. Reserve one email from today's budget atomically; give the claim back if the budget is used up.
+    const budget = await reserveBudget("emailDaily", 1);
+    if (!budget.ok) {
+      await db.growthEmailSend.deleteMany({ where: { id: claimId, status: "CLAIMED" } });
+      return { ...out, blocked: `Email budget: ${budget.reason}` };
+    }
+
+    // 3. Only now call the provider.
     const company = en.leadId ? (await db.lead.findUnique({ where: { id: en.leadId }, select: { company: true } }))?.company : null;
     const msg = renderStep(step, { name: en.name, company, unsubscribeUrl: `${siteConfig.url}/api/growth/unsubscribe?t=${encodeURIComponent(unsubscribeToken(en.email, secret))}` });
     const r = await emailProvider.send(en.email, msg.subject, msg.body);
     if (!r.ok) {
+      // Nothing was sent: release the budget and the claim so the step stays due and is retried on a later run.
+      await releaseBudget(budget);
+      await db.growthEmailSend.deleteMany({ where: { id: claimId, status: "CLAIMED" } });
       out.failed++;
-      await db.sequenceEnrollment.update({ where: { id: en.id }, data: { stopReason: `SEND_FAILED: ${r.error}`.slice(0, 190) } });
+      await db.sequenceEnrollment.updateMany({ where: { id: en.id, step: en.step }, data: { stopReason: `SEND_FAILED: ${r.error}`.slice(0, 190) } });
       return { ...out, blocked: r.error };
     }
-    await recordUsage("emailDaily", 1);
-    const next = en.step + 1;
-    const nextAt = nextStepAt(steps, next, en.createdAt);
-    await db.sequenceEnrollment.update({ where: { id: en.id }, data: { step: next, lastSentAt: new Date(), status: nextAt ? "ACTIVE" : "COMPLETED", nextAt, stopReason: null } });
+    // 4. Record the successful send permanently, then advance the enrollment.
+    await db.growthEmailSend.update({ where: { id: claimId }, data: { status: "SENT", sentAt: new Date() } });
+    await advance();
     if (en.leadId) await db.leadActivity.create({ data: { leadId: en.leadId, type: "EMAIL_SENT", data: { sequence: en.sequence.name, step: en.step + 1, subject: msg.subject } } });
     if (en.prospectId) await db.prospect.updateMany({ where: { id: en.prospectId, status: { in: ["NEW", "RESEARCHED"] } }, data: { status: "CONTACTED" } });
     out.sent++;

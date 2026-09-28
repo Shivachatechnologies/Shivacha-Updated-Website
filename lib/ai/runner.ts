@@ -239,7 +239,8 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
     if (!tool || !cfg.tools.has(name)) return done(false, { content: `Tool "${name}" is not available to this agent.`, isError: true }, "not allowed");
     const parsed = tool.input.safeParse(raw ?? {});
     if (!parsed.success) return done(false, { content: `Invalid input: ${parsed.error.issues.map((i) => `${i.path.join(".") || "input"}: ${i.message}`).join("; ")}`.slice(0, 800), isError: true }, "invalid input");
-    if (input.route?.cls === "INSTANT_READ" && tool.kind === "write") return done(false, { content: "Not executed: this request was classified as a read-only question. Answer it without changing data.", isError: true }, "read-only request");
+    // INSTANT_READ means no mutation of any kind: writes and drafts that save a record are both refused.
+    if (input.route?.cls === "INSTANT_READ" && (tool.kind === "write" || tool.stores)) return done(false, { content: "Not executed: this request was classified as a read-only question. Answer it without changing data.", isError: true }, "read-only request");
     const needed = toolPermissions(tool, parsed.data);
     if (!isSystem(user) && !needed.every((p) => can(user.role, p))) {
       await audit({ userId: user.id, action: "ai.tool.denied", entity: "AIExecution", entityId: exec.id, metadata: { tool: name, needed } });
@@ -251,6 +252,10 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
         r.records?.forEach((x) => records.add(x));
         lastRecords = r.records;
         return done(true, { content: clip(r.data) });
+      }
+      if (tool.kind === "draft" && tool.stores && mode === "OBSERVE") {
+        actions.push((lastAction = { tool: name, summary: `${name} (saves a draft)`, status: "BLOCKED" }));
+        return done(true, { content: "Not saved: this agent is in OBSERVE mode. Present the draft text to the user instead." });
       }
       if (tool.kind === "draft") {
         const r = await tool.run(ctx, parsed.data);

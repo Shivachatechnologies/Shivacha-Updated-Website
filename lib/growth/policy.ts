@@ -39,14 +39,19 @@ export const PLATFORM_LABELS: Record<SocialPlatform, string> = { LINKEDIN: "Link
 
 export const LANGUAGES = { en: "English", hi: "Hindi", hinglish: "Hinglish" } as const;
 
+/**
+ * `enforced` budgets are reserved atomically before every automated action of that kind. The others describe spend
+ * this release never makes automatically (no ad buying, image or video generation), so they are not shown as active.
+ */
 export const BUDGET_KINDS = {
-  adDaily: { label: "Ad spend per day", unit: "money" },
-  aiDaily: { label: "AI cost per day (growth work)", unit: "money" },
-  creativeMonthly: { label: "Creative / image spend per month", unit: "money" },
-  videoMonthly: { label: "Video / TTS spend per month", unit: "money" },
-  emailDaily: { label: "Emails per day", unit: "count" },
-  socialDaily: { label: "Social posts per day", unit: "count" },
+  adDaily: { label: "Ad spend per day", unit: "money", enforced: false },
+  aiDaily: { label: "AI cost per day (autonomous growth tasks)", unit: "money", enforced: true },
+  creativeMonthly: { label: "Creative / image spend per month", unit: "money", enforced: false },
+  videoMonthly: { label: "Video / TTS spend per month", unit: "money", enforced: false },
+  emailDaily: { label: "Emails per day", unit: "count", enforced: true },
+  socialDaily: { label: "Social posts per day", unit: "count", enforced: true },
 } as const;
+export const ENFORCED_BUDGETS = (Object.keys(BUDGET_KINDS) as (keyof typeof BUDGET_KINDS)[]).filter((k) => BUDGET_KINDS[k].enforced);
 export type BudgetKind = keyof typeof BUDGET_KINDS;
 export const BUDGET_KEYS = Object.keys(BUDGET_KINDS) as BudgetKind[];
 

@@ -9,7 +9,7 @@ import { authorizeAccess } from "@/lib/os/guard";
 import { fail, formObject, okThen, optText, optUrl, reqText, UserError, type ActionState } from "@/lib/os/action";
 import { can } from "@/lib/auth/permissions";
 import { AGENTS } from "@/lib/ai/catalog";
-import { growthSettingsSchema, isHumanActor, KILL_KEYS, CHANNEL_KEYS, BUDGET_KEYS, SOCIAL_PLATFORMS, type KillSwitch } from "./policy";
+import { growthSettingsSchema, isHumanActor, KILL_KEYS, CHANNEL_KEYS, BUDGET_KEYS, BUDGET_KINDS, SOCIAL_PLATFORMS, type KillSwitch } from "./policy";
 import { getGrowthSettings, GROWTH_SETTING } from "./settings";
 import { contentQa, excerptFor, repurposePlan, ASSET_KINDS, POST_FORMATS } from "./content";
 import { buildUtmUrl, CHANNEL_UTM } from "./attribution";
@@ -40,8 +40,9 @@ export async function saveGrowthControlAction(_: ActionState, form: FormData): P
       stops: before.stops,
       stoppedAgents: form.getAll("stoppedAgents").map(String).filter((s) => AGENTS.some((a) => a.slug === s)),
       stoppedPlatforms: form.getAll("stoppedPlatforms").map(String),
-      budgets: Object.fromEntries(BUDGET_KEYS.map((k) => [k, f[`budget_${k}`]])),
-      budgetCurrency: f.budgetCurrency,
+      // Only enforced budgets are editable; the others keep their stored value (they control nothing yet).
+      budgets: Object.fromEntries(BUDGET_KEYS.map((k) => [k, BUDGET_KINDS[k].enforced ? f[`budget_${k}`] : before.budgets[k]])),
+      budgetCurrency: before.budgetCurrency,
       dailyQualifiedLeadTarget: f.dailyQualifiedLeadTarget,
       languages: form.getAll("languages").map(String),
       brandVoice: f.brandVoice ?? before.brandVoice,

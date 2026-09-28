@@ -90,6 +90,7 @@ export const GROWTH_TOOLS: ToolDef[] = [
     }),
     permissions: ["growth:manage"],
     kind: "draft",
+    stores: true,
     risk: "LOW",
     run: async (c, i) => {
       const stop = await growthStop({ kind: "channel", channel: "content", agent: c.agentSlug });
@@ -106,6 +107,7 @@ export const GROWTH_TOOLS: ToolDef[] = [
     input: z.object({ kind: z.enum(ASSET_KINDS), title: z.string().trim().min(1).max(200), body: z.string().trim().min(1).max(20_000), language: z.enum(["en", "hi", "hinglish"]).default("en") }),
     permissions: ["growth:manage"],
     kind: "draft",
+    stores: true,
     risk: "LOW",
     run: async (c, i) => {
       const stop = await growthStop({ kind: "channel", channel: "content", agent: c.agentSlug });

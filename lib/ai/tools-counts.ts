@@ -27,10 +27,19 @@ const OPEN_TASK = ["TODO", "IN_PROGRESS", "REVIEW", "BLOCKED"] as const;
 const NOT_WEBSITE = ["manual", "import", "ai"];
 const LIST_SIZE = 10;
 
+/** Growth qualification tiers (Lead.growthTier). "qualified" includes sales-ready: sales-ready is the strictest qualified tier. */
+const LEAD_TIER_FILTER: Record<string, Prisma.StringNullableFilter<"Lead"> | null> = {
+  qualified: { in: ["QUALIFIED", "SALES_READY"] },
+  sales_ready: { equals: "SALES_READY" },
+  nurture: { equals: "NURTURE" },
+  low_fit: { equals: "LOW_FIT" },
+  unscored: null,
+};
+
 export const COUNT_TOOLS: ToolDef[] = [
   def({
     name: "countLeads",
-    description: "Count leads (not archived) with optional filters, and optionally list up to 10 of them. period: all/today/7d/30d. hot = score label Hot or HIGH/URGENT priority. source 'website' = captured by website forms. country is an ISO code or name. assignedToMe = assigned to the requesting user.",
+    description: "Count leads (not archived) with optional filters, and optionally list up to 10 of them. period: all/today/7d/30d. hot = score label Hot or HIGH/URGENT priority. source 'website' = captured by website forms. country is an ISO code or name. assignedToMe = assigned to the requesting user. tier = growth qualification: qualified (Qualified or Sales-ready), sales_ready, nurture, low_fit, unscored.",
     input: z.object({
       period: z.enum(["all", "today", "7d", "30d"]).default("all"),
       status: z.enum(["NEW", "CONTACTED", "QUALIFIED", "MEETING", "PROPOSAL_SENT", "NEGOTIATION", "WON", "LOST", "ON_HOLD"]).optional(),
@@ -39,6 +48,7 @@ export const COUNT_TOOLS: ToolDef[] = [
       source: z.string().trim().max(60).optional(),
       country: z.string().trim().max(60).optional(),
       assignedToMe: z.boolean().optional(),
+      tier: z.enum(["qualified", "sales_ready", "nurture", "low_fit", "unscored"]).optional(),
       list: z.boolean().optional(),
     }),
     permissions: ["leads:view"],
@@ -59,6 +69,7 @@ export const COUNT_TOOLS: ToolDef[] = [
         and.push({ OR: names.map((n) => ({ country: { equals: n, mode: "insensitive" as const } })) });
       }
       if (i.assignedToMe) and.push({ assignedToId: c.user.id });
+      if (i.tier) and.push({ mergedIntoId: null, growthTier: LEAD_TIER_FILTER[i.tier] });
       const where = { AND: and };
       const [count, rows] = await Promise.all([db.lead.count({ where }), i.list ? db.lead.findMany({ where, orderBy: { createdAt: "desc" }, take: LIST_SIZE, select: { id: true, ref: true, name: true, company: true, country: true, status: true } }) : Promise.resolve([])]);
       return { data: { count, filters: i, leads: rows.map((l) => ({ ...l, link: `/admin/leads/${l.id}` })) }, records: rows.map((l) => `Lead:${l.id}`) };

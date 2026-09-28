@@ -4,7 +4,7 @@ import { contentQa, qaBlocks } from "./content";
 import { SOCIAL_PLATFORMS, type SocialPlatform } from "./policy";
 import { SOCIAL_PROVIDERS } from "./providers";
 import { getGrowthSettings, growthStop } from "./settings";
-import { budgetGate, recordUsage, utcDay } from "./engine";
+import { releaseBudget, reserveBudget, utcDay } from "./engine";
 
 /**
  * Social publishing through official APIs only. A post publishes only after a human approved it (approvedById);
@@ -25,19 +25,24 @@ export async function publishPost(postId: string, opts: { autonomous: boolean })
     await db.socialPost.update({ where: { id: post.id }, data: { qa: JSON.parse(JSON.stringify(qa)), error: "Blocked by content QA." } });
     return { ok: false, message: "Blocked by content QA." };
   }
-  const budget = await budgetGate("socialDaily", 1);
-  if (!budget.ok) return { ok: false, message: `Social budget: ${budget.reason}` };
-
+  // 1. Claim the post atomically (only one worker can move it to PUBLISHING).
   const previous = post.status;
   const claimed = await db.socialPost.updateMany({ where: { id: post.id, status: previous }, data: { status: "PUBLISHING" } });
   if (claimed.count !== 1) return { ok: false, message: "The post is already being published." };
+  // 2. Reserve one post from today's budget atomically, before the platform is called.
+  const budget = await reserveBudget("socialDaily", 1);
+  if (!budget.ok) {
+    await db.socialPost.updateMany({ where: { id: post.id, status: "PUBLISHING" }, data: { status: previous } });
+    return { ok: false, message: `Social budget: ${budget.reason}` };
+  }
+  // 3. Only now call the platform.
   const r = await SOCIAL_PROVIDERS[platform].publish({ body: post.body, link: post.link, mediaUrl: post.mediaUrl, format: post.format });
   if (r.ok) {
     await db.socialPost.update({ where: { id: post.id }, data: { status: "PUBLISHED", publishedAt: new Date(), externalId: r.data.externalId, error: null, qa: JSON.parse(JSON.stringify(qa)) } });
-    await recordUsage("socialDaily", 1);
     return { ok: true, message: `Published to ${platform}.` };
   }
-  // Not connected / not supported: nothing was published, so the post returns to its approved state with the reason.
+  // Not published: give the budget back. Not connected / not supported → back to its approved state with the reason.
+  await releaseBudget(budget);
   await db.socialPost.update({ where: { id: post.id }, data: { status: r.code === "PROVIDER_ERROR" ? "FAILED" : previous, error: r.error } });
   return { ok: false, message: r.error };
 }
@@ -58,10 +63,11 @@ export async function publishDue(opts: { autonomous: boolean; limit?: number }) 
 }
 
 /** Pulls today's follower counts from each connected platform. Only real API numbers are stored. */
-export async function syncSocialMetrics(): Promise<{ platform: SocialPlatform; ok: boolean; followers?: number; error?: string }[]> {
+export async function syncSocialMetrics(stoppedPlatforms: string[] = []): Promise<{ platform: SocialPlatform; ok: boolean; followers?: number; error?: string }[]> {
   const date = utcDay();
   const out: { platform: SocialPlatform; ok: boolean; followers?: number; error?: string }[] = [];
   for (const platform of SOCIAL_PLATFORMS) {
+    if (stoppedPlatforms.includes(platform)) continue;
     const p = SOCIAL_PROVIDERS[platform];
     if (!p.status().connected) continue;
     const r = await p.followers();

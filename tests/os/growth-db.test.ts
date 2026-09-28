@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { db } from "../../lib/db/client";
 import { DEFAULT_GROWTH_SETTINGS, type GrowthSettings } from "../../lib/growth/policy";
 import { GROWTH_SETTING } from "../../lib/growth/settings";
-import { budgetGate, qualifyLeadById, recordUsage, upsertGrowthLead } from "../../lib/growth/engine";
+import { qualifyLeadById, releaseBudget, reserveBudget, upsertGrowthLead, usageOf } from "../../lib/growth/engine";
 import { enroll, handleReply, isSuppressed, processDueEmails, suppress } from "../../lib/growth/email";
 import { publishPost } from "../../lib/growth/social";
 import { runGrowthLoop, GROWTH_TASK_SOURCE } from "../../lib/growth/loop";
@@ -120,14 +120,17 @@ test("email sending: blocked by kill switch, by autonomous mode, and by an uncon
   await setGrowth({});
 });
 
-test("budgets: unset blocks; usage counted per day; limit never exceeded", async () => {
+test("budgets: unset blocks; reservation counts per day; limit never exceeded; release gives it back", async () => {
   await setGrowth({});
-  assert.equal((await budgetGate("socialDaily", 1)).ok, false, "no budget configured");
-  await setGrowth({ budgets: { ...DEFAULT_GROWTH_SETTINGS.budgets, socialDaily: 2 } });
-  const before = await db.growthUsage.findFirst({ where: { kind: "socialDaily" }, orderBy: { date: "desc" } });
-  const used = before && before.date.getTime() >= Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) ? before.units : 0;
-  if (used < 2) await recordUsage("socialDaily", 2 - used);
-  assert.equal((await budgetGate("socialDaily", 1)).ok, false, "limit reached → refused");
+  assert.equal((await reserveBudget("socialDaily", 1)).ok, false, "no budget configured");
+  assert.equal((await reserveBudget("adDaily", 1)).ok, false, "a budget no automated action uses can never be reserved");
+  const used = await usageOf("socialDaily");
+  await setGrowth({ budgets: { ...DEFAULT_GROWTH_SETTINGS.budgets, socialDaily: used + 2 } });
+  const a = await reserveBudget("socialDaily", 2);
+  assert.equal(a.ok, true);
+  assert.equal((await reserveBudget("socialDaily", 1)).ok, false, "limit reached → refused");
+  await releaseBudget(a);
+  assert.equal(await usageOf("socialDaily"), used, "released reservation is given back");
   await setGrowth({});
 });
 

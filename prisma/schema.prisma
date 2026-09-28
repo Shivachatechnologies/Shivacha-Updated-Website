@@ -2190,6 +2190,7 @@ model SequenceEnrollment {
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
   sequence   EmailSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sends      GrowthEmailSend[]
 
   @@unique([sequenceId, email])
   @@index([status, nextAt])
@@ -2222,6 +2223,31 @@ model GrowthPartner {
   updatedAt   DateTime @updatedAt
 
   @@index([status])
+}
+
+/// One email step for one enrollment. The unique (enrollmentId, step) row is the database-level claim taken BEFORE
+/// the provider is called, so concurrent workers can never send the same step twice. CLAIMED → SENT on success; the
+/// row is removed again if the provider fails (the step stays due and is retried).
+model GrowthEmailSend {
+  id           String             @id @default(cuid())
+  enrollmentId String
+  step         Int
+  email        String
+  /// CLAIMED | SENT
+  status       String             @default("CLAIMED")
+  claimedAt    DateTime           @default(now())
+  sentAt       DateTime?
+  enrollment   SequenceEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, step])
+  @@index([status, claimedAt])
+}
+
+/// Named one-off claims taken atomically by insert (e.g. "this AI employee's growth task for today", "a loop run is in
+/// progress"). Works across processes and servers without in-memory locks.
+model GrowthClaim {
+  key       String   @id
+  createdAt DateTime @default(now())
 }
 
 /// Units consumed per day and budget kind (ad spend, AI, creative, email volume, video) for budget guardrails.

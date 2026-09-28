@@ -4,7 +4,8 @@ import { Prisma } from "@/lib/generated/prisma/client";
 import { newLeadId } from "@/lib/leads/id";
 import { queueEvent } from "@/lib/automation/engine";
 import { notify } from "@/lib/os/notify";
-import { checkBudget, type BudgetKind } from "./policy";
+import { randomUUID } from "node:crypto";
+import { BUDGET_KINDS, checkBudget, type BudgetKind } from "./policy";
 import { getGrowthSettings } from "./settings";
 import { qualify, shouldAdvanceStage, TIER_LIFECYCLE, type Icp, type Qualification } from "./qualify";
 import { normalizeEmail } from "./email-rules";
@@ -25,15 +26,49 @@ export async function usageOf(kind: BudgetKind): Promise<number> {
   return COUNTED[kind] ? (r._sum.units ?? 0) : Number(r._sum.amount ?? 0);
 }
 
-/** Checks the configured budget before an action. Never silently exceeds: over-budget work is refused. */
-export async function budgetGate(kind: BudgetKind, add: number) {
-  const s = await getGrowthSettings();
-  return checkBudget(s.budgets[kind], await usageOf(kind), add);
+export type Reservation = { ok: true; kind: BudgetKind; amount: number; date: Date } | { ok: false; reason: string };
+
+/**
+ * Atomically reserves `amount` of a budget BEFORE the action runs. The reservation is a single conditional UPDATE
+ * (`… SET used = used + n WHERE used + n <= limit`), so concurrent workers on any number of servers can never push
+ * usage past the limit: Postgres row locking serialises them and the second one's condition is re-evaluated. A blank
+ * (unconfigured) budget or a kind that is not enforced blocks the action. Release it if the action does not happen.
+ */
+export async function reserveBudget(kind: BudgetKind, amount: number): Promise<Reservation> {
+  if (!BUDGET_KINDS[kind].enforced) return { ok: false, reason: "This budget is not used by automated actions." };
+  if (!(amount > 0) || !Number.isFinite(amount)) return { ok: false, reason: "Invalid amount." };
+  const limit = (await getGrowthSettings()).budgets[kind];
+  if (limit == null) return { ok: false, reason: "No budget is configured for this." };
+  const date = MONTHLY[kind] ? utcMonth() : utcDay();
+  await db.$executeRaw`INSERT INTO "GrowthUsage" ("id", "date", "kind", "units", "amount") VALUES (${randomUUID()}, ${date}::date, ${kind}, 0, 0) ON CONFLICT ("date", "kind") DO NOTHING`;
+  const won = COUNTED[kind]
+    ? await db.$queryRaw<{ v: number }[]>`UPDATE "GrowthUsage" SET "units" = "units" + ${Math.round(amount)} WHERE "date" = ${date}::date AND "kind" = ${kind} AND "units" + ${Math.round(amount)} <= ${limit} RETURNING "units" AS v`
+    : await db.$queryRaw<{ v: number }[]>`UPDATE "GrowthUsage" SET "amount" = "amount" + ${amount}::numeric WHERE "date" = ${date}::date AND "kind" = ${kind} AND "amount" + ${amount}::numeric <= ${limit}::numeric RETURNING "amount"::float8 AS v`;
+  if (won.length) return { ok: true, kind, amount: COUNTED[kind] ? Math.round(amount) : amount, date };
+  const used = await usageOf(kind);
+  return { ok: false, reason: checkBudget(limit, used, amount).ok ? "Budget reservation failed." : `Budget reached (${Math.round(used * 100) / 100} of ${limit} used).` };
 }
 
-export async function recordUsage(kind: BudgetKind, units: number, amount = 0) {
-  const date = utcDay();
-  await db.growthUsage.upsert({ where: { date_kind: { date, kind } }, create: { date, kind, units, amount }, update: { units: { increment: units }, amount: { increment: amount } } });
+/** Gives a reservation back when the action failed or did not happen (never below zero). */
+export async function releaseBudget(r: Reservation) {
+  if (!r.ok) return;
+  if (COUNTED[r.kind]) await db.$executeRaw`UPDATE "GrowthUsage" SET "units" = GREATEST("units" - ${r.amount}, 0) WHERE "date" = ${r.date}::date AND "kind" = ${r.kind}`;
+  else await db.$executeRaw`UPDATE "GrowthUsage" SET "amount" = GREATEST("amount" - ${r.amount}::numeric, 0) WHERE "date" = ${r.date}::date AND "kind" = ${r.kind}`;
+}
+
+/* ───────────────────────── named claims (cross-process, insert-based) ───────────────────────── */
+
+/** Takes a named claim; exactly one caller wins, on any server. Stale claims older than `staleMs` can be taken over. */
+export async function takeClaim(key: string, staleMs?: number): Promise<boolean> {
+  const ins = await db.$queryRaw<{ key: string }[]>`INSERT INTO "GrowthClaim" ("key", "createdAt") VALUES (${key}, now()) ON CONFLICT ("key") DO NOTHING RETURNING "key"`;
+  if (ins.length) return true;
+  if (staleMs == null) return false;
+  const took = await db.$queryRaw<{ key: string }[]>`UPDATE "GrowthClaim" SET "createdAt" = now() WHERE "key" = ${key} AND "createdAt" < now() - (${staleMs} * interval '1 millisecond') RETURNING "key"`;
+  return took.length > 0;
+}
+
+export async function releaseClaim(key: string) {
+  await db.growthClaim.deleteMany({ where: { key } });
 }
 
 /* ───────────────────────── leads: dedupe into the existing CRM ───────────────────────── */

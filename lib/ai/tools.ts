@@ -55,6 +55,9 @@ export interface ToolDef<S extends z.ZodType = z.ZodType> {
   extra?: (input: z.infer<S>) => Permission[];
   /** read: returns data. draft: produces text only, changes nothing. write: changes data (approval-governed). */
   kind: "read" | "draft" | "write";
+  /** A draft that saves an inert review record (e.g. a post awaiting approval). Still a mutation: never allowed in a
+   *  read-only (INSTANT_READ) request or in OBSERVE mode. */
+  stores?: boolean;
   risk: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   /** External communication: approval is required in every mode. */
   alwaysApprove?: boolean;

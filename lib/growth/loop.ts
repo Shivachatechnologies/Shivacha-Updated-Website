@@ -1,16 +1,22 @@
 import "server-only";
 import { db } from "@/lib/db/client";
 import { audit } from "@/lib/audit";
-import { createEmployeeTask } from "@/lib/ai/workforce/engine";
+import { createEmployeeTask, taskTokenLimit } from "@/lib/ai/workforce/engine";
 import { ensureEmployees } from "@/lib/ai/workforce/employees";
+import { getAgentConfig } from "@/lib/ai/agents";
+import { aiLimits } from "@/lib/ai/cost";
+import { costOf, DEFAULT_MODEL } from "@/lib/ai/provider";
 import { isEnabled } from "@/lib/os/flags";
 import { stopReason, type GrowthChannel } from "./policy";
 import { getGrowthSettings } from "./settings";
-import { qualifyPending, utcDay } from "./engine";
+import { qualifyPending, releaseBudget, releaseClaim, reserveBudget, takeClaim, utcDay } from "./engine";
 import { processDueEmails } from "./email";
 import { publishDue, syncSocialMetrics } from "./social";
 
 export const GROWTH_TASK_SOURCE = "growth";
+/** Only one loop run at a time across all servers; a run that died is taken over after this long. */
+const LOOP_CLAIM = "growth-loop-running";
+const LOOP_STALE_MS = 20 * 60_000;
 
 interface Step {
   step: string;
@@ -20,15 +26,36 @@ interface Step {
 }
 
 /**
- * Scheduled autonomous work for one AI employee, created through the existing AI task system (the same path the
- * global execution router uses for BACKGROUND_TASK). At most one per employee per day. The employee runs under the
- * system identity, so every external action it proposes still goes to the Human Approval Center.
+ * The most one autonomous AI task can cost: its token cap priced at the employee's model input rate, plus one
+ * maximum-length reply. This is what the AI daily budget reserves, so actual spend can only be lower.
  */
-async function scheduleEmployeeTask(agentSlug: string, title: string, instructions: string): Promise<boolean> {
-  const exists = await db.aITask.count({ where: { agentSlug, source: GROWTH_TASK_SOURCE, title, createdAt: { gte: utcDay() } } });
-  if (exists) return false;
-  await createEmployeeTask({ agentSlug, title, instructions, priority: "MEDIUM", kind: "RECURRING", source: GROWTH_TASK_SOURCE });
-  return true;
+export async function aiTaskMaxCostUsd(agentSlug: string): Promise<number> {
+  const model = (await getAgentConfig(agentSlug))?.model || process.env.AI_MODEL || DEFAULT_MODEL;
+  return Math.ceil(costOf(model, { input: taskTokenLimit(), output: aiLimits().callMaxTokens }) * 100) / 100;
+}
+
+/**
+ * Scheduled autonomous work for one AI employee, created through the existing AI task system (the same path the
+ * global execution router uses for BACKGROUND_TASK). Order: daily claim (at most one per employee per day, atomic
+ * across servers) → AI budget reservation of the task's maximum cost → task. Anything that fails is given back.
+ */
+async function scheduleEmployeeTask(agentSlug: string, title: string, instructions: string): Promise<{ created: boolean; detail: string }> {
+  const key = `ai-task:${utcDay().toISOString().slice(0, 10)}:${agentSlug}:${title}`;
+  if (!(await takeClaim(key))) return { created: false, detail: "Already assigned today." };
+  const cost = await aiTaskMaxCostUsd(agentSlug);
+  const budget = await reserveBudget("aiDaily", cost);
+  if (!budget.ok) {
+    await releaseClaim(key);
+    return { created: false, detail: `AI budget: ${budget.reason} (this task can cost up to $${cost.toFixed(2)}).` };
+  }
+  try {
+    await createEmployeeTask({ agentSlug, title, instructions, priority: "MEDIUM", kind: "RECURRING", source: GROWTH_TASK_SOURCE });
+  } catch (e) {
+    await releaseBudget(budget);
+    await releaseClaim(key);
+    throw e;
+  }
+  return { created: true, detail: `Task assigned: ${title} (reserved up to $${cost.toFixed(2)} of the AI budget).` };
 }
 
 const AI_WORK: { channel: GrowthChannel; agent: string; title: string; instructions: string }[] = [
@@ -52,6 +79,11 @@ const AI_WORK: { channel: GrowthChannel; agent: string; title: string; instructi
   },
 ];
 
+/**
+ * The daily autonomous growth loop. Order is part of the safety contract:
+ * GROWTH flag (checked by the caller) → STOP ALL → AUTONOMOUS_GROWTH_MODE → one run at a time → only then any
+ * external provider call or AI task. With autonomous mode off nothing runs and no provider is contacted.
+ */
 export async function runGrowthLoop(trigger: "SCHEDULE" | "MANUAL" = "SCHEDULE", actorId?: string | null): Promise<number> {
   const s = await getGrowthSettings();
   const run = await db.growthRun.create({ data: { trigger, status: "RUNNING" } });
@@ -60,23 +92,32 @@ export async function runGrowthLoop(trigger: "SCHEDULE" | "MANUAL" = "SCHEDULE",
     await db.growthRun.update({ where: { id: run.id }, data: { status, steps: JSON.parse(JSON.stringify(steps)), error: error ?? null, finishedAt: new Date() } });
     await audit({ userId: actorId ?? null, action: "growth.loop", entity: "GrowthRun", entityId: run.id, metadata: { status, trigger, steps: steps.map((x) => `${x.step}:${x.status}`) } });
   };
+  if (s.stops.all) {
+    steps.push({ step: "all", status: "skipped", detail: "STOP ALL is on." });
+    await finish("SKIPPED");
+    return 0;
+  }
+  if (!s.autonomousMode) {
+    steps.push({ step: "autonomous", status: "skipped", detail: "Autonomous growth mode is off — nothing runs and no provider is contacted." });
+    await finish("SKIPPED");
+    return 0;
+  }
+  if (!(await takeClaim(LOOP_CLAIM, LOOP_STALE_MS))) {
+    steps.push({ step: "overlap", status: "skipped", detail: "Another growth loop run is in progress." });
+    await finish("SKIPPED");
+    return 0;
+  }
   try {
-    if (s.stops.all) {
-      steps.push({ step: "all", status: "skipped", detail: "STOP ALL is on." });
-      await finish("SKIPPED");
-      return 0;
-    }
-    // Reading real follower counts is not a marketing action, so it runs whenever a platform is connected.
-    const metrics = await syncSocialMetrics();
-    steps.push({ step: "social.metrics", status: metrics.some((m) => !m.ok) ? "failed" : metrics.length ? "done" : "skipped", detail: metrics.length ? metrics.map((m) => (m.ok ? `${m.platform}: ${m.followers}` : `${m.platform}: ${m.error}`)).join("; ") : "No social platform connected.", count: metrics.filter((m) => m.ok).length });
-
-    if (!s.autonomousMode) {
-      steps.push({ step: "autonomous", status: "skipped", detail: "Autonomous growth mode is off." });
-      await finish("SKIPPED");
-      return 0;
-    }
     const gate = (channel: GrowthChannel) => stopReason(s, { kind: "channel", channel, autonomous: true });
     let total = 0;
+
+    // Follower counts are pulled only when autonomous mode AND the social channel allow it (per-platform stops apply).
+    const so1 = gate("social");
+    if (so1) steps.push({ step: "social.metrics", status: "skipped", detail: so1 });
+    else {
+      const metrics = await syncSocialMetrics(s.stoppedPlatforms);
+      steps.push({ step: "social.metrics", status: metrics.some((m) => !m.ok) ? "failed" : metrics.length ? "done" : "skipped", detail: metrics.length ? metrics.map((m) => (m.ok ? `${m.platform}: ${m.followers}` : `${m.platform}: ${m.error}`)).join("; ") : "No social platform connected.", count: metrics.filter((m) => m.ok).length });
+    }
 
     const lg = gate("leadGen");
     if (lg) steps.push({ step: "leads.qualify", status: "skipped", detail: lg });
@@ -107,9 +148,9 @@ export async function runGrowthLoop(trigger: "SCHEDULE" | "MANUAL" = "SCHEDULE",
         await ensureEmployees();
         employeesReady = true;
       }
-      const created = await scheduleEmployeeTask(w.agent, w.title, w.instructions);
-      if (created) total++;
-      steps.push({ step: `ai.${w.agent}`, status: "done", detail: created ? `Task assigned: ${w.title}` : "Already assigned today." });
+      const r = await scheduleEmployeeTask(w.agent, w.title, w.instructions);
+      if (r.created) total++;
+      steps.push({ step: `ai.${w.agent}`, status: r.created || /Already assigned/.test(r.detail) ? "done" : "skipped", detail: r.detail });
     }
     await finish("SUCCEEDED");
     return total;
@@ -117,5 +158,7 @@ export async function runGrowthLoop(trigger: "SCHEDULE" | "MANUAL" = "SCHEDULE",
     steps.push({ step: "error", status: "failed", detail: (e as Error).message.slice(0, 300) });
     await finish("FAILED", (e as Error).message.slice(0, 1000));
     return 0;
+  } finally {
+    await releaseClaim(LOOP_CLAIM);
   }
 }

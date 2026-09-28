@@ -33,6 +33,9 @@ export interface NewTask {
 }
 
 /** Assigns work to an AI employee: creates the task, records it on the timeline and starts it when it is due. */
+/** Token cap for one AI employee task (all model calls together). Budgets reserve against this maximum. */
+export const taskTokenLimit = () => (Number(process.env.MAX_TASK_TOKENS) > 0 ? Number(process.env.MAX_TASK_TOKENS) : 400_000);
+
 export async function createEmployeeTask(t: NewTask) {
   const runAfter = t.runAfter ?? new Date();
   const task = await db.aITask.create({
@@ -214,7 +217,7 @@ export async function executeTask(id: string, opts: { provider?: AIProvider | nu
         system: brief(t, user, subtasks, await memoryPrompt(slug)),
         tools,
         maxIterations: 24,
-        requestTokens: Number(process.env.MAX_TASK_TOKENS) > 0 ? Number(process.env.MAX_TASK_TOKENS) : 400_000,
+        requestTokens: taskTokenLimit(),
         shouldStop: async () => {
           const now = await db.aITask.findUnique({ where: { id }, select: { status: true, agentSlug: true } });
           if (!now || now.agentSlug !== slug) return "Task was reassigned.";
