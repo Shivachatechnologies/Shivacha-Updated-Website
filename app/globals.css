@@ -195,8 +195,19 @@ body {
 }
 
 @layer components {
+  /*
+   * Public-site content container. Sections stay full-bleed (backgrounds span the viewport); content sits in this
+   * fluid inner container: gutters scale with the viewport (16px on phones → 56px on large desktops) and content
+   * widens with the screen up to a controlled maximum, so ultra-wide monitors get full-width bands with centred
+   * content instead of stretched text or ever-growing side gaps on normal desktops.
+   */
   .container-x {
-    @apply mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-8;
+    --gutter: clamp(1rem, 2.5vw, 3.5rem);
+    --content-max: 100rem; /* 1600px */
+    width: 100%;
+    max-width: calc(var(--content-max) + 2 * var(--gutter));
+    margin-inline: auto;
+    padding-inline: var(--gutter);
   }
   /* Type system: display (hero statements) · editorial (section narratives) · technical (mono metadata) · body. */
   .eyebrow {
@@ -206,13 +217,13 @@ body {
     @apply font-mono text-[11px] font-medium tracking-[0.08em] text-dim uppercase;
   }
   .h-display {
-    @apply text-[2.4rem] leading-[1.03] font-medium tracking-[-0.04em] text-balance sm:text-[3.5rem] lg:text-[4.1rem] xl:text-[4.5rem];
+    @apply text-[2.4rem] leading-[1.03] font-medium tracking-[-0.04em] text-balance sm:text-[3.5rem] lg:text-[4.1rem] xl:text-[4.5rem] 2xl:text-[5rem];
   }
   .h-page {
-    @apply text-[2.1rem] leading-[1.06] font-medium tracking-[-0.035em] text-balance sm:text-[2.9rem] lg:text-[3.35rem];
+    @apply text-[2.1rem] leading-[1.06] font-medium tracking-[-0.035em] text-balance sm:text-[2.9rem] lg:text-[3.35rem] 2xl:text-[3.75rem];
   }
   .h-section {
-    @apply text-[1.8rem] leading-[1.1] font-medium tracking-[-0.03em] text-balance sm:text-[2.35rem] lg:text-[2.7rem];
+    @apply text-[1.8rem] leading-[1.1] font-medium tracking-[-0.03em] text-balance sm:text-[2.35rem] lg:text-[2.7rem] 2xl:text-[3rem];
   }
   .h-card {
     @apply text-lg leading-snug font-semibold tracking-[-0.01em];
@@ -327,6 +338,17 @@ body {
   }
   .marquee:hover {
     animation-play-state: paused;
+  }
+  /* Reduced motion: the strip stops and becomes a touch/keyboard scrollable row instead. */
+  @media (prefers-reduced-motion: reduce) {
+    .marquee {
+      animation: none !important;
+    }
+    .marquee-viewport {
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scrollbar-width: thin;
+    }
   }
   .text-spectrum {
     background-image: linear-gradient(90deg, #33aaff, #0195ff 35%, #22d3ee 75%, #66bfff);
