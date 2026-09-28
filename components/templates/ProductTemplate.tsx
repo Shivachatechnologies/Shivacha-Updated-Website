@@ -127,7 +127,7 @@ export function ProductTemplate({ product }: { product: Product }) {
       </Section>
 
       <Section>
-        <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-center">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-center">
           <div>
             <SectionHeader eyebrow="Product preview" title="Designed for operators and end users." className="mb-8" />
             <ul className="space-y-3">
