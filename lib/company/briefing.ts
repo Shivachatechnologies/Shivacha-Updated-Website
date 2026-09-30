@@ -5,6 +5,11 @@ import { dealMetrics } from "@/lib/sales/deals";
 import { financeSummary } from "@/lib/finance/core";
 import { can, type RoleName } from "@/lib/auth/permissions";
 import { startOfLocalDay, periodStart } from "@/lib/ai/workforce/profiles";
+import type { DataNature } from "./data-rules";
+import { freshness } from "./data-rules";
+import { adsProviders, ADS_PROVIDER_KEYS } from "@/lib/ads/providers";
+import { ga4Summary, gscSummary } from "@/lib/integrations/google";
+import { hydrateVault, secretValue } from "@/lib/integrations/vault";
 
 /**
  * CEO briefing for TODAY / THIS WEEK / THIS MONTH, computed from live records every time it is opened.
@@ -13,7 +18,7 @@ import { startOfLocalDay, periodStart } from "@/lib/ai/workforce/profiles";
  * Sections a role may not see (finance, deals) are omitted, not zeroed.
  */
 
-export type Nature = "REAL" | "ESTIMATED" | "MANUAL" | "UNAVAILABLE";
+export type Nature = DataNature;
 export interface Metric {
   label: string;
   value: string;
@@ -97,10 +102,11 @@ export async function buildBriefing(period: Briefing["period"], role: RoleName, 
     db.lead.findMany({ where: { archivedAt: null, growthTier: "SALES_READY", qualifiedAt: range }, orderBy: { qualifiedAt: "desc" }, take: 5, select: { id: true, name: true, company: true } }),
   ]);
 
+  const external = await externalMarketingMetrics(from, to);
   const sections: BriefSection[] = [
     { key: "workforce", title: "AI workforce", metrics: [real("Tasks completed", tasksDone, "/admin/ai/tasks?view=done"), real("Tasks failed", tasksFailed, "/admin/ai/tasks?view=failed"), real("Working now", running), real("Queued / waiting", waiting), real("Approvals required", approvalsPending, "/admin/ai/approvals"), real("Open escalations & blockers", escalationsOpen, "/admin/company"), real("AI cost (USD)", `$${Number(aiCost._sum.costUsd ?? 0).toFixed(2)}`, "/admin/ai/costs", "Metered per model call")] },
     { key: "leads", title: "Leads & lead generation", metrics: [real("New CRM leads", newLeads, "/admin/leads"), real("Qualified leads", qualified), real("Sales-ready leads", salesReady), real("Prospects discovered", prospects, "/admin/marketing/leads"), real("Prospects qualified", prospectsQualified)] },
-    { key: "marketing", title: "Marketing", metrics: [real("Posts published (platform-confirmed)", posts, "/admin/marketing/social"), real("Sequence emails sent", emails, "/admin/marketing/email"), real("Website visitors", visitors, "/admin/visitors", "First-party visitor tracking"), spend.length ? { label: "Campaign spend", value: money(Object.entries(spend.reduce<Record<string, number>>((a, m) => ({ ...a, [m.campaign.currency]: (a[m.campaign.currency] ?? 0) + Number(m.spend) }), {})).map(([currency, amount]) => ({ currency, amount }))), nature: spend.every((s) => s.source === "MANUAL") ? "MANUAL" : "REAL", href: "/admin/marketing/campaigns", note: "Entered on campaigns; no ad platform is synced" } : { label: "Campaign spend", value: "—", nature: "UNAVAILABLE", note: "No spend entered and no ad platform connected" }, { label: "Ad platform results", value: "—", nature: "UNAVAILABLE", note: "Ads adapters are not implemented" }] },
+    { key: "marketing", title: "Marketing", metrics: [real("Posts published (platform-confirmed)", posts, "/admin/marketing/social"), real("Sequence emails sent", emails, "/admin/marketing/email"), real("Website visitors", visitors, "/admin/visitors", "First-party visitor tracking"), spend.length ? { label: "Campaign spend", value: money(Object.entries(spend.reduce<Record<string, number>>((a, m) => ({ ...a, [m.campaign.currency]: (a[m.campaign.currency] ?? 0) + Number(m.spend) }), {})).map(([currency, amount]) => ({ currency, amount }))), nature: spend.every((s) => s.source === "MANUAL") ? "MANUAL" : "REAL", href: "/admin/marketing/campaigns", note: "Entered on campaigns (MANUAL) or synced from connected ad platforms" } : { label: "Campaign spend", value: "—", nature: "UNAVAILABLE", note: "No spend entered or synced in this period" }, ...external] },
     { key: "projects", title: "Projects & delivery", metrics: [real("Active projects", activeProjects, "/admin/projects"), real("Red-health projects", redProjects.length), overdueTasks == null ? { label: "Overdue project tasks", value: "—", nature: "UNAVAILABLE" } : real("Overdue project tasks", overdueTasks, "/admin/tasks")] },
     { key: "customers", title: "Customers", metrics: [activeClients == null ? { label: "Active clients", value: "—", nature: "UNAVAILABLE" } : real("Active clients", activeClients, "/admin/clients"), real("Open tickets", openTickets, "/admin/support"), real("Tickets past SLA", breached)] },
   ];
@@ -127,4 +133,40 @@ export async function buildBriefing(period: Briefing["period"], role: RoleName, 
     approvals: approvals.map((a) => ({ title: a.action, detail: `${a.agentSlug} · ${a.risk.toLowerCase()} risk`, href: `/admin/ai/approvals/${a.id}` })),
     decisions: decisions.map((m) => ({ title: m.subject, detail: m.body.slice(0, 200), href: m.objectiveId ? `/admin/company/objectives/${m.objectiveId}` : m.taskId ? `/admin/ai/tasks/${m.taskId}` : undefined })),
   };
+}
+
+/**
+ * Ad platform and website analytics for the period, each with its real nature: REAL from the provider (or synced
+ * rows), STALE when the last ad sync is older than a day, NOT_CONNECTED when the provider is not connected.
+ */
+async function externalMarketingMetrics(from: Date, to: Date): Promise<Metric[]> {
+  await hydrateVault();
+  const out: Metric[] = [];
+  const adsConnected = ADS_PROVIDER_KEYS.some((k) => adsProviders[k].connected());
+  const [logs, lastSync] = await Promise.all([
+    db.adSpendLog.findMany({ where: { date: { gte: new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate())), lte: to } }, select: { spend: true, clicks: true, conversions: true, adCampaign: { select: { currency: true } } } }),
+    db.adCampaign.aggregate({ where: { status: "ACTIVE" }, _min: { lastSyncedAt: true } }),
+  ]);
+  if (!adsConnected && !logs.length) out.push({ label: "Ad platform results", value: "—", nature: "NOT_CONNECTED", href: "/admin/marketing/ads", note: "No ad account connected" });
+  else if (!logs.length) out.push({ label: "Ad platform results", value: "—", nature: "UNAVAILABLE", href: "/admin/marketing/ads", note: "No platform-reported results in this period" });
+  else {
+    const spend = logs.reduce<Record<string, number>>((a, l) => ({ ...a, [l.adCampaign.currency]: Math.round(((a[l.adCampaign.currency] ?? 0) + Number(l.spend)) * 100) / 100 }), {});
+    const clicks = logs.reduce((a, l) => a + l.clicks, 0);
+    const conv = logs.reduce((a, l) => a + l.conversions, 0);
+    const nature = lastSync._min.lastSyncedAt ? freshness(lastSync._min.lastSyncedAt, 24, adsConnected) : "REAL";
+    out.push({ label: "Ad spend (platform-reported)", value: Object.entries(spend).map(([c, v]) => fmtMoney(String(v), c)).join(" · "), nature, href: "/admin/marketing/ads", note: `${clicks.toLocaleString("en-US")} clicks · ${conv.toLocaleString("en-US")} conversions` });
+  }
+  const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86400_000));
+  const google = !!secretValue("GOOGLE_REFRESH_TOKEN");
+  if (!google || !secretValue("GA4_PROPERTY_ID")) out.push({ label: "Website sessions (GA4)", value: "—", nature: "NOT_CONNECTED", href: "/admin/integrations/connect" });
+  else {
+    const r = await ga4Summary(days);
+    out.push(r.ok ? { label: "Website sessions (GA4)", value: r.data.sessions.toLocaleString("en-US"), nature: "REAL", note: `${r.data.conversions.toLocaleString("en-US")} conversions · last ${days} day(s)` } : { label: "Website sessions (GA4)", value: "—", nature: "UNAVAILABLE", note: r.error });
+  }
+  if (!google || !secretValue("GSC_SITE_URL")) out.push({ label: "Search clicks (Search Console)", value: "—", nature: "NOT_CONNECTED", href: "/admin/integrations/connect" });
+  else {
+    const r = await gscSummary(Math.max(days, 3));
+    out.push(r.ok ? { label: "Search clicks (Search Console)", value: r.data.clicks.toLocaleString("en-US"), nature: "REAL", note: "Search Console data lags 2–3 days" } : { label: "Search clicks (Search Console)", value: "—", nature: "UNAVAILABLE", note: r.error });
+  }
+  return out;
 }

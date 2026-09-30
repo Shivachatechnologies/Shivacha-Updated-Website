@@ -331,6 +331,9 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
         beforeCall: async () => {
           const stop = input.task ? await input.task.shouldStop() : null;
           if (stop) throw new StopRequested(stop);
+          // A kill switch turned on while this run is in progress stops it before the next model call.
+          const halt = await growthStop({ kind: "ai", agent: cfg.spec.slug });
+          if (halt) throw new StopRequested(`AI is stopped by a kill switch: ${halt}`);
           const tokenLimit = input.task?.requestTokens ?? limits.requestTokens;
           if (tokens >= tokenLimit) throw new BudgetError(`Request token limit reached (${tokenLimit.toLocaleString()} tokens).`);
           await assertBudget(cfg.spec.slug, cfg.dailyCostLimit);

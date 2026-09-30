@@ -6,6 +6,7 @@ import { engagementOf, getSocialStrategy, parseMetrics } from "@/lib/growth/soci
 import { saveSocialStrategyAction, syncSocialMetricsAction } from "@/lib/company/actions";
 import { DataTable, Kpi, KpiGrid, StatusBadge, TextArea, TextField } from "@/components/admin/os";
 import { EmptyState, PageHeader, fmtDate } from "@/components/admin/ui";
+import { freshness } from "@/lib/company/data-rules";
 import { ActionForm } from "@/components/admin/forms";
 import { SubmitButton } from "@/components/admin/client";
 import { GROWTH_CRUMB, GrowthTabs } from "@/components/admin/growth/tabs";
@@ -65,7 +66,7 @@ export default async function SocialPerformancePage() {
           </Card>
           <Card title="Top posts by engagement">
             {top.length ? (
-              <DataTable rows={top} columns={[{ header: "Post", cell: (r) => <span className="line-clamp-2 max-w-md text-sm">{r.body}</span> }, { header: "Platform", cell: (r) => PLATFORM_LABELS[r.platform as SocialPlatform] ?? r.platform }, { header: "Published", cell: (r) => <span className="text-xs">{fmtDate(r.publishedAt!, true)}</span> }, { header: "Engagement", cell: (r) => dash(r.eng) }, { header: "Synced", cell: (r) => <span className="text-xs">{fmtDate(r.metricsAt!, true)}</span> }]} />
+              <DataTable rows={top} columns={[{ header: "Post", cell: (r) => <span className="line-clamp-2 max-w-md text-sm">{r.body}</span> }, { header: "Platform", cell: (r) => PLATFORM_LABELS[r.platform as SocialPlatform] ?? r.platform }, { header: "Published", cell: (r) => <span className="text-xs">{fmtDate(r.publishedAt!, true)}</span> }, { header: "Engagement", cell: (r) => dash(r.eng) }, { header: "Synced", cell: (r) => <span className="text-xs">{fmtDate(r.metricsAt!, true)} <Nature value={freshness(r.metricsAt, 24, true, now.getTime())} /></span> }]} />
             ) : (
               <EmptyState title="No platform metrics yet" description="Metrics appear after posts are published through a connected platform and synced." />
             )}

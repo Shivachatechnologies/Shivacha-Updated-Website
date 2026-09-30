@@ -2,6 +2,8 @@ import Link from "next/link";
 import { can } from "@/lib/auth/permissions";
 import { requireAccess } from "@/lib/os/guard";
 import { dealRisks, leadPriorities, nextBestActions, salesForecast } from "@/lib/company/sales";
+import { revenueAttribution } from "@/lib/company/analytics";
+import { fmtDate } from "@/components/admin/ui";
 import { agentBySlug } from "@/lib/ai/catalog";
 import { fmtMoney } from "@/lib/os/money";
 import { DataTable, StatusBadge } from "@/components/admin/os";
@@ -14,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function SalesAutonomyPage() {
   const user = await requireAccess("leads:view", "AI_WORKFORCE");
   const deals = can(user.role, "deals:view");
-  const [prio, nba, risks, forecast] = await Promise.all([leadPriorities(20), deals ? nextBestActions(30) : Promise.resolve([]), deals ? dealRisks(20) : Promise.resolve([]), deals ? salesForecast() : Promise.resolve(null)]);
+  const [prio, nba, risks, forecast, attribution] = await Promise.all([leadPriorities(20), deals ? nextBestActions(30) : Promise.resolve([]), deals ? dealRisks(20) : Promise.resolve([]), deals ? salesForecast() : Promise.resolve(null), deals ? revenueAttribution(90) : Promise.resolve(null)]);
   return (
     <>
       <PageHeader title="Sales autonomy" description="What the AI sales team works from: lead priorities, next best actions, deal risk and the pipeline forecast — all computed from live CRM records. Outreach, proposals and follow-ups are prepared by AI employees and follow the approval policy for anything sent to a customer." crumbs={[COMPANY_CRUMB, { label: "Sales" }]} />
@@ -40,6 +42,26 @@ export default async function SalesAutonomyPage() {
           </Card>
         )}
       </div>
+      {attribution && (
+        <div className="mt-4">
+          <Card title={<>Revenue attribution — won deals {fmtDate(attribution.since)} to {fmtDate(attribution.until)} <Nature value="REAL" /></>}>
+            {attribution.rows.length ? (
+              <DataTable
+                rows={attribution.rows.map((r, i) => ({ id: String(i), ...r }))}
+                columns={[
+                  { header: "Quality", cell: (r) => <StatusBadge value={r.quality === "CAMPAIGN" ? "DONE" : r.quality === "SOURCE" ? "IN_PROGRESS" : "PENDING"} text={r.quality.toLowerCase()} /> },
+                  { header: "Source", cell: (r) => r.source },
+                  { header: "Campaign", cell: (r) => r.campaign ?? "—" },
+                  { header: "Channel", cell: (r) => r.channel },
+                  { header: "Deals", cell: (r) => r.deals },
+                  { header: "Won value", cell: (r) => fmtMoney(String(r.value), r.currency) },
+                ]}
+              />
+            ) : <p className="text-sm text-dim">No deals won in the period.</p>}
+            <p className="mt-2 text-xs text-dim">From the lead that started each deal (UTM campaign / campaign name → source → none). Values stay in their own currency. UNATTRIBUTED rows are deals without a lead or source — nothing is guessed.</p>
+          </Card>
+        </div>
+      )}
     </>
   );
 }

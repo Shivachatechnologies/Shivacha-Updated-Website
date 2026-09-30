@@ -234,6 +234,21 @@ export async function disconnectIntegrationAction(key: string): Promise<ActionSt
   }
 }
 
+/** Runs the provider certification procedure (read-only checks plus the explicitly ticked controlled actions). */
+export async function certifyProviderAction(key: string, _: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("integrations:manage", "INTEGRATIONS");
+    const createPausedCampaign = form.get("createPausedCampaign") === "on";
+    // Creating an ad campaign (paused) is an advertising action: it needs growth control like any other ad change.
+    if (createPausedCampaign && !can(user.role, "growth:control")) throw new UserError("Creating a paused test campaign needs growth control permission.");
+    const { certifyProvider } = await import("@/lib/integrations/certify");
+    const r = await certifyProvider(key, user, { sendTestEmail: form.get("sendTestEmail") === "on", createPausedCampaign });
+    return okThen("/admin/integrations/certification", `${integrationByKey(key)?.name ?? key}: ${r.verdict.replace(/_/g, " ").toLowerCase()} (${r.steps.map((s) => `${s.name} — ${s.result}`).join("; ")})`.slice(0, 500));
+  } catch (e) {
+    return fail(e instanceof UserError ? e : new UserError((e as Error).message), "integrations");
+  }
+}
+
 /** Chooses which Facebook Page (and its Instagram account) the Meta sign-in should use. */
 export async function selectMetaPageAction(_: ActionState, form: FormData): Promise<ActionState> {
   try {

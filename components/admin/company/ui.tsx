@@ -2,9 +2,11 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Tabs } from "@/components/admin/os";
 import { cn } from "@/lib/cn";
+import type { DataNature } from "@/lib/company/data-rules";
 
 const ITEMS = [
   ["command", "Command Center", "/admin/company"],
+  ["today", "Today", "/admin/company/today"],
   ["objectives", "Objectives", "/admin/company/objectives"],
   ["org", "Organization", "/admin/company/org"],
   ["briefing", "CEO Briefing", "/admin/company/briefing"],
@@ -32,10 +34,10 @@ export function Meter({ pct, tone = "blue" }: { pct: number; tone?: "blue" | "gr
   );
 }
 
-/** REAL / ESTIMATED / MANUAL / UNAVAILABLE marker next to a number. */
-export function Nature({ value }: { value: "REAL" | "ESTIMATED" | "MANUAL" | "UNAVAILABLE" }) {
-  const cls = { REAL: "text-emerald-700 border-emerald-500/30", ESTIMATED: "text-amber-700 border-amber-500/30", MANUAL: "text-sky-700 border-sky-500/30", UNAVAILABLE: "text-dim border-line" }[value];
-  return <span className={cn("rounded border px-1 py-px font-mono text-[9.5px] tracking-wide", cls)}>{value}</span>;
+/** REAL / ESTIMATED / MANUAL / UNAVAILABLE / NOT_CONNECTED / STALE marker next to a number (see lib/company/data-rules.ts). */
+export function Nature({ value }: { value: DataNature }) {
+  const cls = { REAL: "text-emerald-700 border-emerald-500/30", ESTIMATED: "text-amber-700 border-amber-500/30", MANUAL: "text-sky-700 border-sky-500/30", UNAVAILABLE: "text-dim border-line", NOT_CONNECTED: "text-dim border-line", STALE: "text-amber-700 border-amber-500/30" }[value];
+  return <span className={cn("rounded border px-1 py-px font-mono text-[9.5px] tracking-wide", cls)}>{value.replace("_", " ")}</span>;
 }
 
 export function Card({ title, href, children, action, className }: { title: ReactNode; href?: string; children: ReactNode; action?: ReactNode; className?: string }) {

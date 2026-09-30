@@ -222,6 +222,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { label: "Integrations", href: "/admin/integrations", icon: "Plug", permission: "integrations:view", flag: "INTEGRATIONS" },
       { label: "API & Integrations", href: "/admin/integrations/connect", icon: "KeyRound", permission: "integrations:view", flag: "INTEGRATIONS" },
+      { label: "Provider certification", href: "/admin/integrations/certification", icon: "ShieldCheck", permission: "integrations:view", flag: "INTEGRATIONS" },
       { label: "Security", href: "/admin/security", icon: "Lock", permission: "security:view" },
       { label: "System Health", href: "/admin/system", icon: "HeartPulse", permission: "system:view" },
     ],

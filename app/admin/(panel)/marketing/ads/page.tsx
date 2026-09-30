@@ -8,6 +8,7 @@ import { changeAdBudgetAction, createAdCampaignAction, launchAdAction, pauseAdAc
 import { fmtMoney } from "@/lib/os/money";
 import { CheckField, DataTable, Kpi, KpiGrid, SelectField, StatusBadge, TextArea, TextField } from "@/components/admin/os";
 import { EmptyState, PageHeader, fmtDate } from "@/components/admin/ui";
+import { freshness } from "@/lib/company/data-rules";
 import { ActionForm } from "@/components/admin/forms";
 import { ConfirmButton, SubmitButton } from "@/components/admin/client";
 import { GROWTH_CRUMB, GrowthTabs } from "@/components/admin/growth/tabs";
@@ -20,7 +21,8 @@ export default async function AdsPage() {
   const user = await requireAccess("growth:view", "GROWTH");
   const control = can(user.role, "growth:control");
   const manage = can(user.role, "growth:manage") && can(user.role, "marketing:manage");
-  const since = new Date(new Date().getTime() - 13 * 86400_000);
+  const renderedAt = new Date().getTime();
+  const since = new Date(renderedAt - 13 * 86400_000);
   const [providers, policy, rows, logs, campaigns] = await Promise.all([
     adsReady(),
     getAdsPolicy(),
@@ -60,7 +62,7 @@ export default async function AdsPage() {
                   { header: "Campaign", cell: (r) => <span className="font-medium">{r.name}<span className="block text-xs text-dim">{r.provider} · {r.externalId ?? "—"}</span>{r.error && <span className="block max-w-72 text-[11px] text-amber-700">{r.error}</span>}</span> },
                   { header: "Status", cell: (r) => <StatusBadge value={r.status} /> },
                   { header: "Daily", cell: (r) => fmtMoney(r.dailyBudget.toString(), r.currency) },
-                  { header: "Spend", cell: (r) => <span>{fmtMoney(r.spend.toString(), r.currency)}<span className="block text-[11px] text-dim">{r.lastSyncedAt ? `synced ${fmtDate(r.lastSyncedAt, true)}` : "not synced"}</span></span> },
+                  { header: "Spend", cell: (r) => <span>{fmtMoney(r.spend.toString(), r.currency)} <Nature value={freshness(r.lastSyncedAt, 24, providers.find((p) => p.key === r.provider)?.connected ?? false, renderedAt)} /><span className="block text-[11px] text-dim">{r.lastSyncedAt ? `synced ${fmtDate(r.lastSyncedAt, true)}` : "not synced"}</span></span> },
                   { header: "Results", cell: (r) => <span className="text-xs">{r.impressions.toLocaleString("en-US")} impr · {r.clicks} clicks · {r.conversions} conv</span> },
                   {
                     header: "",

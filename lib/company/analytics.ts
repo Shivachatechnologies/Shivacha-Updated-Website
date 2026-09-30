@@ -3,6 +3,7 @@ import { db } from "@/lib/db/client";
 import { ALL_AGENTS } from "@/lib/ai/catalog";
 import { placementOf, regionOf, REGIONS } from "./org";
 import { leadGenFunnel, type Funnel } from "./leadgen";
+import { attributionOf } from "./data-rules";
 
 /**
  * AI company analytics. Every number is computed from existing rows (leads, deals, prospects, AI tasks, AI usage).
@@ -224,4 +225,35 @@ export async function stuckTasks(limit = 25): Promise<StuckTask[]> {
   });
   const why: Record<string, string> = { WAITING: "waiting on delegated work or a dependency", AWAITING_APPROVAL: "waiting for a person's approval", PAUSED: "paused", QUEUED: "queued past its deadline", RUNNING: "running for over 2 hours" };
   return rows.map((t) => ({ id: t.id, agentSlug: t.agentSlug, title: t.title, status: t.status, hours: Math.round((now - t.updatedAt.getTime()) / 3600_000), overdue: !!t.deadline && t.deadline.getTime() < now, reason: why[t.status] ?? t.status }));
+}
+
+export interface AttributionRow {
+  quality: "CAMPAIGN" | "SOURCE" | "UNATTRIBUTED";
+  source: string;
+  campaign: string | null;
+  channel: string;
+  currency: string;
+  deals: number;
+  value: number;
+}
+
+/**
+ * Won revenue attributed to the lead that started each deal (source, campaign, channel), per currency, for the
+ * period. Attribution quality is stated per row; deals without a lead or source are UNATTRIBUTED — never guessed.
+ */
+export async function revenueAttribution(days = 90): Promise<{ rows: AttributionRow[]; since: Date; until: Date }> {
+  const until = new Date();
+  const since = new Date(until.getTime() - days * DAY);
+  const deals = await db.deal.findMany({ where: { deletedAt: null, stage: "WON", wonAt: { gte: since } }, select: { value: true, currency: true, lead: { select: { source: true, campaign: true, utmSource: true, utmMedium: true, utmCampaign: true } } } });
+  const map = new Map<string, AttributionRow>();
+  for (const d of deals) {
+    const a = attributionOf(d.lead);
+    const k = [a.quality, a.source, a.campaign, a.channel, d.currency].join("|");
+    const r = map.get(k) ?? { ...a, currency: d.currency, deals: 0, value: 0 };
+    r.deals++;
+    r.value = Math.round((r.value + Number(d.value)) * 100) / 100;
+    map.set(k, r);
+  }
+  const order = { CAMPAIGN: 0, SOURCE: 1, UNATTRIBUTED: 2 };
+  return { rows: [...map.values()].sort((a, b) => order[a.quality] - order[b.quality] || a.currency.localeCompare(b.currency) || b.value - a.value), since, until };
 }
