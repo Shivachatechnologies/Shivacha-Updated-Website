@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAccess } from "@/lib/os/guard";
+import { can } from "@/lib/auth/permissions";
 import { companyDay } from "@/lib/company/today";
 import { agentBySlug } from "@/lib/ai/catalog";
 import { DataTable, Kpi, KpiGrid, StatusBadge, str, type SP } from "@/components/admin/os";
@@ -10,11 +11,13 @@ export const metadata = { title: "What the AI company did today" };
 export const dynamic = "force-dynamic";
 
 export default async function TodayPage({ searchParams }: { searchParams: Promise<SP> }) {
-  await requireAccess("ai:view", "AI_WORKFORCE");
+  // A company-wide record of the day is an executive view; audit entries also need audit-log access.
+  const user = await requireAccess("executive:view", "AI_WORKFORCE");
+  const audit = can(user.role, "audit:view");
   const sp = await searchParams;
   const raw = str(sp, "d", 10);
   const day = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(`${raw}T00:00:00Z`) : new Date();
-  const d = await companyDay(day);
+  const d = await companyDay(day, 300, { audit });
   const label = d.from.toISOString().slice(0, 10);
   const prev = new Date(d.from.getTime() - 86400_000).toISOString().slice(0, 10);
   const next = new Date(d.from.getTime() + 86400_000).toISOString().slice(0, 10);
@@ -51,7 +54,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         </Card>
       </div>
       <div className="mt-5">
-        <Card title={`Timeline (${d.events.length})`}>
+        <Card title={`Timeline (${d.events.length})${audit ? "" : " — AI activity and approvals; audit entries need audit-log access"}`}>
           <DataTable
             rows={d.events.map((e, i) => ({ id: String(i), ...e }))}
             columns={[

@@ -39,14 +39,15 @@ const PROVIDER_OF: [RegExp, string][] = [[/^ads\./, "ads"], [/^integration\.oaut
 
 const utcDay = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 
-export async function companyDay(day = new Date(), limit = 300): Promise<CompanyDay> {
+/** `audit`: include audit-log entries (only for people who may read the audit log). */
+export async function companyDay(day = new Date(), limit = 300, opts: { audit?: boolean } = { audit: true }): Promise<CompanyDay> {
   const from = utcDay(day);
   const to = new Date(from.getTime() + 86400_000);
   const range = { gte: from, lt: to };
   const [activity, approvals, audits, usage, calls, done, failed, pending, escalations, blockers, posts, emails, prospects, adsCreated, adsLaunched] = await Promise.all([
     db.aIActivity.findMany({ where: { createdAt: range }, orderBy: { createdAt: "desc" }, take: limit }),
     db.aIApproval.findMany({ where: { decidedAt: range }, orderBy: { decidedAt: "desc" }, take: 100, select: { id: true, agentSlug: true, tool: true, status: true, decidedAt: true, taskId: true, decidedBy: { select: { name: true } } } }),
-    db.auditLog.findMany({ where: { createdAt: range, OR: AUDIT_PREFIXES.map((p) => ({ action: { startsWith: p } })) }, orderBy: { createdAt: "desc" }, take: limit, select: { action: true, entity: true, entityId: true, metadata: true, createdAt: true, user: { select: { name: true } } } }),
+    opts.audit ? db.auditLog.findMany({ where: { createdAt: range, OR: AUDIT_PREFIXES.map((p) => ({ action: { startsWith: p } })) }, orderBy: { createdAt: "desc" }, take: limit, select: { action: true, entity: true, entityId: true, metadata: true, createdAt: true, user: { select: { name: true } } } }) : Promise.resolve([]),
     db.aIUsage.groupBy({ by: ["agentSlug"], where: { createdAt: range }, _sum: { costUsd: true }, _count: { _all: true } }),
     db.integrationUsage.findMany({ where: { date: from } }),
     db.aITask.count({ where: { status: "DONE", completedAt: range } }),
