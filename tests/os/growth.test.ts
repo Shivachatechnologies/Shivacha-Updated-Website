@@ -196,11 +196,13 @@ test("controls: every switch shown in the UI is read by server code; the rest ar
     assert.doesNotMatch(src, new RegExp(`channel: "${c}"`), `${c} is not wired anywhere`);
   }
   assert.deepEqual([...CHANNEL_KEYS].sort(), [...IMPLEMENTED_CHANNELS, ...Object.keys(NOT_IMPLEMENTED_CHANNELS)].sort());
-  assert.ok(!ACTIVE_KILL_KEYS.includes("ads"), "the paid-ads kill switch is not offered");
+  // Phase 34: the Advertising OS makes the paid-ads kill switch real (it stops create/launch/budget increases).
+  assert.ok(ACTIVE_KILL_KEYS.includes("ads"), "the paid-ads kill switch is offered now that ad actions exist");
   const stale = parseGrowthSettings({ channels: { paidAds: true, seo: true, community: true, email: true }, stops: { ads: true } });
   assert.equal(stale.channels.paidAds || stale.channels.seo || stale.channels.community, false, "unimplemented channels can never read as on");
   assert.equal(stale.channels.email, true);
-  assert.equal(stale.stops.ads, false);
+  assert.equal(stale.stops.ads, true, "a stored ads stop is honoured");
+  assert.match(stopReason(stale, { kind: "channel", channel: "paidAds" }) ?? "", /paid ads/i);
   const page = readFileSync("app/admin/(panel)/marketing/autonomous/page.tsx", "utf8");
   assert.match(page, /IMPLEMENTED_CHANNELS\.map/);
   assert.match(page, /ACTIVE_KILL_KEYS\.map/);

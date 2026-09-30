@@ -452,8 +452,26 @@ test("Phase 29 scenario: “100 qualified international leads per day” runs en
   assert.equal(await executeTask(by("sdr").id, { provider: scripted([() => ["draftEmail", { subject: "Compliance-ready payments", body: "Hi Priya, …" }], () => ["completeTask", { summary: "2 outreach drafts prepared." }]]) }), "DONE");
   assert.equal(await executeTask(by("content-manager").id, { provider: scripted([() => ["draftContentAsset", { kind: "ARTICLE", title: `Compliance-ready payments ${RUN}`, body: "Draft article." }], () => ["completeTask", { summary: "Article drafted for review." }]]) }), "DONE");
   assert.ok(await db.contentAsset.findFirst({ where: { title: `Compliance-ready payments ${RUN}`, status: "IN_REVIEW" } }), "content waits for review, not published");
+  // Social: platform drafts into the approval queue (never published here).
+  assert.equal(await executeTask(by("social-manager").id, { provider: scripted([() => ["getSocialPerformance", {}], () => ["draftSocialPost", { platform: "LINKEDIN", body: `Compliance-ready payments for fintech teams ${RUN}` }], () => ["completeTask", { summary: "1 LinkedIn draft queued for approval." }]]) }), "DONE");
+  assert.ok(await db.socialPost.findFirst({ where: { body: { contains: `Compliance-ready payments for fintech teams ${RUN}` }, status: { not: "PUBLISHED" } } }), "social post is a draft awaiting approval");
+  // Paid media: no ad account CONNECTED → the blocker is reported and nothing is created or spent.
+  const adsBefore = await db.adCampaign.count();
+  assert.equal(await executeTask(by("campaign-manager").id, { provider: scripted([
+    () => ["getAdCampaigns", {}],
+    (prev) => {
+      const text = typeof prev[0] === "string" ? prev[0] : JSON.stringify(prev[0]);
+      assert.equal((text.match(/"status":"NOT_CONNECTED"/g) ?? []).length, 3, `ad accounts reported honestly: ${text.slice(0, 300)}`);
+      assert.doesNotMatch(text, /"CONNECTED"/);
+      return ["reportBlocker", { reason: "No ad account CONNECTED (Meta Ads, Google Ads, LinkedIn Ads) — no paid media planned." }];
+    },
+    () => ["completeTask", { summary: "Blocked: no ad account connected; no spend planned." }],
+  ]) }), "DONE");
+  assert.equal(await db.adCampaign.count(), adsBefore, "no ad campaign created");
+  assert.ok(await db.aIWorkMessage.findFirst({ where: { objectiveId: id, kind: "BLOCKER", body: { contains: "No ad account CONNECTED" } } }), "blocker reached the manager");
   // 22–23: analytics and optimisation from real funnel data.
   assert.equal(await executeTask(by("revenue-analyst").id, { provider: scripted([() => ["getLeadGenFunnel", { campaignId: o.campaignId }], () => ["completeTask", { summary: "2 discovered, 2 qualified; bottleneck: replies not yet tracked." }]]) }), "DONE");
+  assert.equal(await executeTask(by("growth-director").id, { provider: scripted([() => ["getLeadGenFunnel", { campaignId: o.campaignId }], () => ["getSocialPerformance", {}], () => ["getAdCampaigns", {}], () => ["completeTask", { summary: "Next: raise daily discovery; connect an ad account before any paid test." }]]) }), "DONE");
   // 24: the Chief of Staff reviews every result and reports to the CEO.
   const root = await db.aITask.findUniqueOrThrow({ where: { id: o.rootTaskId! } });
   assert.equal(root.status, "QUEUED", "Chief of Staff resumes once all delegated work is back");

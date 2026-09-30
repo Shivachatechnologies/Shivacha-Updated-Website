@@ -16,6 +16,9 @@ import { delegationKey, isTransientError, retryDelayMs } from "../../lib/company
 import { redactSecrets } from "../../lib/ai/workforce/memory";
 import { INTEGRATIONS, VAULT_NAMES, maskHint } from "../../lib/integrations/catalog";
 import { progressFrom } from "../../lib/company/objective-status";
+import { leadNextStep, revenueNextStep } from "../../lib/company/measure-rules";
+import { checkLaunch, DEFAULT_ADS_POLICY, parseAdsPolicy } from "../../lib/ads/policy";
+import { providerOfUrl } from "../../lib/integrations/usage";
 
 const managers: ManagerMap = new Map(ALL_AGENTS.map((a) => [a.slug, placementOf(a.slug)!.manager]));
 
@@ -180,4 +183,49 @@ test("security: secrets never enter memory; the vault accepts only catalogued cr
   for (const t of ["launchAdCampaign", "changeAdBudget", "proposeAdCampaign"]) assert.equal(getTool(t)!.alwaysApprove, true, `${t} always needs a person`);
   assert.equal(getTool("launchAdCampaign")!.risk, "CRITICAL");
   assert.ok(!ORG_EMPLOYEES.some((e) => e.tools.includes("launchAdCampaign")), "no AI employee can launch ads directly");
+});
+
+test("control loop rules: the first failing funnel stage decides the next action, with the numbers behind it", () => {
+  const P = { discovery: true, verification: true };
+  const f = (o: Partial<Record<"discovered" | "withEmail" | "verified" | "qualified" | "contacted" | "replied", number>>) => ({ discovered: 0, withEmail: 0, verified: 0, qualified: 0, contacted: 0, replied: 0, ...o });
+  assert.match(leadNextStep(f({}), 0, 100, { discovery: false, verification: false }).action, /No discovery provider CONNECTED/);
+  assert.equal(leadNextStep(f({}), 0, 100, P).bottleneck, "DISCOVERY");
+  assert.equal(leadNextStep(f({ discovered: 100, withEmail: 20 }), 0, 100, P).bottleneck, "ENRICHMENT");
+  assert.match(leadNextStep(f({ discovered: 10, withEmail: 8 }), 0, 100, { discovery: true, verification: false }).action, /No verification provider CONNECTED/);
+  assert.equal(leadNextStep(f({ discovered: 100, withEmail: 90, verified: 80, qualified: 5 }), 0, 100, P).bottleneck, "QUALIFICATION");
+  assert.equal(leadNextStep(f({ discovered: 100, withEmail: 90, verified: 80, qualified: 40, contacted: 5 }), 0, 100, P).bottleneck, "OUTREACH");
+  assert.equal(leadNextStep(f({ discovered: 200, withEmail: 180, verified: 170, qualified: 100, contacted: 100, replied: 1 }), 10, 100, P).owner, "cmo", "messaging goes to marketing");
+  const vol = leadNextStep(f({ discovered: 50, withEmail: 45, verified: 40, qualified: 20, contacted: 15, replied: 2 }), 12, 100, P);
+  assert.equal(vol.bottleneck, "VOLUME");
+  assert.match(vol.action, /12 of 100 qualified today \(gap 88\)/);
+  assert.equal(leadNextStep(f({ discovered: 50, withEmail: 45, verified: 40, qualified: 20, contacted: 15, replied: 2 }), 120, 100, P).bottleneck, "ON_TARGET");
+  assert.equal(revenueNextStep(1000, 1000, "USD", 0).bottleneck, "ON_TARGET");
+  assert.match(revenueNextStep(400, 1000, "USD", 3).action, /Gap 600 USD: work the 3 at-risk/);
+});
+
+test("ads policy: no autonomous spend by default; every limit is checked before a launch", () => {
+  assert.deepEqual(parseAdsPolicy(null), DEFAULT_ADS_POLICY);
+  assert.equal(DEFAULT_ADS_POLICY.autonomous, false);
+  assert.equal(parseAdsPolicy({ autonomous: "yes", dailySpendLimit: -5 }).autonomous, false, "only a real true enables autonomy");
+  const ctx = { dailyBudget: 20, currency: "USD", activeDaily: 0, monthSpend: 0, stop: null, via: "HUMAN" as const };
+  const p = { ...DEFAULT_ADS_POLICY, dailySpendLimit: 100, monthlyAccountBudget: 1000, maxCampaignDaily: 50 };
+  assert.match((checkLaunch(DEFAULT_ADS_POLICY, ctx) as { reason: string }).reason, /No daily ad spend limit/);
+  assert.equal(checkLaunch(p, ctx).ok, true);
+  assert.match((checkLaunch({ ...p, emergencyStop: true }, ctx) as { reason: string }).reason, /emergency stop/);
+  assert.match((checkLaunch(p, { ...ctx, stop: "STOP ALL is on." }) as { reason: string }).reason, /stopped/);
+  assert.match((checkLaunch(p, { ...ctx, dailyBudget: 60 }) as { reason: string }).reason, /per-campaign cap/);
+  assert.match((checkLaunch(p, { ...ctx, activeDaily: 90 }) as { reason: string }).reason, /daily spend limit/);
+  assert.match((checkLaunch(p, { ...ctx, monthSpend: 990 }) as { reason: string }).reason, /monthly account budget/);
+  assert.match((checkLaunch(p, { ...ctx, via: "POLICY" }) as { reason: string }).reason, /Autonomous advertising is off/);
+  assert.match((checkLaunch({ ...p, autonomous: true, autoApproveUpTo: 10 }, { ...ctx, via: "POLICY" }) as { reason: string }).reason, /autonomous limit/);
+  assert.equal(checkLaunch({ ...p, autonomous: true, autoApproveUpTo: 25 }, { ...ctx, via: "POLICY" }).ok, true);
+});
+
+test("usage accounting maps provider hosts; unknown hosts are not rate-limited", () => {
+  assert.equal(providerOfUrl("https://api.apollo.io/api/v1/x"), "apollo");
+  assert.equal(providerOfUrl("https://graph.facebook.com/v21.0/me"), "meta");
+  assert.equal(providerOfUrl("https://googleads.googleapis.com/v21/customers"), "google-ads");
+  assert.equal(providerOfUrl("https://analyticsdata.googleapis.com/v1beta/x"), "google");
+  assert.equal(providerOfUrl("https://example.com/"), null);
+  assert.equal(providerOfUrl("not a url"), null);
 });

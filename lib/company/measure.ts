@@ -123,7 +123,7 @@ export async function controlObjective(id: string, now = new Date()): Promise<Lo
     db.aITask.count({ where: { objectiveId: id, source: "company-loop" } }),
   ]);
   if (open || total >= MAX_LOOP_TASKS) return out;
-  const t = await createEmployeeTask({ agentSlug: m.owner, title: `Optimise: ${o.title}`.slice(0, 200), instructions: `Control loop for objective "${o.statement}".\nMeasurement (${m.day}): ${m.label} = ${m.actual ?? "UNAVAILABLE"}${m.target != null ? `, target ${m.target}` : ""}. Bottleneck: ${m.bottleneck}.\nNext action: ${r.nextAction}\nAct with your tools; writes go through approval. If a provider is NOT CONNECTED, call reportBlocker. Report what you changed with the numbers.`, requestedById: o.createdById, source: "company-loop", objectiveId: id, idempotencyKey: `loop:${id}:${day}` });
+  const t = await createEmployeeTask({ agentSlug: m.owner, title: `Optimise: ${o.title}`.slice(0, 200), instructions: `Control loop for objective "${o.statement}".\nMeasurement (${m.day}): ${m.label} = ${m.actual ?? "UNAVAILABLE"}${m.target != null ? `, target ${m.target}` : ""}. Bottleneck: ${m.bottleneck}.\nNext action: ${r.nextAction}\nAct with your tools; writes go through approval. If a provider is NOT CONNECTED, call reportBlocker. Report what you changed with the numbers.`, requestedById: o.createdById, source: "company-loop", objectiveId: id, idempotencyKey: `loop:${id}:${day}`, runAfter: now });
   out.task = t.id;
   return out;
 }

@@ -35,6 +35,6 @@ export const GROWTH_ROLES: GrowthRole[] = [
   { key: "sales", title: "AI sales follow-up", agent: "sales", tools: ["searchLeads", "createFollowUp", "draftEmail"], approval: true },
   { key: "crm", title: "CRM hygiene & dedupe", agent: "crm", tools: ["findDuplicates", "findDataGaps"], approval: true },
   { key: "partners", title: "Partnerships manager", agent: "research", tools: ["webResearch"], approval: true },
-  { key: "ads", title: "Paid ads analyst (reads entered spend; no ad buying)", agent: "marketing", tools: ["getGrowthSummary", "searchCampaigns"], approval: true },
+  { key: "ads", title: "Paid ads analyst (reads spend; ad actions run through the Advertising OS policy)", agent: "marketing", tools: ["getGrowthSummary", "searchCampaigns"], approval: true },
   { key: "analytics", title: "Growth analytics & attribution", agent: "marketing", tools: ["getGrowthSummary", "getMarketingSummary"], approval: false },
 ];

@@ -72,6 +72,12 @@ export async function toggleKillSwitchAction(key: KillSwitch, on: boolean): Prom
     const next = { ...s, stops: { ...s.stops, [key]: on } };
     await db.setting.upsert({ where: { key: GROWTH_SETTING }, update: { value: json(next) }, create: { key: GROWTH_SETTING, value: json(next) } });
     await audit({ userId: user.id, action: on ? "growth.killswitch.on" : "growth.killswitch.off", entity: "Setting", entityId: GROWTH_SETTING, metadata: { switch: key } });
+    // Stopping paid media also pauses what is already live at the providers (pausing only reduces spend).
+    if (on && (key === "ads" || key === "marketing" || key === "all")) {
+      const { pauseAll } = await import("@/lib/ads/engine");
+      const r = await pauseAll(`Kill switch: ${key}`, user.id);
+      if (r.failed.length) return okThen(`${P}/autonomous`, `Stopped: ${key}. These ad campaigns could not be paused at the provider — pause them there now: ${r.failed.join(", ")}.`);
+    }
     return okThen(`${P}/autonomous`, on ? `Stopped: ${key}.` : `Resumed: ${key}.`);
   } catch (e) {
     return fail(e, "growth");

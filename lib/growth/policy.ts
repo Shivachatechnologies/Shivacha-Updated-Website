@@ -43,8 +43,8 @@ export const KILL_SWITCHES = {
 } as const;
 export type KillSwitch = keyof typeof KILL_SWITCHES;
 export const KILL_KEYS = Object.keys(KILL_SWITCHES) as KillSwitch[];
-/** Kill switches that stop real code paths. "ads" stops nothing because no automated ad action exists; it is not offered. */
-export const ACTIVE_KILL_KEYS: KillSwitch[] = KILL_KEYS.filter((k) => k !== "ads");
+/** Kill switches that stop real code paths. "ads" stops the Advertising OS (create, launch, budget increases) and pauses live campaigns. */
+export const ACTIVE_KILL_KEYS: KillSwitch[] = [...KILL_KEYS];
 
 export const SOCIAL_PLATFORMS = ["LINKEDIN", "INSTAGRAM", "FACEBOOK", "X", "YOUTUBE"] as const;
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
@@ -54,7 +54,7 @@ export const LANGUAGES = { en: "English", hi: "Hindi", hinglish: "Hinglish" } as
 
 /**
  * `enforced` budgets are reserved atomically before every automated action of that kind. The others describe spend
- * this release never makes automatically (no ad buying, image or video generation), so they are not shown as active.
+ * this module never enforces (image or video generation; ad spend is governed by the Advertising policy on Growth → Advertising), so they are not shown as active.
  */
 export const BUDGET_KINDS = {
   adDaily: { label: "Ad spend per day", unit: "money", enforced: false },
@@ -101,7 +101,7 @@ export function parseGrowthSettings(v: unknown): GrowthSettings {
   // Channels and switches with no implementation can never read as "on".
   const channels = { ...s.channels };
   for (const k of CHANNEL_KEYS) if (!IMPLEMENTED_CHANNELS.includes(k)) channels[k] = false;
-  return { ...s, channels, stops: { ...s.stops, ads: false } };
+  return { ...s, channels };
 }
 
 export type GrowthScope =
