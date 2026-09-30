@@ -17,4 +17,4 @@ Audited against the original 29-phase specification on branch `claude/inspiring-
 | Control loop | PARTIALLY IMPLEMENTED | Objective → plan → delegate → execute → review → report exists; MEASURE → OPTIMISE → NEXT ACTION missing |
 | Paid-ads provider APIs, Gemini as a model, Search Console reports, AI-written code | NOT SUPPORTED at audit time | Addressed where an API exists (Phases 31, 34); code-writing stays NOT SUPPORTED |
 
-The results of Phases 31–41 are in `PHASE-REPORT.md`.
+The results of Phases 31–41 are in `PHASE-REPORT.md`. Found during Phase 34: the growth "Stop paid ads" kill switch was hard-wired off because no ad action existed; it now stops the Advertising OS and pauses live campaigns.
