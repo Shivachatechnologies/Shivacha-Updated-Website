@@ -153,6 +153,27 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
                 <SubmitButton variant="secondary">Save figures</SubmitButton>
               </ActionForm>
             </Panel>
+            <Panel title="Platform capabilities">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-dim"><th className="py-1 font-medium">Platform</th><th className="font-medium">Publishing</th><th className="font-medium">Followers</th></tr>
+                </thead>
+                <tbody>
+                  {SOCIAL_PLATFORMS.map((p) => {
+                    const on = connected.includes(p);
+                    const pub = p === "YOUTUBE" ? "NOT_SUPPORTED" : on ? "CONNECTED" : "NOT_CONNECTED";
+                    return (
+                      <tr key={p} className="border-t border-line">
+                        <td className="py-1.5">{PLATFORM_LABELS[p]}</td>
+                        <td><StatusBadge value={pub} text={pub === "NOT_SUPPORTED" ? "Manual upload" : on ? (p === "INSTAGRAM" ? "Images only" : "API") : "Not connected"} /></td>
+                        <td><StatusBadge value={on ? "CONNECTED" : "NOT_CONNECTED"} text={on ? "API" : "Not connected"} /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="mt-2 text-xs text-dim">Reach, impressions, engagement and clicks are not pulled from any API; enter them from each platform&apos;s own report. A post is marked published only after the platform returns its post ID.</p>
+            </Panel>
             <Panel title="Growth rules">
               <ul className="list-disc space-y-1 pl-4 text-xs text-muted">
                 <li>No bought followers, likes, views or comments; no bots, pods or follow/unfollow.</li>

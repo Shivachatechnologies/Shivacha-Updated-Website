@@ -1,7 +1,9 @@
 /** Growth department unit tests (pure logic, no database): npm run test:growth */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkBudget, DEFAULT_GROWTH_SETTINGS, isHumanActor, KILL_KEYS, parseGrowthSettings, stopReason, CHANNEL_KEYS } from "../../lib/growth/policy";
+import { checkBudget, DEFAULT_GROWTH_SETTINGS, isHumanActor, KILL_KEYS, parseGrowthSettings, stopReason, CHANNEL_KEYS, IMPLEMENTED_CHANNELS, NOT_IMPLEMENTED_CHANNELS, ACTIVE_KILL_KEYS } from "../../lib/growth/policy";
+import { readFileSync, readdirSync } from "node:fs";
+import { classifyRequest } from "../../lib/ai/router/policy";
 import { budgetUpperUsd, qualify, shouldAdvanceStage } from "../../lib/growth/qualify";
 import { aggregateCredit, attribute, buildUtmUrl, channelOfLead } from "../../lib/growth/attribution";
 import { classifyReply, DEFAULT_CADENCE, DEFAULT_STEPS, nextStepAt, renderStep, STOPS_SEQUENCE, SUPPRESSES, unsubscribeToken, verifyUnsubscribeToken } from "../../lib/growth/email-rules";
@@ -184,4 +186,34 @@ test("AI workforce: all 24 growth responsibilities map onto existing agents and 
   const marketing = AGENTS.find((a) => a.slug === "marketing")!;
   assert.ok(marketing.tools.includes("draftSocialPost") && marketing.tools.includes("getGrowthSummary"));
   for (const a of AGENTS) assert.ok(!a.tools.some((t) => /growth.*(settings|control|kill)/i.test(t)), "no agent has a tool that changes growth control");
+});
+
+test("controls: every switch shown in the UI is read by server code; the rest are labelled and always off", () => {
+  const src = readdirSync("lib/growth").filter((f) => f.endsWith(".ts") && f !== "policy.ts").map((f) => readFileSync(`lib/growth/${f}`, "utf8")).join("\n") + readFileSync("lib/ai/tools-growth.ts", "utf8");
+  for (const c of IMPLEMENTED_CHANNELS) assert.match(src, new RegExp(`channel: "${c}"|gate\\("${c}"\\)`), `channel ${c} is checked server-side`);
+  for (const c of CHANNEL_KEYS.filter((k) => !IMPLEMENTED_CHANNELS.includes(k))) {
+    assert.ok(NOT_IMPLEMENTED_CHANNELS[c], `${c} is labelled not implemented`);
+    assert.doesNotMatch(src, new RegExp(`channel: "${c}"`), `${c} is not wired anywhere`);
+  }
+  assert.deepEqual([...CHANNEL_KEYS].sort(), [...IMPLEMENTED_CHANNELS, ...Object.keys(NOT_IMPLEMENTED_CHANNELS)].sort());
+  assert.ok(!ACTIVE_KILL_KEYS.includes("ads"), "the paid-ads kill switch is not offered");
+  const stale = parseGrowthSettings({ channels: { paidAds: true, seo: true, community: true, email: true }, stops: { ads: true } });
+  assert.equal(stale.channels.paidAds || stale.channels.seo || stale.channels.community, false, "unimplemented channels can never read as on");
+  assert.equal(stale.channels.email, true);
+  assert.equal(stale.stops.ads, false);
+  const page = readFileSync("app/admin/(panel)/marketing/autonomous/page.tsx", "utf8");
+  assert.match(page, /IMPLEMENTED_CHANNELS\.map/);
+  assert.match(page, /ACTIVE_KILL_KEYS\.map/);
+  assert.doesNotMatch(page, /(?<![A-Z_])(CHANNEL_KEYS|KILL_KEYS)\.map/, "the page never lists every channel or switch");
+});
+
+test("router: campaign sends and launches need approval; reads, drafts and daily runs keep their class", () => {
+  const cases: [string, string][] = [
+    ["Send this campaign", "APPROVAL_REQUIRED"], ["Send this campaign.", "APPROVAL_REQUIRED"], ["Send the campaign now", "APPROVAL_REQUIRED"], ["Launch the campaign", "APPROVAL_REQUIRED"],
+    ["Launch this campaign", "APPROVAL_REQUIRED"], ["Email the newsletter", "APPROVAL_REQUIRED"], ["Mail the campaign", "APPROVAL_REQUIRED"], ["Blast the newsletter", "APPROVAL_REQUIRED"],
+    ["Send the newsletter", "APPROVAL_REQUIRED"], ["Launch today's campaign", "APPROVAL_REQUIRED"], ["Send this campaign to all leads", "APPROVAL_REQUIRED"], ["Publish today's posts", "APPROVAL_REQUIRED"],
+    ["How many campaigns do we have?", "INSTANT_READ"], ["Show me today's campaigns", "INSTANT_READ"], ["What campaigns are active?", "INSTANT_READ"],
+    ["Create a campaign draft", "INSTANT_ACTION"], ["Run today's marketing", "BACKGROUND_TASK"], ["aaj ki marketing chalao", "BACKGROUND_TASK"],
+  ];
+  for (const [t, want] of cases) assert.equal(classifyRequest(t).cls, want, t);
 });

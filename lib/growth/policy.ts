@@ -7,31 +7,44 @@ import { z } from "zod";
  */
 
 export const GROWTH_CHANNELS = {
-  social: "Social media publishing & community",
-  leadGen: "Lead generation & qualification",
-  email: "Email nurture & sequences",
+  social: "Social media: publish approved, scheduled posts and sync follower counts",
+  leadGen: "Lead qualification: score new leads and assign the SDR prospect review",
+  email: "Email sequences: send due steps",
   paidAds: "Paid ads",
   seo: "SEO",
-  content: "Content & creative production",
+  content: "Content drafts: daily AI Marketing drafting task",
   community: "Community management",
-  aiSales: "AI sales follow-up",
-  background: "Background automation (daily loop)",
+  aiSales: "AI sales follow-up: daily AI Sales task for sales-ready leads",
+  background: "Scheduled daily run (cron): let the daily scheduler run this loop",
 } as const;
 export type GrowthChannel = keyof typeof GROWTH_CHANNELS;
 export const CHANNEL_KEYS = Object.keys(GROWTH_CHANNELS) as GrowthChannel[];
+
+/**
+ * Channels with server-side code that checks them. The others describe work this release does not automate, so they
+ * are never shown as switches, are always stored as off, and nothing reads them.
+ */
+export const IMPLEMENTED_CHANNELS: GrowthChannel[] = ["background", "leadGen", "email", "social", "content", "aiSales"];
+export const NOT_IMPLEMENTED_CHANNELS: Partial<Record<GrowthChannel, string>> = {
+  paidAds: "Automated paid-ad buying and ad-spend sync are not implemented. Enter spend on each campaign.",
+  seo: "No automated SEO actions exist. SEO work is done in the CMS and SEO pages.",
+  community: "Automated community replies and DMs are not implemented. Replies are written by a person.",
+};
 
 export const KILL_SWITCHES = {
   all: "STOP ALL (every growth action and every AI agent)",
   ai: "Stop all AI agents",
   marketing: "Stop all marketing automation",
   social: "Stop social media",
-  outbound: "Stop outbound (prospecting & cold email)",
-  email: "Stop all email sending",
+  outbound: "Stop outbound email sequences",
+  email: "Stop all growth email sending",
   ads: "Stop paid ads",
   publishing: "Stop all publishing",
 } as const;
 export type KillSwitch = keyof typeof KILL_SWITCHES;
 export const KILL_KEYS = Object.keys(KILL_SWITCHES) as KillSwitch[];
+/** Kill switches that stop real code paths. "ads" stops nothing because no automated ad action exists; it is not offered. */
+export const ACTIVE_KILL_KEYS: KillSwitch[] = KILL_KEYS.filter((k) => k !== "ads");
 
 export const SOCIAL_PLATFORMS = ["LINKEDIN", "INSTAGRAM", "FACEBOOK", "X", "YOUTUBE"] as const;
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
@@ -84,7 +97,11 @@ export const DEFAULT_GROWTH_SETTINGS: GrowthSettings = growthSettingsSchema.pars
 /** Tolerant parse: unknown/invalid stored values fall back to safe defaults (everything off, nothing stopped). */
 export function parseGrowthSettings(v: unknown): GrowthSettings {
   const r = growthSettingsSchema.safeParse(v && typeof v === "object" ? v : {});
-  return r.success ? r.data : DEFAULT_GROWTH_SETTINGS;
+  const s = r.success ? r.data : DEFAULT_GROWTH_SETTINGS;
+  // Channels and switches with no implementation can never read as "on".
+  const channels = { ...s.channels };
+  for (const k of CHANNEL_KEYS) if (!IMPLEMENTED_CHANNELS.includes(k)) channels[k] = false;
+  return { ...s, channels, stops: { ...s.stops, ads: false } };
 }
 
 export type GrowthScope =

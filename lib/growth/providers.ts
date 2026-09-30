@@ -17,11 +17,16 @@ export type ProviderResult<T> = { ok: true; data: T } | { ok: false; code: Provi
 export const PROVIDER_KINDS = ["ads", "social", "email", "lead", "enrichment", "search", "analytics", "image", "video", "tts"] as const;
 export type ProviderKind = (typeof PROVIDER_KINDS)[number];
 
+/** CONNECTED = credentials present and code uses them · NOT_CONNECTED = credentials missing · NOT_SUPPORTED = no code performs this automatically. */
+export type ProviderState = "CONNECTED" | "NOT_CONNECTED" | "NOT_SUPPORTED";
+
 export interface ProviderStatus {
   key: string;
   kind: ProviderKind;
   name: string;
+  /** True only when the credentials are present AND this release has code that uses them. */
   connected: boolean;
+  state?: ProviderState;
   /** Names of the environment variables it needs (names only — values are never shown). */
   env: string[];
   note?: string;
@@ -264,17 +269,20 @@ export const enrichmentProvider = {
 export function providerStatuses(): ProviderStatus[] {
   const ads = analyticsConnections();
   const adKeys = new Set(["meta", "gads", "linkedin"]);
-  return [
-    ...ads.filter((a) => adKeys.has(a.key)).map((a): ProviderStatus => ({ key: `ads-${a.key}`, kind: "ads", name: a.name, connected: a.connected, env: a.env, note: "Spend is entered on the campaign (or synced when an ads API sync is configured). Ads are never launched automatically." })),
+  const withState = (p: ProviderStatus): ProviderStatus => ({ ...p, state: p.state ?? (p.connected ? "CONNECTED" : "NOT_CONNECTED") });
+  const list: ProviderStatus[] = [
+    // Automated ad actions do not exist: credentials only enable the existing manual spend reporting.
+    ...ads.filter((a) => adKeys.has(a.key)).map((a): ProviderStatus => ({ key: `ads-${a.key}`, kind: "ads", name: a.name, connected: false, state: "NOT_SUPPORTED", env: a.env, note: `Automated ad buying and spend sync are not implemented${a.connected ? " (credentials are set but unused)" : ""}. Enter spend on each campaign.` })),
     ...Object.values(SOCIAL_PROVIDERS).map((p) => p.status()),
     emailProvider.status(),
     leadProviders.apollo.status(),
     leadProviders.hunter.status(),
     enrichmentProvider.status(),
     { key: "search", kind: "search", name: "AI web research (existing Research agent)", connected: webSearchEnabled(), env: ["ANTHROPIC_API_KEY", "AI_WEB_SEARCH"] },
-    ...ads.filter((a) => !adKeys.has(a.key)).map((a): ProviderStatus => ({ key: `analytics-${a.key}`, kind: "analytics", name: a.name, connected: a.connected, env: a.env })),
-    { key: "image", kind: "image", name: "Image generation", connected: set("IMAGE_API_URL", "IMAGE_API_KEY"), env: ["IMAGE_API_URL", "IMAGE_API_KEY"], note: "Until connected, the creative engine writes image briefs for a designer." },
-    { key: "video", kind: "video", name: "Video generation / editing", connected: set("VIDEO_API_URL", "VIDEO_API_KEY"), env: ["VIDEO_API_URL", "VIDEO_API_KEY"], note: "Until connected, reels and videos are produced from AI-written scripts by a person." },
+    ...ads.filter((a) => !adKeys.has(a.key)).map((a): ProviderStatus => ({ key: `analytics-${a.key}`, kind: "analytics", name: a.name, connected: a.connected, env: a.env, note: "Connection status only; reports are not pulled automatically." })),
+    { key: "image", kind: "image", name: "Image generation", connected: false, state: "NOT_SUPPORTED", env: [], note: "Not implemented: the creative engine writes image briefs for a designer." },
+    { key: "video", kind: "video", name: "Video generation / editing", connected: false, state: "NOT_SUPPORTED", env: [], note: "Not implemented: reels and videos are produced from AI-written scripts by a person." },
     { key: "tts", kind: "tts", name: "Text-to-speech (existing voice provider)", connected: openaiVoice.configured(), env: ["OPENAI_API_KEY", "OPENAI_TTS_MODEL"] },
   ];
+  return list.map(withState);
 }

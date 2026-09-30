@@ -31,6 +31,7 @@ const TONES: Record<string, Tone> = {
   CONNECTED: "green", NOT_CONNECTED: "gray", ERROR: "red", MISSED_CALL: "red", NO_ANSWER: "amber", BUSY: "amber", RINGING: "blue", VOICEMAIL: "violet", PAUSED: "amber",
   PUBLISHED: "green", INTERNAL: "gray", CLIENT: "blue", PUBLIC: "green",
   // growth
+  NOT_SUPPORTED: "gray", NOT_IMPLEMENTED: "gray", MANUAL: "blue", AUTOMATED: "violet", DISABLED: "gray",
   SALES_READY: "green", QUALIFIED: "blue", NURTURE: "amber", LOW_FIT: "gray", NEW: "blue", RESEARCHED: "violet", CONTACTED: "violet", REPLIED: "green", CONVERTED: "green", DISQUALIFIED: "gray", PUBLISHING: "blue", IN_REVIEW: "amber", STOPPED: "gray", PROSPECT: "gray", ENDED: "gray",
 };
 

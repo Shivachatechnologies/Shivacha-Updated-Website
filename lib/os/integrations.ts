@@ -3,11 +3,12 @@ import { channels } from "@/lib/communication/providers";
 import { PAYMENT_PROVIDERS } from "@/lib/payments";
 import { analyticsConnections } from "@/lib/marketing/attribution";
 import { providerStatus } from "@/lib/ai/provider";
+import { providerStatuses } from "@/lib/growth/providers";
 
 export interface IntegrationInfo {
   key: string;
   name: string;
-  category: "AI" | "Communication" | "Payments" | "Marketing & analytics" | "Scheduling" | "Storage & data" | "Security";
+  category: "AI" | "Communication" | "Payments" | "Marketing & analytics" | "Growth (social & prospecting)" | "Scheduling" | "Storage & data" | "Security";
   connected: boolean;
   /** Environment variable NAMES (never values). */
   env: string[];
@@ -26,6 +27,10 @@ export function integrations(): IntegrationInfo[] {
     ...channels().map((c) => ({ key: c.key, name: c.name, category: "Communication" as const, connected: c.connected, env: c.env, note: c.note, href: "/admin/communication" })),
     ...PAYMENT_PROVIDERS.map((p) => ({ key: p.key.toLowerCase(), name: p.name, category: "Payments" as const, connected: p.isConfigured(), env: p.key === "STRIPE" ? ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"] : ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"], href: "/admin/finance/payments", note: "Payments stay PENDING until a verified webhook or a finance manager confirms them." })),
     ...analyticsConnections().map((a) => ({ key: a.key, name: a.name, category: "Marketing & analytics" as const, connected: a.connected, env: a.env, href: "/admin/marketing", note: a.tracking ? "Website tracking tag is installed." : undefined })),
+    // Growth providers come from the same status source as the Growth control page (lib/growth/providers.ts).
+    ...providerStatuses()
+      .filter((p) => p.kind === "social" || p.kind === "lead" || p.kind === "enrichment")
+      .map((p) => ({ key: `growth-${p.key}`, name: p.name, category: "Growth (social & prospecting)" as const, connected: p.state === "CONNECTED", env: p.env, note: p.note, href: "/admin/marketing/autonomous" })),
     { key: "calendly", name: "Calendly (meeting webhooks)", category: "Scheduling", connected: set("CALENDLY_WEBHOOK_SIGNING_KEY"), env: ["CALENDLY_WEBHOOK_SIGNING_KEY", "NEXT_PUBLIC_CALENDLY_URL"], href: "/admin/communication/meetings" },
     { key: "sheets", name: "Google Sheets lead sync", category: "Storage & data", connected: set("GOOGLE_SHEETS_LEADS_ID") || set("GOOGLE_SHEETS_WEBHOOK_URL"), env: ["GOOGLE_SHEETS_LEADS_ID", "GOOGLE_SERVICE_ACCOUNT_EMAIL"] },
     { key: "crm-webhook", name: "External CRM webhook", category: "Storage & data", connected: set("CRM_WEBHOOK_URL"), env: ["CRM_WEBHOOK_URL", "CRM_WEBHOOK_SECRET"] },

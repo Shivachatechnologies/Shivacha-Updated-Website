@@ -9,7 +9,7 @@ import { authorizeAccess } from "@/lib/os/guard";
 import { fail, formObject, okThen, optText, optUrl, reqText, UserError, type ActionState } from "@/lib/os/action";
 import { can } from "@/lib/auth/permissions";
 import { AGENTS } from "@/lib/ai/catalog";
-import { growthSettingsSchema, isHumanActor, KILL_KEYS, CHANNEL_KEYS, BUDGET_KEYS, BUDGET_KINDS, SOCIAL_PLATFORMS, type KillSwitch } from "./policy";
+import { growthSettingsSchema, isHumanActor, ACTIVE_KILL_KEYS, IMPLEMENTED_CHANNELS, KILL_KEYS, CHANNEL_KEYS, BUDGET_KEYS, BUDGET_KINDS, SOCIAL_PLATFORMS, type KillSwitch } from "./policy";
 import { getGrowthSettings, GROWTH_SETTING } from "./settings";
 import { contentQa, excerptFor, repurposePlan, ASSET_KINDS, POST_FORMATS } from "./content";
 import { buildUtmUrl, CHANNEL_UTM } from "./attribution";
@@ -35,7 +35,8 @@ export async function saveGrowthControlAction(_: ActionState, form: FormData): P
     const before = await getGrowthSettings();
     const d = growthSettingsSchema.parse({
       autonomousMode: form.get("autonomousMode"),
-      channels: Object.fromEntries(CHANNEL_KEYS.map((k) => [k, form.get(`ch_${k}`)])),
+      // Only implemented channels can be switched on; the rest are always stored as off.
+      channels: Object.fromEntries(CHANNEL_KEYS.map((k) => [k, IMPLEMENTED_CHANNELS.includes(k) ? form.get(`ch_${k}`) : false])),
       // Kill switches change only through their own buttons, so a stale form can never resume a stop.
       stops: before.stops,
       stoppedAgents: form.getAll("stoppedAgents").map(String).filter((s) => AGENTS.some((a) => a.slug === s)),
@@ -65,7 +66,7 @@ export async function toggleKillSwitchAction(key: KillSwitch, on: boolean): Prom
   try {
     const user = await authorizeAccess(on ? "growth:manage" : "growth:control", F);
     if (!isHumanActor(user)) throw new UserError("Only a person can change kill switches.");
-    if (!KILL_KEYS.includes(key)) throw new UserError("Unknown switch.");
+    if (!ACTIVE_KILL_KEYS.includes(key)) throw new UserError("This switch does not control anything in this release.");
     const s = await getGrowthSettings();
     const next = { ...s, stops: { ...s.stops, [key]: on } };
     await db.setting.upsert({ where: { key: GROWTH_SETTING }, update: { value: json(next) }, create: { key: GROWTH_SETTING, value: json(next) } });

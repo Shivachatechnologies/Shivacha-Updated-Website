@@ -73,6 +73,9 @@ const APPROVAL_VERBS = [
   /\b(send|email|mail|message|whatsapp|sms|text|call)\b.*\b(to|client|customer|lead|prospect|them|him|her|invoice|proposal|quote|reminder)\b/i,
   /\b(delete|remove|archive|purge|erase|void|refund|write ?off|cancel (the |this |an? )?(invoice|payment|project|contract|subscription))\b/i,
   /\b(approve|reject|sign|publish|go live|deploy|discount|change (the )?price|pricing change|pay|make (a )?payments?|payout|transfer|mark (as )?paid|record (a )?payment|issue (the |this |an? )?invoice)\b/i,
+  // Sending or launching a campaign, newsletter or broadcast contacts many people at once, recipient named or not.
+  /\b(send|launch|blast|email|mail|broadcast|push|roll ?out|go live with|start sending)\b[^.?!]*\b(campaigns?|newsletters?|mailers?|mailshots?|blasts?|broadcasts?|sequences?|drips?|e-?mail campaigns?)\b/i,
+  /\b(campaign|newsletter|mailer|sequence)\b[^.?!]*\b(bhej do|bhejo|launch kar(o| do)?|chala do|shuru kar(o| do)?)\b/i,
   /\b(bhej do|bhejo|bhej de|delete kar|hata do|mita do|approve kar|refund kar)\b/i,
   /(भेज दो|भेजो|डिलीट|हटा दो|रिफंड|अप्रूव)/,
 ];

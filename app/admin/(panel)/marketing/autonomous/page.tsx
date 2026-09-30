@@ -2,7 +2,7 @@ import { db } from "@/lib/db/client";
 import { can } from "@/lib/auth/permissions";
 import { requireAccess } from "@/lib/os/guard";
 import { AGENTS } from "@/lib/ai/catalog";
-import { BUDGET_KEYS, BUDGET_KINDS, CHANNEL_KEYS, ENFORCED_BUDGETS, GROWTH_CHANNELS, KILL_KEYS, KILL_SWITCHES, LANGUAGES, PLATFORM_LABELS, SOCIAL_PLATFORMS } from "@/lib/growth/policy";
+import { ACTIVE_KILL_KEYS, BUDGET_KEYS, BUDGET_KINDS, ENFORCED_BUDGETS, GROWTH_CHANNELS, IMPLEMENTED_CHANNELS, NOT_IMPLEMENTED_CHANNELS, KILL_SWITCHES, LANGUAGES, PLATFORM_LABELS, SOCIAL_PLATFORMS } from "@/lib/growth/policy";
 import { getGrowthSettings } from "@/lib/growth/settings";
 import { usageOf } from "@/lib/growth/engine";
 import { providerStatuses } from "@/lib/growth/providers";
@@ -17,6 +17,23 @@ import { GROWTH_CRUMB, GrowthTabs } from "@/components/admin/growth/tabs";
 export const metadata = { title: "Autonomous growth control" };
 export const dynamic = "force-dynamic";
 
+/** Honest capability list: what the loop does, what a person does, and what this release does not do. */
+const CAPABILITIES: [string, "AUTOMATED" | "MANUAL" | "NOT_SUPPORTED" | "NOT_IMPLEMENTED", string][] = [
+  ["Lead qualification", "AUTOMATED", "Rules-based scoring of new leads (last 30 days) when lead qualification is on."],
+  ["Email sequence steps", "AUTOMATED", "Due steps are sent once each, within the email budget, with an unsubscribe link."],
+  ["Publishing approved posts", "AUTOMATED", "Only posts a person approved and scheduled; LinkedIn, Facebook, X, Instagram images."],
+  ["Follower counts", "AUTOMATED", "Pulled from connected platform APIs when the social channel is on."],
+  ["Post approval and scheduling", "MANUAL", "A person approves every post."],
+  ["Reach, impressions, engagement", "MANUAL", "Entered from each platform's own report; not pulled from APIs."],
+  ["Replies, bounces, complaints", "MANUAL", "Logged on the Email page or sent to the email-events webhook; the inbox is not read automatically."],
+  ["YouTube uploads", "NOT_SUPPORTED", "Upload in YouTube Studio, then mark the post published."],
+  ["Instagram reels and video", "NOT_SUPPORTED", "Upload in the Instagram app, then mark the post published."],
+  ["Paid-ad buying and spend sync", "NOT_IMPLEMENTED", "Enter spend on each campaign."],
+  ["Image and video generation", "NOT_IMPLEMENTED", "AI writes briefs and scripts for a person to produce."],
+  ["Community replies and DMs", "NOT_IMPLEMENTED", "Written and sent by a person."],
+  ["Campaign optimisation", "NOT_IMPLEMENTED", "No automatic changes to campaigns, content or budgets."],
+];
+
 export default async function AutonomousPage() {
   const user = await requireAccess("growth:view", "GROWTH");
   const control = can(user.role, "growth:control");
@@ -28,7 +45,7 @@ export default async function AutonomousPage() {
   ]);
   const used = Object.fromEntries(usage) as Record<(typeof ENFORCED_BUDGETS)[number], number>;
   const providers = providerStatuses();
-  const anyStop = KILL_KEYS.some((k) => s.stops[k]);
+  const anyStop = ACTIVE_KILL_KEYS.some((k) => s.stops[k]);
   return (
     <>
       <PageHeader title="Autonomous growth control" description="AUTONOMOUS_GROWTH_MODE, channel switches, kill switches and budgets. Only people can change these; no AI employee can lift a kill switch." crumbs={[GROWTH_CRUMB, { label: "Autonomous control" }]} />
@@ -39,7 +56,7 @@ export default async function AutonomousPage() {
           <Panel title="Kill switches" action={anyStop ? <Badge tone="red">Stopped</Badge> : <Badge tone="green">Running as configured</Badge>}>
             <p className="mb-3 text-xs text-dim">Stopping takes effect before the next action, including work already in progress. Anyone who manages growth can stop; only administrators with growth control can resume.</p>
             <ul className="grid gap-2 sm:grid-cols-2">
-              {KILL_KEYS.map((k) => (
+              {ACTIVE_KILL_KEYS.map((k) => (
                 <li key={k} className="flex items-center justify-between gap-3 rounded-md border border-line px-3 py-2">
                   <span className="min-w-0 text-sm">
                     <span className="block truncate font-medium text-fg">{KILL_SWITCHES[k]}</span>
@@ -59,16 +76,25 @@ export default async function AutonomousPage() {
                 </li>
               ))}
             </ul>
+            <p className="mt-3 text-xs text-dim">There is no paid-ads switch: no automated ad action exists in this release, so there is nothing for it to stop.</p>
           </Panel>
 
           {control ? (
             <ActionForm action={saveGrowthControlAction} className="space-y-4">
               <Panel title="Autonomous mode">
-                <CheckField name="autonomousMode" label="AUTONOMOUS_GROWTH_MODE" defaultChecked={s.autonomousMode} hint="When on, the daily scheduler runs the switched-on channels below. Every external action (posts, emails, ads) still needs a person's approval or a person's schedule." />
+                <CheckField name="autonomousMode" label="AUTONOMOUS_GROWTH_MODE" defaultChecked={s.autonomousMode} hint="When off, the growth loop does nothing and contacts no provider. When on, it runs only the channels switched on below. Posts still need a person's approval and schedule; AI-written customer emails still need approval." />
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {CHANNEL_KEYS.map((k) => (
+                  {IMPLEMENTED_CHANNELS.map((k) => (
                     <CheckField key={k} name={`ch_${k}`} label={GROWTH_CHANNELS[k]} defaultChecked={s.channels[k]} />
                   ))}
+                </div>
+                <div className="mt-4 rounded-md border border-dashed border-line-strong p-3 text-xs text-muted">
+                  <p className="font-medium text-fg">Not implemented (no switch)</p>
+                  <ul className="mt-1 space-y-1">
+                    {Object.entries(NOT_IMPLEMENTED_CHANNELS).map(([k, why]) => (
+                      <li key={k}><StatusBadge value="NOT_IMPLEMENTED" text="Not implemented" /> <span className="font-medium text-fg">{GROWTH_CHANNELS[k as keyof typeof GROWTH_CHANNELS]}</span> — {why}</li>
+                    ))}
+                  </ul>
                 </div>
               </Panel>
               <Panel title="Stop individual AI employees or platforms">
@@ -119,7 +145,7 @@ export default async function AutonomousPage() {
             </ActionForm>
           ) : (
             <Panel title="Settings">
-              <p className="text-sm text-muted">Autonomous mode is <strong>{s.autonomousMode ? "on" : "off"}</strong>. Channels on: {CHANNEL_KEYS.filter((k) => s.channels[k]).map((k) => GROWTH_CHANNELS[k]).join(", ") || "none"}. Only administrators with growth control can change these.</p>
+              <p className="text-sm text-muted">Autonomous mode is <strong>{s.autonomousMode ? "on" : "off"}</strong>. Channels on: {IMPLEMENTED_CHANNELS.filter((k) => s.channels[k]).map((k) => GROWTH_CHANNELS[k]).join(", ") || "none"}. Only administrators with growth control can change these.</p>
             </Panel>
           )}
 
@@ -138,7 +164,7 @@ export default async function AutonomousPage() {
 
         <div className="min-w-0 space-y-4">
           <Panel title="Daily loop" action={control ? <ActionForm action={runGrowthLoopNowAction}><SubmitButton variant="secondary">Run now</SubmitButton></ActionForm> : undefined}>
-            <p className="mb-2 text-xs text-dim">Runs with the existing daily scheduler (/api/cron/daily). Honours every switch above.</p>
+            <p className="mb-2 text-xs text-dim">The daily scheduler (/api/cron/daily, 03:30 UTC) runs it only when autonomous mode and the “Scheduled daily run” switch are on. “Run now” is an administrator run and ignores that one switch. Both honour every other switch and kill switch.</p>
             {runs.length ? (
               <ul className="space-y-2 text-sm">
                 {runs.map((r) => (
@@ -168,13 +194,24 @@ export default async function AutonomousPage() {
                   <span className="min-w-0">
                     <span className="block text-fg">{p.name}</span>
                     <span className="block text-[11px] text-dim uppercase">{p.kind}</span>
-                    {!p.connected && <span className="block font-mono text-[11px] break-all text-dim">{p.env.join(", ")}</span>}
+                    {p.state === "NOT_CONNECTED" && <span className="block font-mono text-[11px] break-all text-dim">{p.env.join(", ")}</span>}
+                    {p.note && <span className="block text-[11px] text-dim">{p.note}</span>}
                   </span>
-                  <StatusBadge value={p.connected ? "CONNECTED" : "NOT_CONNECTED"} text={p.connected ? "Connected" : "Not connected"} />
+                  <StatusBadge value={p.state} text={p.state === "CONNECTED" ? "Connected" : p.state === "NOT_SUPPORTED" ? "Not supported" : "Not connected"} />
                 </li>
               ))}
             </ul>
             <p className="mt-3 text-xs text-dim">Credentials are read from server environment variables only and are never shown or stored in the database. Unconnected providers report NOT_CONNECTED; nothing is simulated.</p>
+          </Panel>
+          <Panel title="What is automated, manual or not available">
+            <ul className="space-y-1.5 text-xs">
+              {CAPABILITIES.map(([name, state, detail]) => (
+                <li key={name} className="flex items-start justify-between gap-2">
+                  <span className="min-w-0"><span className="block text-fg">{name}</span><span className="block text-dim">{detail}</span></span>
+                  <StatusBadge value={state} text={state.replace("_", " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase())} />
+                </li>
+              ))}
+            </ul>
           </Panel>
         </div>
       </div>

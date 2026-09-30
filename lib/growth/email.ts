@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db/client";
 import { siteConfig } from "@/data/siteConfig";
 import { classifyReply, isEmail, nextStepAt, normalizeEmail, renderStep, STOPS_SEQUENCE, SUPPRESSES, unsubscribeToken, type ReplyClass, type SequenceStep } from "./email-rules";
@@ -119,11 +120,10 @@ export async function processDueEmails(opts: { autonomous: boolean; limit?: numb
 
     // 1. Claim this exact step in the database BEFORE anything is sent. The unique (enrollmentId, step) row means only
     //    one worker — on any server, cron or manual run — can hold it; everyone else skips.
-    let claimId: string;
-    try {
-      claimId = (await db.growthEmailSend.create({ data: { enrollmentId: en.id, step: en.step, email: en.email } })).id;
-    } catch (e) {
-      if ((e as { code?: string }).code !== "P2002") throw e;
+    //    A conflict-ignoring insert: the loser gets no row back instead of an exception, so nothing is logged as an error.
+    const won = await db.$queryRaw<{ id: string }[]>`INSERT INTO "GrowthEmailSend" ("id", "enrollmentId", "step", "email", "status", "claimedAt") VALUES (${randomUUID()}, ${en.id}, ${en.step}, ${en.email}, 'CLAIMED', now()) ON CONFLICT ("enrollmentId", "step") DO NOTHING RETURNING "id"`;
+    const claimId = won[0]?.id;
+    if (!claimId) {
       const held = await db.growthEmailSend.findUnique({ where: { enrollmentId_step: { enrollmentId: en.id, step: en.step } } });
       if (held?.status === "SENT") await advance(); // sent earlier but not advanced (crash) — repair, never resend
       else if (held && Date.now() - held.claimedAt.getTime() > STALE_CLAIM_MS) {

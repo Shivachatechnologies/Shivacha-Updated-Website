@@ -81,7 +81,8 @@ const AI_WORK: { channel: GrowthChannel; agent: string; title: string; instructi
 
 /**
  * The daily autonomous growth loop. Order is part of the safety contract:
- * GROWTH flag (checked by the caller) → STOP ALL → AUTONOMOUS_GROWTH_MODE → one run at a time → only then any
+ * GROWTH flag (checked by the caller) → STOP ALL → AUTONOMOUS_GROWTH_MODE → scheduled-run switch (cron runs only) →
+ * one run at a time → only then any
  * external provider call or AI task. With autonomous mode off nothing runs and no provider is contacted.
  */
 export async function runGrowthLoop(trigger: "SCHEDULE" | "MANUAL" = "SCHEDULE", actorId?: string | null): Promise<number> {
@@ -101,6 +102,15 @@ export async function runGrowthLoop(trigger: "SCHEDULE" | "MANUAL" = "SCHEDULE",
     steps.push({ step: "autonomous", status: "skipped", detail: "Autonomous growth mode is off — nothing runs and no provider is contacted." });
     await finish("SKIPPED");
     return 0;
+  }
+  // "Scheduled daily run" switch: the cron-triggered run needs it; an administrator's "Run now" does not.
+  if (trigger === "SCHEDULE") {
+    const bg = stopReason(s, { kind: "channel", channel: "background", autonomous: true });
+    if (bg) {
+      steps.push({ step: "schedule", status: "skipped", detail: bg });
+      await finish("SKIPPED");
+      return 0;
+    }
   }
   if (!(await takeClaim(LOOP_CLAIM, LOOP_STALE_MS))) {
     steps.push({ step: "overlap", status: "skipped", detail: "Another growth loop run is in progress." });

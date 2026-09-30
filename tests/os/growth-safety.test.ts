@@ -407,3 +407,95 @@ test("17. a successfully sent step is never sent again, even if the enrollment i
   assert.equal((await db.sequenceEnrollment.findUnique({ where: { id: e.id! } }))!.step, 1, "enrollment repaired from the SENT record");
   assert.ok(mine().filter((m) => m.to.includes(addr("once"))).every((m) => /api\/growth\/unsubscribe\?t=/.test(m.body.replace(/=\r?\n/g, "").replace(/=3D/g, "="))), "unsubscribe link present");
 });
+
+test("J. scheduled-run switch: the cron run needs it (zero provider calls when off); an administrator's run does not", async () => {
+  connectLinkedIn();
+  stubSocialApis();
+  await set({ autonomousMode: true, channels: channels({ social: true, background: false }) });
+  await runGrowthLoop("SCHEDULE");
+  const off = await db.growthRun.findFirst({ orderBy: { startedAt: "desc" } });
+  assert.equal(off!.status, "SKIPPED");
+  assert.match(JSON.stringify(off!.steps), /Scheduled daily run/);
+  assert.equal(providerCalls.length, 0, "scheduled run with the switch off contacts no provider");
+  await runGrowthLoop("MANUAL");
+  assert.ok(providerCalls.length > 0, "an administrator's Run now still runs");
+  providerCalls = [];
+  await set({ autonomousMode: true, channels: channels({ social: true, background: true }) });
+  await runGrowthLoop("SCHEDULE");
+  assert.ok(providerCalls.length > 0, "scheduled run with the switch on runs");
+  providerCalls = [];
+  await set({ autonomousMode: true, channels: channels({ social: true, background: true }), stops: stops({ marketing: true }) });
+  await runGrowthLoop("SCHEDULE");
+  assert.equal(providerCalls.length, 0, "the marketing kill switch stops the scheduled run");
+  await set({});
+});
+
+test("K. email claim race: exactly one send and no error logged by the losing workers", async () => {
+  await set({ budgets: budgets({ emailDaily: await remaining("emailDaily", 100) }) });
+  const s = await seq();
+  await enroll(s.id, { email: addr("quiet") });
+  const logged: string[] = [];
+  const [ce, sw] = [console.error, process.stderr.write.bind(process.stderr)];
+  console.error = (...a: unknown[]) => void logged.push(a.map(String).join(" "));
+  process.stderr.write = function (chunk: string | Uint8Array) {
+    logged.push(String(chunk));
+    return sw(chunk as string);
+  } as typeof process.stderr.write;
+  try {
+    await Promise.all(Array.from({ length: 4 }, () => processDueEmails({ autonomous: false })));
+  } finally {
+    console.error = ce;
+    process.stderr.write = sw;
+  }
+  assert.equal(mine().filter((m) => m.to.includes(addr("quiet"))).length, 1);
+  assert.deepEqual(logged.filter((l) => /prisma:error|Unique constraint/i.test(l)), [], "no expected-conflict errors in the logs");
+});
+
+test("M/R. concurrent publishes of the same approved post: one platform call, one success, PUBLISHED only after confirmation", async () => {
+  connectLinkedIn();
+  stubSocialApis();
+  await set({ budgets: budgets({ socialDaily: await remaining("socialDaily", 10) }) });
+  const p = await db.socialPost.create({ data: { platform: "LINKEDIN", body: `Idempotent ${TAG}`, status: "APPROVED", approvedById: admin.id, idempotencyKey: `safety-${TAG}-same` } });
+  const rs = await Promise.all(Array.from({ length: 4 }, () => publishPost(p.id, { autonomous: false })));
+  assert.equal(rs.filter((r) => r.ok).length, 1);
+  assert.equal(providerCalls.filter((u) => u.endsWith("/rest/posts")).length, 1);
+  const row = await db.socialPost.findUnique({ where: { id: p.id } });
+  assert.equal(row!.status, "PUBLISHED");
+  assert.match(row!.externalId ?? "", /^urn:li:share:/, "stores the platform's own id");
+  assert.equal((await publishPost(p.id, { autonomous: false })).message, "Already published.", "a retry never publishes again");
+  await set({});
+});
+
+test("N. provider states are honest: unused capabilities are NOT_SUPPORTED even with credentials; the Integration hub lists growth providers", async () => {
+  const { providerStatuses } = await import("../../lib/growth/providers");
+  const { integrations } = await import("../../lib/os/integrations");
+  process.env.META_ADS_ACCESS_TOKEN = "unused";
+  process.env.META_ADS_ACCOUNT_ID = "unused";
+  try {
+    const st = providerStatuses();
+    for (const k of ["image", "video"]) assert.equal(st.find((x) => x.key === k)!.state, "NOT_SUPPORTED");
+    const ads = st.find((x) => x.key === "ads-meta")!;
+    assert.equal(ads.state, "NOT_SUPPORTED", "ad credentials never make ad automation look connected");
+    assert.equal(ads.connected, false);
+    assert.equal(st.find((x) => x.key === "linkedin")!.state, "NOT_CONNECTED");
+    const hub = integrations().filter((i) => i.key.startsWith("growth-"));
+    assert.deepEqual(hub.map((i) => i.key).sort(), ["growth-apollo", "growth-facebook", "growth-hunter", "growth-hunter-verify", "growth-instagram", "growth-linkedin", "growth-x", "growth-youtube"]);
+    assert.ok(hub.every((i) => i.connected === false));
+  } finally {
+    delete process.env.META_ADS_ACCESS_TOKEN;
+    delete process.env.META_ADS_ACCOUNT_ID;
+  }
+});
+
+test("crash safety: a claim left for over 30 minutes with no result stops the enrollment instead of risking a duplicate", async () => {
+  await set({ budgets: budgets({ emailDaily: await remaining("emailDaily", 10) }) });
+  const s = await seq();
+  const e = await enroll(s.id, { email: addr("stale") });
+  await db.growthEmailSend.create({ data: { enrollmentId: e.id!, step: 0, email: addr("stale"), claimedAt: new Date(Date.now() - 31 * 60_000) } });
+  const before = mine().length;
+  await processDueEmails({ autonomous: false });
+  assert.equal(mine().length, before, "nothing sent");
+  const en = await db.sequenceEnrollment.findUnique({ where: { id: e.id! } });
+  assert.equal(en!.status, "STOPPED");
+  assert.match(en!.stopReason ?? "", /SEND_OUTCOME_UNKNOWN/);
+});
