@@ -175,12 +175,36 @@ ok(await seen(page.getByText("Stop paid ads")), "the paid-ads kill switch is off
 await page.goto("/admin/marketing/social/performance");
 ok(await seen(page.getByRole("heading", { name: /Social/ }).first()), "social performance page renders");
 
+// 7c. Phase 42: activation — blockers, certification, day timeline, honest states.
+await page.goto(objectiveUrl);
+ok(await seen(page.getByText("Requires human action")), "objective lists what requires human action");
+ok(await seen(page.getByText("Connect Anthropic (AI provider)")), "the missing AI provider is named");
+ok(await seen(page.getByText(/BLOCKED BY an ad account/).first()), "paid-media stage shows BLOCKED BY its provider");
+await page.goto("/admin/integrations/connect");
+for (const k of ["Expired", "Rate limited"]) ok(await seen(page.getByText(k, { exact: true }).first()), `integration center counts ${k}`);
+await page.goto("/admin/integrations/certification");
+ok(await seen(page.getByRole("heading", { name: "Provider certification" })), "certification page renders");
+const apolloRow = page.locator("tr", { hasText: "Apollo.io" });
+await submit(page, apolloRow, "Run certification");
+ok(await seen(page.locator("tr", { hasText: "Apollo.io" }).getByText("not connected").first()), "certifying an unconnected provider records NOT CONNECTED — nothing simulated");
+ok(await seen(page.getByText(/not set — email sending and address verification steps are skipped/)), "no certification address → email steps skipped");
+await page.goto("/admin/company/today");
+ok(await seen(page.getByRole("heading", { name: /What the AI company did/ })), "day timeline renders");
+ok(await seen(page.getByText("integration.certification.run").first()), "today's certification run is on the timeline (audit)");
+await page.goto("/admin/company/briefing");
+ok(await seen(page.getByText("Website sessions (GA4)")), "briefing lists website analytics");
+ok(!(await seen(page.getByText("Ads adapters are not implemented"), 2000)), "briefing no longer claims ads are not implemented");
+await page.goto("/admin/company/sales");
+ok(await seen(page.getByText(/Revenue attribution — won deals/)), "sales shows revenue attribution");
+
 // 8. A role without executive:view cannot create objectives.
 const sales = await login("qa-sales@shivacha.test");
 await sales.page.goto("/admin/company");
 ok(!(await seen(sales.page.getByText("What do you want the company to achieve?"), 3000)), "sales manager sees no objective input");
 await sales.page.goto("/admin/company/briefing");
 ok(/forbidden|login|disabled/.test(sales.page.url()) || (await seen(sales.page.getByText(/permission|forbidden|not allowed/i), 3000)), "CEO briefing needs executive access");
+await sales.page.goto("/admin/company/today");
+ok(/forbidden|login|disabled/.test(sales.page.url()) || (await seen(sales.page.getByText(/permission|forbidden|not allowed/i), 3000)), "the day timeline needs executive access");
 
 ok(errors.length === 0, `no page errors (${errors.slice(0, 3).join(" | ")})`);
 await browser.close();
