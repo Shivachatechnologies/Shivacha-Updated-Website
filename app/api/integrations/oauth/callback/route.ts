@@ -4,6 +4,7 @@ import { audit } from "@/lib/audit";
 import { completeOAuth, OAuthError } from "@/lib/integrations/oauth";
 import { testIntegration } from "@/lib/integrations/health";
 import { OAUTH } from "@/lib/integrations/oauth";
+import { oauthCallbackError } from "@/lib/integrations/health-rules";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +23,13 @@ export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams;
   const state = p.get("state") ?? "";
   const code = p.get("code") ?? "";
-  if (p.get("error")) return back(`Sign-in was not completed: ${(p.get("error_description") ?? p.get("error") ?? "").slice(0, 150)}`);
-  if (!state || !code) return back("Missing sign-in response.");
+  if (p.get("error")) {
+    // The provider's own description is never echoed into the page; the RFC error code maps to an actionable message.
+    const errCode = (p.get("error") ?? "").replace(/[^a-z_]/gi, "").slice(0, 40);
+    await audit({ userId: user.id, action: "integration.oauth.failed", metadata: { kind: errCode === "access_denied" ? "CANCELLED" : "PROVIDER_ERROR", error: errCode } });
+    return back(oauthCallbackError(errCode));
+  }
+  if (!state || !code) return back("Invalid state: the provider's response was incomplete. Start the sign-in again.");
   try {
     const r = await completeOAuth(state, code, user.id);
     await audit({ userId: user.id, action: "integration.oauth.connected", entity: "Integration", entityId: r.provider });
@@ -31,7 +37,7 @@ export async function GET(req: NextRequest) {
     for (const key of OAUTH[r.provider].connects) await testIntegration(key).catch(() => null);
     return back(r.message);
   } catch (e) {
-    await audit({ userId: user.id, action: "integration.oauth.failed", metadata: { reason: e instanceof OAuthError ? e.message : "error" } });
+    await audit({ userId: user.id, action: "integration.oauth.failed", metadata: e instanceof OAuthError ? { kind: e.kind, reason: e.message, detail: e.detail ?? null } : { kind: "ERROR" } });
     return back(e instanceof OAuthError ? e.message : "Sign-in failed.");
   }
 }

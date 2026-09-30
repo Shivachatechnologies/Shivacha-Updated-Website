@@ -7,6 +7,8 @@ export function aiLimits() {
   return {
     /** USD per UTC day across all agents. */
     dailyUsd: num(process.env.MAX_DAILY_AI_COST, 10),
+    /** USD per UTC calendar month across all agents (optional; unset = only the daily cap applies). */
+    monthlyUsd: process.env.MAX_MONTHLY_AI_COST ? num(process.env.MAX_MONTHLY_AI_COST, Infinity) : null,
     /** Total tokens (input + output) one request may consume across its tool loop. */
     requestTokens: num(process.env.MAX_REQUEST_TOKENS, 150_000),
     /** max_tokens per model call. */
@@ -25,9 +27,13 @@ export async function spentToday(agentSlug?: string) {
 export class BudgetError extends Error {}
 
 export async function assertBudget(agentSlug: string, agentLimit: number | null) {
-  const { dailyUsd } = aiLimits();
+  const { dailyUsd, monthlyUsd } = aiLimits();
   const [all, agent] = await Promise.all([spentToday(), agentLimit != null ? spentToday(agentSlug) : Promise.resolve(0)]);
   if (all >= dailyUsd) throw new BudgetError(`Daily AI budget reached ($${all.toFixed(2)} of $${dailyUsd.toFixed(2)}). Raise MAX_DAILY_AI_COST or try tomorrow.`);
+  if (monthlyUsd != null) {
+    const month = Number((await db.aIUsage.aggregate({ where: { createdAt: { gte: startOfUtcMonth() } }, _sum: { costUsd: true } }))._sum.costUsd ?? 0);
+    if (month >= monthlyUsd) throw new BudgetError(`Monthly AI budget reached ($${month.toFixed(2)} of $${monthlyUsd.toFixed(2)}). Raise MAX_MONTHLY_AI_COST or wait for next month.`);
+  }
   if (agentLimit != null && agent >= agentLimit) throw new BudgetError(`This agent's daily budget is used up ($${agent.toFixed(2)} of $${agentLimit.toFixed(2)}).`);
   await assertDepartmentBudget(agentSlug);
 }

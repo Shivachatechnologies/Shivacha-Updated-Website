@@ -43,9 +43,10 @@ const num = (s: string) => {
 /** The measurable target stated in the objective, if any. It is a target — never a promise. */
 export function parseTarget(text: string, playbook: Playbook): Target | null {
   const t = text.replace(/,/g, "");
-  const perDay = t.match(/(\d+(?:\.\d+)?\s*(?:k)?)\s+(?:[a-z-]+\s+){0,4}(?:leads?|prospects?)\s+(?:per|a|each|every)\s+day/i) ?? t.match(/(\d+(?:\.\d+)?)\s+(?:[a-z-]+\s+){0,4}(?:leads?|prospects?)\s+daily/i);
+  // Qualifier words may contain digits ("B2B", "Web3", "Tier-1") but never start with one, so the count stays the first number.
+  const perDay = t.match(/(\d+(?:\.\d+)?\s*(?:k)?)\s+(?:[a-z][a-z0-9-]*\s+){0,4}(?:leads?|prospects?)\s+(?:per|a|each|every)\s+day/i) ?? t.match(/(\d+(?:\.\d+)?)\s+(?:[a-z][a-z0-9-]*\s+){0,4}(?:leads?|prospects?)\s+daily/i);
   if (perDay) return { metric: /qualified/i.test(text) ? "qualified_leads_per_day" : "leads_per_day", value: num(perDay[1])! };
-  const leads = t.match(/(\d+(?:\.\d+)?\s*(?:k)?)\s+(?:[a-z-]+\s+){0,4}(?:leads?|prospects?)\b/i);
+  const leads = t.match(/(\d+(?:\.\d+)?\s*(?:k)?)\s+(?:[a-z][a-z0-9-]*\s+){0,4}(?:leads?|prospects?)\b/i);
   if (leads) return { metric: /qualified/i.test(text) ? "qualified_leads" : "leads", value: num(leads[1])! };
   if (playbook === "REVENUE") {
     const money = t.match(/[$€£₹]\s?(\d+(?:\.\d+)?\s*(?:k|m|mn|million|thousand|lakh|crore)?)/i) ?? t.match(/(\d+(?:\.\d+)?\s*(?:k|m|mn|million|thousand|lakh|crore)?)\s*(?:usd|dollars|eur|gbp|inr|aed)\b/i);

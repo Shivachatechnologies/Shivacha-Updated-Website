@@ -7,7 +7,7 @@ import { openaiVoice } from "@/lib/voice/provider";
 import type { SocialPlatform } from "./policy";
 import { secretValue } from "@/lib/integrations/vault";
 import { trackedFetch } from "@/lib/integrations/usage";
-import { refreshXToken } from "@/lib/integrations/oauth";
+import { refreshLinkedInToken, refreshXToken } from "@/lib/integrations/oauth";
 import { adsProviders } from "@/lib/ads/providers";
 
 /**
@@ -92,15 +92,23 @@ const IG_KEYS = ["INSTAGRAM_BUSINESS_ACCOUNT_ID", "META_PAGE_ACCESS_TOKEN"];
 const X_KEYS = ["X_ACCESS_TOKEN", "X_USER_ID"];
 const YT_KEYS = ["YOUTUBE_API_KEY", "YOUTUBE_CHANNEL_ID"];
 
+/** LinkedIn call with the current token; one refresh-and-retry on 401 when LinkedIn issued a refresh token. */
+async function liCall(url: string, init: RequestInit & { json?: unknown } = {}) {
+  const auth = () => ({ ...(init.headers ?? {}), Authorization: `Bearer ${env("LINKEDIN_ACCESS_TOKEN")}` });
+  let r = await call(url, { ...init, headers: auth() });
+  if (r.status === 401 && (await refreshLinkedInToken())) r = await call(url, { ...init, headers: auth() });
+  return r;
+}
+
 const linkedin: SocialProvider = {
   platform: "LINKEDIN",
   status: () => ({ key: "linkedin", kind: "social", name: "LinkedIn Page (Community Management API)", connected: set(...LI_KEYS), env: [...LI_KEYS, "LINKEDIN_API_VERSION"] }),
   publish: (p) =>
     set(...LI_KEYS)
       ? guard("LinkedIn", async () => {
-          const r = await call("https://api.linkedin.com/rest/posts", {
+          const r = await liCall("https://api.linkedin.com/rest/posts", {
             method: "POST",
-            headers: { Authorization: `Bearer ${env("LINKEDIN_ACCESS_TOKEN")}`, "LinkedIn-Version": env("LINKEDIN_API_VERSION") || "202409", "X-Restli-Protocol-Version": "2.0.0" },
+            headers: { "LinkedIn-Version": env("LINKEDIN_API_VERSION") || "202409", "X-Restli-Protocol-Version": "2.0.0" },
             json: { author: env("LINKEDIN_ORGANIZATION_URN"), commentary: p.link ? `${p.body}\n\n${p.link}` : p.body, visibility: "PUBLIC", distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] }, lifecycleState: "PUBLISHED", isReshareDisabledByAuthor: false },
           });
           const id = r.headers.get("x-restli-id");
@@ -110,7 +118,7 @@ const linkedin: SocialProvider = {
   followers: () =>
     set(...LI_KEYS)
       ? guard("LinkedIn", async () => {
-          const r = await call(`https://api.linkedin.com/rest/networkSizes/${encodeURIComponent(env("LINKEDIN_ORGANIZATION_URN"))}?edgeType=COMPANY_FOLLOWED_BY_MEMBER`, { headers: { Authorization: `Bearer ${env("LINKEDIN_ACCESS_TOKEN")}`, "LinkedIn-Version": env("LINKEDIN_API_VERSION") || "202409" } });
+          const r = await liCall(`https://api.linkedin.com/rest/networkSizes/${encodeURIComponent(env("LINKEDIN_ORGANIZATION_URN"))}?edgeType=COMPANY_FOLLOWED_BY_MEMBER`, { headers: { "LinkedIn-Version": env("LINKEDIN_API_VERSION") || "202409" } });
           const n = Number(r.body.firstDegreeSize);
           return r.ok && Number.isFinite(n) ? { ok: true, data: { followers: n } } : apiError("LinkedIn", r);
         })

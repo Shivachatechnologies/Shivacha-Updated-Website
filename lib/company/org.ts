@@ -107,7 +107,7 @@ export interface OrgEmployee extends AgentSpec, Placement {
 }
 
 /** Tools shared by every manager-level employee to read the company's own organisation and objectives. */
-const MGMT = ["getOrgChart", "getObjectiveStatus"];
+const MGMT = ["getOrgChart", "getObjectiveStatus", "getProviderBlockers"];
 
 const e = (o: OrgEmployee) => o;
 

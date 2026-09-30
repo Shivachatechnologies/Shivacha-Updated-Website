@@ -188,10 +188,15 @@ test("security: secrets never enter memory; the vault accepts only catalogued cr
 test("control loop rules: the first failing funnel stage decides the next action, with the numbers behind it", () => {
   const P = { discovery: true, verification: true };
   const f = (o: Partial<Record<"discovered" | "withEmail" | "verified" | "qualified" | "contacted" | "replied", number>>) => ({ discovered: 0, withEmail: 0, verified: 0, qualified: 0, contacted: 0, replied: 0, ...o });
-  assert.match(leadNextStep(f({}), 0, 100, { discovery: false, verification: false }).action, /No discovery provider CONNECTED/);
+  const noDisc = leadNextStep(f({}), 0, 100, { discovery: false, verification: false });
+  assert.match(noDisc.action, /BLOCKED BY Apollo or Hunter \(lead discovery\): no discovery provider CONNECTED/);
+  assert.equal(noDisc.needsHuman, true, "connecting a provider is a human action, not an AI task");
   assert.equal(leadNextStep(f({}), 0, 100, P).bottleneck, "DISCOVERY");
   assert.equal(leadNextStep(f({ discovered: 100, withEmail: 20 }), 0, 100, P).bottleneck, "ENRICHMENT");
-  assert.match(leadNextStep(f({ discovered: 10, withEmail: 8 }), 0, 100, { discovery: true, verification: false }).action, /No verification provider CONNECTED/);
+  const noVer = leadNextStep(f({ discovered: 10, withEmail: 8 }), 0, 100, { discovery: true, verification: false });
+  assert.match(noVer.action, /BLOCKED BY NeverBounce or Hunter \(email verification\): no verification provider CONNECTED/);
+  assert.equal(noVer.needsHuman, true);
+  assert.equal(leadNextStep(f({}), 0, 100, P).needsHuman, undefined, "with a provider, the AI can act");
   assert.equal(leadNextStep(f({ discovered: 100, withEmail: 90, verified: 80, qualified: 5 }), 0, 100, P).bottleneck, "QUALIFICATION");
   assert.equal(leadNextStep(f({ discovered: 100, withEmail: 90, verified: 80, qualified: 40, contacted: 5 }), 0, 100, P).bottleneck, "OUTREACH");
   assert.equal(leadNextStep(f({ discovered: 200, withEmail: 180, verified: 170, qualified: 100, contacted: 100, replied: 1 }), 10, 100, P).owner, "cmo", "messaging goes to marketing");

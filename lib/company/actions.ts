@@ -11,7 +11,7 @@ import { saveMemory } from "@/lib/ai/workforce/memory";
 import { integrationByKey } from "@/lib/integrations/catalog";
 import { removeSecrets, storeSecret, VaultError } from "@/lib/integrations/vault";
 import { testIntegration } from "@/lib/integrations/health";
-import { OAUTH_TOKENS, OAuthError, selectMetaPage } from "@/lib/integrations/oauth";
+import { OAUTH_TOKENS, OAuthError, revokeOAuth, selectMetaPage } from "@/lib/integrations/oauth";
 import { cancelObjective, createObjective, ObjectiveError } from "./objectives";
 import { seesAllObjectives } from "./access";
 import { saveCompanyProfile } from "./profile";
@@ -222,11 +222,13 @@ export async function disconnectIntegrationAction(key: string): Promise<ActionSt
     const def = integrationByKey(key);
     if (!def || !def.vault) throw new UserError("Nothing stored for this integration.");
     // Shared credentials (e.g. the Meta page token used by Facebook and Instagram) are removed for both.
-    // Disconnecting an OAuth app also revokes our copy of every token its sign-in stored.
-    await removeSecrets([...def.fields.map((f) => f.name), ...(def.oauth && def.category === "OAuth apps" ? OAUTH_TOKENS[def.oauth] : [])]);
-    await db.integration.deleteMany({ where: { key: { in: [`center:${key}`, ...(def.oauth && def.category === "OAuth apps" ? [`oauth:${def.oauth}`] : [])] } } });
-    await audit({ userId: user.id, action: "integration.credentials.removed", entity: "Integration", entityId: key });
-    return okThen("/admin/integrations/connect", `${def.name}: stored credentials removed. Environment variables (if any) are unchanged.`);
+    // Disconnecting an OAuth app first asks the provider to revoke the sign-in, then deletes every token it stored.
+    const app = def.oauth && def.category === "OAuth apps" ? def.oauth : null;
+    const revoke = app ? await revokeOAuth(app) : null;
+    await removeSecrets([...def.fields.map((f) => f.name), ...(app ? OAUTH_TOKENS[app] : [])]);
+    await db.integration.deleteMany({ where: { key: { in: [`center:${key}`, ...(app ? [`oauth:${app}`] : [])] } } });
+    await audit({ userId: user.id, action: "integration.credentials.removed", entity: "Integration", entityId: key, metadata: revoke ? { providerRevoked: revoke.revoked } : undefined });
+    return okThen("/admin/integrations/connect", `${def.name}: stored credentials removed.${revoke ? ` ${revoke.message}` : ""} Environment variables (if any) are unchanged.`);
   } catch (e) {
     return fail(wrap(e), "integrations");
   }

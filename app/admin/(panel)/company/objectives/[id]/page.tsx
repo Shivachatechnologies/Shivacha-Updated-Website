@@ -8,6 +8,7 @@ import { refreshObjective, progressFrom } from "@/lib/company/objective-status";
 import { PLAYBOOKS, type Playbook } from "@/lib/company/objective-rules";
 import { campaignScorecard } from "@/lib/company/analytics";
 import { measureObjective, parseMeasurement } from "@/lib/company/measure";
+import { objectiveBlockers } from "@/lib/company/blockers";
 import { REGIONS } from "@/lib/company/org";
 import type { PlanStage } from "@/lib/company/objectives";
 import { seesAllObjectives } from "@/lib/company/access";
@@ -36,6 +37,7 @@ export default async function ObjectivePage({ params }: { params: Promise<{ id: 
     o = (await db.aIObjective.findUnique({ where: { id } }))!;
   }
   const measured = parseMeasurement(o.metrics);
+  const blockers = !["COMPLETED", "CANCELLED"].includes(o.status) || o.playbook === "LEAD_GENERATION" ? await objectiveBlockers(id) : { stages: [], providers: [], actions: [] };
   const [tasks, activity, messages, research] = await Promise.all([
     db.aITask.findMany({ where: { objectiveId: id }, orderBy: { createdAt: "asc" } }),
     db.aIActivity.findMany({ where: { objectiveId: id }, orderBy: { createdAt: "desc" }, take: 80 }),
@@ -110,6 +112,8 @@ export default async function ObjectivePage({ params }: { params: Promise<{ id: 
                       <StatusBadge value={t?.status ?? "QUEUED"} />
                       <span className="font-medium">{s.title}</span>
                       <span className="text-xs text-dim">→ {name(s.ownerSlug)}{s.after.length ? ` · after ${s.after.join(", ")}` : ""}{s.note ? ` · ${s.note}` : ""}</span>
+                      {t?.blockedReason && <span className="text-xs font-medium text-red-700">BLOCKED — {t.blockedReason}</span>}
+                      {!t?.blockedReason && blockers.stages.filter((b) => b.stage === s.key && b.capability !== "ai").map((b) => <span key={b.capability} className="text-xs font-medium text-red-700">{t?.status === "DONE" ? "external step " : ""}{b.message.slice(b.message.indexOf("BLOCKED BY"))}</span>)}
                     </li>
                   );
                 })}
@@ -118,6 +122,14 @@ export default async function ObjectivePage({ params }: { params: Promise<{ id: 
             {o.campaignId && <p className="mt-3 text-sm"><Link href={`/admin/marketing/leads/${o.campaignId}`} className="text-brand-blue hover:underline">Lead campaign →</Link></p>}
             {research.map((r) => <p key={r.id} className="mt-1 text-sm"><Link href={`/admin/marketing/market/${r.id}`} className="text-brand-blue hover:underline">{r.title}</Link> <StatusBadge value={r.status} /></p>)}
           </Card>
+          {blockers.actions.length > 0 && (
+            <Card title="Requires human action">
+              <ul className="space-y-1.5 text-sm">
+                {blockers.actions.map((a) => <li key={a.text} className="flex items-start gap-2"><StatusBadge value={a.kind === "CONNECT" ? "ERROR" : "PENDING"} text={a.kind.toLowerCase()} /><Link href={a.href} className="hover:underline">{a.text}</Link></li>)}
+              </ul>
+              {blockers.providers.length > 0 && <p className="mt-2 text-xs text-dim">Until these are connected the affected stages stay BLOCKED; nothing is reported as done for them.</p>}
+            </Card>
+          )}
           <Card title="Measurement & next action (control loop)">
             {measured ? (
               <>

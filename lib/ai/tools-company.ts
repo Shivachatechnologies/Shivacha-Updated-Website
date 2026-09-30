@@ -10,6 +10,8 @@ import { enrollQualified, leadGenFunnel, runLeadPipeline } from "@/lib/company/l
 import { addFinding, completeResearch } from "@/lib/company/research";
 import { RESEARCH_SECTIONS } from "@/lib/company/research-rules";
 import { engagementOf, getSocialStrategy, parseMetrics } from "@/lib/growth/social-metrics";
+import { capabilityState, objectiveBlockers } from "@/lib/company/blockers";
+import { CAPABILITY_PROVIDERS, type Capability } from "@/lib/company/blocker-rules";
 import type { ToolDef } from "./tools";
 
 /**
@@ -20,6 +22,20 @@ const def = <S extends z.ZodType>(t: ToolDef<S>) => t as unknown as ToolDef;
 const id = z.string().trim().min(1).max(40);
 
 export const COMPANY_TOOLS: ToolDef[] = [
+  def({
+    name: "getProviderBlockers",
+    description: "Which external providers are CONNECTED or NOT_CONNECTED right now (AI, lead discovery, email verification, outreach email, social, ads) and, for an objective, every stage that is \"BLOCKED BY <provider>\" plus the human actions it waits on. Use it before planning or reporting; never report a blocked stage as done.",
+    input: z.object({ objectiveId: id.optional() }),
+    permissions: ["ai:view"],
+    kind: "read",
+    risk: "LOW",
+    run: async (_c, i) => {
+      const state = await capabilityState();
+      const providers = (Object.keys(CAPABILITY_PROVIDERS) as Capability[]).map((k) => ({ capability: k, provider: CAPABILITY_PROVIDERS[k], status: state[k] ? "CONNECTED" : "NOT_CONNECTED" }));
+      const objective = i.objectiveId ? await objectiveBlockers(i.objectiveId) : null;
+      return { data: { providers, objective: objective && { blockedStages: objective.stages.map((b) => b.message), requiresHumanAction: objective.actions.map((a) => a.text) } }, records: i.objectiveId ? [`AIObjective:${i.objectiveId}`] : [] };
+    },
+  }),
   def({
     name: "getOrgChart",
     description: "The AI company organisation: every AI employee with slug, title, level, department, region and manager. Optionally one department.",

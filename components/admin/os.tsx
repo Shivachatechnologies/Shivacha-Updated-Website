@@ -28,7 +28,7 @@ const TONES: Record<string, Tone> = {
   // comms / runs / AI
   QUEUED: "gray", DELIVERED: "green", READ: "green", RECEIVED: "blue", LOGGED: "gray", SCHEDULED: "blue", PENDING_APPROVAL: "amber", RUNNING: "blue", SUCCEEDED: "green", PARTIAL: "amber", SKIPPED: "gray",
   AWAITING_APPROVAL: "amber", EXECUTED: "green", DISMISSED: "gray", ACTED: "green", OBSERVE: "gray", ASSIST: "blue", AUTONOMOUS: "violet",
-  CONNECTED: "green", NOT_CONNECTED: "gray", ERROR: "red", MISSED_CALL: "red", NO_ANSWER: "amber", BUSY: "amber", RINGING: "blue", VOICEMAIL: "violet", PAUSED: "amber",
+  CONNECTED: "green", NOT_CONNECTED: "gray", ERROR: "red", RATE_LIMITED: "amber", MISSED_CALL: "red", NO_ANSWER: "amber", BUSY: "amber", RINGING: "blue", VOICEMAIL: "violet", PAUSED: "amber",
   PUBLISHED: "green", INTERNAL: "gray", CLIENT: "blue", PUBLIC: "green",
   // growth
   NOT_SUPPORTED: "gray", NOT_IMPLEMENTED: "gray", MANUAL: "blue", AUTOMATED: "violet", DISABLED: "gray",

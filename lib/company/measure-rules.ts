@@ -21,6 +21,8 @@ export interface NextStep {
   bottleneck: "DISCOVERY" | "ENRICHMENT" | "VERIFICATION" | "QUALIFICATION" | "OUTREACH" | "MESSAGING" | "VOLUME" | "ON_TARGET";
   owner: string;
   action: string;
+  /** Only a person can fix this (connect a provider); an AI task would change nothing. */
+  needsHuman?: boolean;
 }
 
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 1000) / 10 : 0);
@@ -30,13 +32,13 @@ export function leadNextStep(f: FunnelCounts, today: number, target: number | nu
   if (!f.discovered) {
     return p.discovery
       ? { bottleneck: "DISCOVERY", owner: "leadgen-director", action: "No prospects discovered yet: run the lead pipeline and widen the ICP (titles, countries, domains) if searches return nothing." }
-      : { bottleneck: "DISCOVERY", owner: "leadgen-director", action: "No discovery provider CONNECTED: connect Apollo or Hunter in the Integration Center, then run the lead pipeline." };
+      : { bottleneck: "DISCOVERY", owner: "leadgen-director", action: "BLOCKED BY Apollo or Hunter (lead discovery): no discovery provider CONNECTED. Connect one in the Integration Center, then run the lead pipeline.", needsHuman: true };
   }
   if (f.discovered >= 10 && f.withEmail / f.discovered < 0.5) return { bottleneck: "ENRICHMENT", owner: "leadgen-director", action: `Only ${pct(f.withEmail, f.discovered)}% of ${f.discovered} prospects have an email: run enrichment (Apollo match / Hunter email-finder) before sourcing more.` };
   if (f.withEmail && !f.verified) {
     return p.verification
       ? { bottleneck: "VERIFICATION", owner: "leadgen-director", action: `${f.withEmail} emails await verification: run the lead pipeline to verify them.` }
-      : { bottleneck: "VERIFICATION", owner: "leadgen-director", action: "No verification provider CONNECTED: connect NeverBounce or Hunter — unverified prospects are never qualified or contacted." };
+      : { bottleneck: "VERIFICATION", owner: "leadgen-director", action: "BLOCKED BY NeverBounce or Hunter (email verification): no verification provider CONNECTED — unverified prospects are never qualified or contacted.", needsHuman: true };
   }
   if (f.verified >= 10 && f.qualified / f.verified < 0.2) return { bottleneck: "QUALIFICATION", owner: "leadgen-director", action: `Only ${pct(f.qualified, f.verified)}% of ${f.verified} verified prospects fit the ICP: tighten sourcing to the ICP or review the minimum fit score.` };
   if (f.qualified >= 5 && f.contacted / f.qualified < 0.5) return { bottleneck: "OUTREACH", owner: "leadgen-director", action: `${f.qualified - f.contacted} qualified prospects are not in a sequence: request enrolment in an OUTBOUND sequence (approval required).` };

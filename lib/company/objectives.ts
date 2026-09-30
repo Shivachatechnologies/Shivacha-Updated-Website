@@ -14,6 +14,8 @@ import { refreshObjective } from "./objective-status";
 import { ensureOrganisationOnce, getCompanyProfile } from "./organisation";
 import { placementOf, REGIONS } from "./org";
 import { requestMarketResearch } from "./research-request";
+import { stageBlockers } from "./blocker-rules";
+import { capabilityState } from "./blockers";
 
 const json = (v: unknown) => JSON.parse(JSON.stringify(v ?? null)) as Prisma.InputJsonValue;
 
@@ -57,6 +59,8 @@ export async function createObjective(i: { statement: string; title?: string | n
     const dept = placementOf(s.owner)?.department;
     return !dept || profile.departments.includes(dept);
   });
+  // Provider blockers known at planning time go into the Chief of Staff's brief, so the report names them.
+  const known = stageBlockers(playbook, stages.length ? stages : [{ key: "plan", title: "Plan" }], await capabilityState());
   const root = await createEmployeeTask({
     agentSlug: "ceo",
     kind: "OBJECTIVE",
@@ -74,7 +78,8 @@ export async function createObjective(i: { statement: string; title?: string | n
       stages.length
         ? `Playbook "${PLAYBOOKS[playbook]}": the plan below was assigned to your executives. When their work is back, review each result with reviewDelegatedWork (accept, or revise with a precise note), delegate follow-up work if needed, then write the CEO report.`
         : "Plan the objective: break it into 3–8 concrete pieces of work and delegate each to the right executive or director with delegateTask (use dependsOn for ordering). End your run after delegating; you will resume when the work is back to review it and write the CEO report.",
-      "CEO report: what was achieved against the target with real numbers and record links, what is blocked and exactly why (e.g. provider NOT CONNECTED, approval pending), risks, and the next actions. Never claim an external action happened without confirmation.",
+      known.length ? `Provider blockers at planning time (re-check with getProviderBlockers before the report; write each still-missing one as "BLOCKED BY <provider>"):\n${known.map((b) => `- ${b.message}`).join("\n")}` : "",
+      "CEO report: what was achieved against the target with real numbers and record links; actual vs target; every stage that is blocked, written as \"BLOCKED BY <provider>\" or \"BLOCKED: approval pending\"; risks; and what requires human action. A blocked stage is never reported as done. Never claim an external action happened without confirmation.",
     ].filter(Boolean).join("\n\n"),
   });
 

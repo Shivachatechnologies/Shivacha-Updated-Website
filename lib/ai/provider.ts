@@ -79,7 +79,7 @@ export function costOf(model: string, u: { input: number; output: number; cacheW
   return ((u.input + (u.cacheWrite ?? 0) * 1.25 + (u.cacheRead ?? 0) * 0.1) * i + u.output * o) / 1_000_000;
 }
 
-export const providerStatus = () => ({ name: "Anthropic Claude", connected: !!secretValue("ANTHROPIC_API_KEY"), env: ["ANTHROPIC_API_KEY", "AI_MODEL", "MAX_DAILY_AI_COST", "MAX_REQUEST_TOKENS", "AI_WEB_SEARCH"] });
+export const providerStatus = () => ({ name: "Anthropic Claude", connected: !!secretValue("ANTHROPIC_API_KEY"), env: ["ANTHROPIC_API_KEY", "AI_MODEL", "MAX_DAILY_AI_COST", "MAX_MONTHLY_AI_COST", "MAX_REQUEST_TOKENS", "AI_WEB_SEARCH"] });
 export const webSearchEnabled = () => providerStatus().connected && process.env.AI_WEB_SEARCH === "true";
 
 let client: Anthropic | null = null;

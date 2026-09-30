@@ -106,6 +106,7 @@ export const TOOL_PERMISSION_LABELS: Record<string, string> = {
   completeMarketResearch: "Save market research to the Knowledge Base (draft)",
   getAdCampaigns: "Read paid-media campaigns",
   getSocialPerformance: "Read social strategy and post performance",
+  getProviderBlockers: "Read which providers are connected and what blocks an objective",
   getSalesPriorities: "Read lead priorities",
   getNextBestActions: "Read next best sales actions",
   getDealRisks: "Read deal risk",

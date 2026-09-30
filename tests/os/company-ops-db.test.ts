@@ -116,7 +116,14 @@ test("OAuth: needs the app credentials; state is single-use, bound to the user a
   // Provider refuses the code → nothing stored, not connected.
   tokenReply = { status: 400, body: { error: "invalid_grant", error_description: "bad code" } };
   const s3 = stateOf(await startOAuth("linkedin", SUPER));
-  await assert.rejects(completeOAuth(s3, "code", SUPER), /did not issue a token: bad code/);
+  // Phase 42: an actionable message is shown; the provider's own text is kept (scrubbed) only for the audit log.
+  await assert.rejects(completeOAuth(s3, "code", SUPER), (e: OAuthError) => {
+    assert.match(e.message, /LinkedIn: the authorization code expired or was already used\. Sign in again\./);
+    assert.doesNotMatch(e.message, /bad code/, "raw provider text is not shown");
+    assert.equal(e.kind, "EXPIRED");
+    assert.equal(e.detail, "bad code");
+    return true;
+  });
   await hydrateVault(true);
   assert.equal(secretValue("LINKEDIN_ACCESS_TOKEN"), "");
   assert.equal(await db.integration.count({ where: { key: "oauth:linkedin", status: "CONNECTED" } }), 0);

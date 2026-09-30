@@ -26,12 +26,14 @@ export default async function IntegrationsCenter() {
   const n = (s: string) => rows.filter((r) => r.state === s).length;
   return (
     <>
-      <PageHeader title="API & Integrations" description="Connect providers with OAuth sign-in or API keys, then configure, test and disconnect them without editing environment variables. Credentials are encrypted (AES-256-GCM) on the server, masked here, never logged and never sent to the browser; environment variables, when set, always take precedence. Statuses are real: CONNECTED only when credentials exist (and ERROR when the last real test failed)." crumbs={[{ label: "Platform" }, { label: "API & Integrations" }]} />
+      <PageHeader title="API & Integrations" description="Connect providers with OAuth sign-in or API keys, then configure, test and disconnect them without editing environment variables. Credentials are encrypted (AES-256-GCM) on the server, masked here, never logged and never sent to the browser; environment variables, when set, always take precedence. Statuses are real: CONNECTED only when credentials exist and the last real check did not fail; EXPIRED when a sign-in expired or was revoked; RATE_LIMITED while the provider asks us to slow down; ERROR with the classified reason otherwise." crumbs={[{ label: "Platform" }, { label: "API & Integrations" }]} />
       {!encryption && <p className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">BLOCKED: APP_ENCRYPTION_KEY (32+ characters) is not set on the server, so credentials cannot be stored here. Environment-variable configuration still works.</p>}
-      <KpiGrid cols={4}>
+      <KpiGrid cols={6}>
         <Kpi label="Connected" value={n("CONNECTED")} tone="green" />
         <Kpi label="Not connected" value={n("NOT_CONNECTED")} />
         <Kpi label="Errors" value={n("ERROR")} tone={n("ERROR") ? "red" : undefined} />
+        <Kpi label="Expired" value={n("EXPIRED")} tone={n("EXPIRED") ? "red" : undefined} hint="Sign in again" />
+        <Kpi label="Rate limited" value={n("RATE_LIMITED")} tone={n("RATE_LIMITED") ? "amber" : undefined} />
         <Kpi label="Not supported" value={n("NOT_SUPPORTED")} hint="No adapter in this release" />
       </KpiGrid>
       <div className="mt-5 space-y-6">
@@ -39,7 +41,7 @@ export default async function IntegrationsCenter() {
           <section key={cat}>
             <h2 className="mb-2 text-base font-semibold">{cat}</h2>
             <div className="grid gap-3 lg:grid-cols-2">
-              {rows.filter((r) => r.def.category === cat).map(({ def, state, source, lastTestedAt, lastError, usage }) => (
+              {rows.filter((r) => r.def.category === cat).map(({ def, state, source, lastTestedAt, lastError, usage, lastSuccessAt, lastFailureAt, failureKind, expiresAt, account }) => (
                 <article key={def.key} className="min-w-0 rounded-lg border border-line bg-ink-900 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -55,7 +57,8 @@ export default async function IntegrationsCenter() {
                     return (
                       <div className="mt-2 rounded-md border border-line bg-ink-850 p-2 text-xs">
                         <p className="text-muted">Redirect URL to register at the provider: <span className="font-mono break-all text-fg">{redirect}</span></p>
-                        <p className="mt-1">Sign-in: <StatusBadge value={o?.status === "CONNECTED" ? "CONNECTED" : o?.status === "ERROR" ? "ERROR" : "NOT_CONNECTED"} />{o?.lastError ? <span className="ml-1 text-red-700">{o.lastError}</span> : null}</p>
+                        <p className="mt-1">Sign-in: <StatusBadge value={o?.state ?? "NOT_CONNECTED"} />{o?.expiresAt ? <span className="ml-1 text-dim">{o.state === "EXPIRED" ? "expired" : "expires"} {fmtDate(new Date(o.expiresAt), true)}{o.canRefresh ? " (auto-refresh)" : ""}</span> : null}{o?.lastError ? <span className="ml-1 text-red-700">{o.lastError}</span> : null}</p>
+                        {o?.missingScopes && o.missingScopes.length > 0 && <p className="mt-1 text-amber-700">Insufficient permission — not granted: {o.missingScopes.join(", ")}</p>}
                         {manage && (o?.clientReady ? <a href={`/api/integrations/oauth/start?provider=${def.oauth}`} className="btn-primary mt-2 inline-flex h-8 items-center px-3 text-xs">Sign in with {def.name.split(" ")[0]}</a> : <p className="mt-1 text-dim">Save the client ID and secret first.</p>)}
                         {def.oauth === "meta" && manage && Array.isArray(o?.config?.pages) && (o!.config!.pages as { id: string; name: string; instagram: string | null }[]).length > 0 && (
                           <ActionForm action={selectMetaPageAction} className="mt-2 flex flex-wrap items-end gap-2">
@@ -67,8 +70,10 @@ export default async function IntegrationsCenter() {
                     );
                   })()}
                   {usage && <p className="mt-1 text-xs text-dim">Usage: {usage}</p>}
-                  {lastTestedAt && <p className="mt-1 text-xs text-dim">Last tested {fmtDate(lastTestedAt, true)}{lastError ? "" : " · OK"}</p>}
-                  {lastError && <p className="mt-1 text-xs text-red-700">Last test failed: {lastError}</p>}
+                  {account && state !== "NOT_CONNECTED" && <p className="mt-1 text-xs text-dim">Account: {account}</p>}
+                  {(lastSuccessAt || lastFailureAt || lastTestedAt) && <p className="mt-1 text-xs text-dim">Last check {lastTestedAt ? fmtDate(lastTestedAt, true) : "—"} · last success {lastSuccessAt ? fmtDate(lastSuccessAt, true) : "never"}{lastFailureAt ? ` · last failure ${fmtDate(lastFailureAt, true)}` : ""}</p>}
+                  {expiresAt && state !== "NOT_CONNECTED" && <p className="mt-1 text-xs text-dim">Sign-in {state === "EXPIRED" ? "expired" : "expires"} {fmtDate(new Date(expiresAt), true)}</p>}
+                  {lastError && <p className="mt-1 text-xs text-red-700">{failureKind ? `${failureKind.replace(/_/g, " ").toLowerCase()}: ` : ""}{lastError}</p>}
                   {def.fields.length > 0 && (
                     <ul className="mt-2 space-y-0.5 text-xs">
                       {def.fields.map((f) => (
