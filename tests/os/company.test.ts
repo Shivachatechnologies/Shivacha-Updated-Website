@@ -19,6 +19,9 @@ import { progressFrom } from "../../lib/company/objective-status";
 import { leadNextStep, revenueNextStep } from "../../lib/company/measure-rules";
 import { checkLaunch, DEFAULT_ADS_POLICY, parseAdsPolicy } from "../../lib/ads/policy";
 import { providerOfUrl } from "../../lib/integrations/usage";
+import { classifyFailure, missingScopes, oauthCallbackError, scrubSecrets, statusFromText, tokenError, tokenExpired } from "../../lib/integrations/health-rules";
+import { blockingProviders, stageBlockers, stageNeeds } from "../../lib/company/blocker-rules";
+import { attributionOf, freshness } from "../../lib/company/data-rules";
 
 const managers: ManagerMap = new Map(ALL_AGENTS.map((a) => [a.slug, placementOf(a.slug)!.manager]));
 
@@ -233,4 +236,73 @@ test("usage accounting maps provider hosts; unknown hosts are not rate-limited",
   assert.equal(providerOfUrl("https://analyticsdata.googleapis.com/v1beta/x"), "google");
   assert.equal(providerOfUrl("https://example.com/"), null);
   assert.equal(providerOfUrl("not a url"), null);
+});
+
+/* ───────────────────────── Phase 42: activation rules ───────────────────────── */
+
+test("provider failure classification: every failure maps to an honest, actionable state — never CONNECTED", () => {
+  const c = (e: Parameters<typeof classifyFailure>[0]) => classifyFailure(e, "Acme");
+  assert.deepEqual([c({ status: 401 }).state, c({ status: 401 }).kind], ["ERROR", "INVALID_CREDENTIALS"], "API key rejected");
+  assert.deepEqual([c({ status: 401, oauth: true }).state, c({ status: 401, oauth: true }).kind], ["EXPIRED", "EXPIRED"], "OAuth token rejected = expired / revoked");
+  assert.equal(c({ status: 400, message: "Error validating access token: Session has expired" }).state, "EXPIRED");
+  assert.equal(c({ status: 403 }).kind, "PERMISSION_DENIED");
+  assert.match(c({ status: 403 }).reason, /lacks a required permission/);
+  assert.deepEqual([c({ status: 429 }).state, c({ status: 429 }).kind], ["RATE_LIMITED", "RATE_LIMITED"]);
+  assert.equal(c({ status: 429, message: "Monthly quota exceeded" }).kind, "QUOTA_EXHAUSTED");
+  assert.deepEqual([c({ status: 402 }).state, c({ status: 402 }).kind], ["ERROR", "QUOTA_EXHAUSTED"]);
+  assert.equal(c({ local: true, message: "acme daily API limit reached (5 calls)." }).kind, "QUOTA_EXHAUSTED", "our own daily cap");
+  assert.equal(c({ local: true, message: "acme asked us to slow down" }).state, "RATE_LIMITED", "cool-down: nothing was sent");
+  assert.equal(c({ timeout: true }).kind, "TIMEOUT");
+  assert.equal(c({ network: true }).kind, "NETWORK");
+  assert.deepEqual([c({ status: 503 }).state, c({ status: 503 }).kind], ["ERROR", "UNAVAILABLE"]);
+  assert.equal(c({ status: 200, malformed: true }).kind, "MALFORMED");
+  for (const e of [{ status: 401 }, { status: 403 }, { status: 429 }, { status: 500 }, { timeout: true }, { status: 200, malformed: true }, {}]) assert.notEqual(c(e).state, "CONNECTED");
+  assert.equal(statusFromText("Meta Ads: Invalid OAuth access token (HTTP 401)"), 401);
+  assert.equal(statusFromText("no status here"), undefined);
+});
+
+test("OAuth messages are actionable and never echo provider text or secrets", () => {
+  assert.match(oauthCallbackError("access_denied"), /Authorization cancelled/);
+  assert.match(oauthCallbackError("invalid_scope"), /Insufficient permission/);
+  assert.match(oauthCallbackError("temporarily_unavailable"), /Provider unavailable/);
+  assert.match(oauthCallbackError("<script>"), /not completed/);
+  assert.match(tokenError("X", 400, { error: "invalid_grant", error_description: "code abc123 expired" }), /expired or was already used/);
+  assert.doesNotMatch(tokenError("X", 400, { error: "invalid_grant", error_description: "code abc123 expired" }), /abc123/);
+  assert.match(tokenError("X", 401, { error: "invalid_client" }), /client ID or secret was rejected/);
+  assert.match(tokenError("X", 429, {}), /rate limited/);
+  assert.match(tokenError("X", 503, {}), /provider unavailable/);
+  assert.deepEqual(missingScopes(["a", "b", "c"], "a c"), ["b"]);
+  assert.deepEqual(missingScopes(["a", "b"], "a,b", ","), []);
+  assert.deepEqual(missingScopes(["a"], undefined), [], "provider did not report scopes → no claim");
+  assert.equal(tokenExpired(new Date(Date.now() - 1000).toISOString(), false), true);
+  assert.equal(tokenExpired(new Date(Date.now() - 1000).toISOString(), true), false, "a refresh token renews it");
+  assert.equal(tokenExpired(null, false), false);
+  const scrubbed = scrubSecrets("token=abcDEF123456&x=1 Bearer abcdefghijklmnop sk-ant-abcdefghijk1234 EAAabcdefghijklmnopqrstuvwxyz0123 plain-secret-value-9", ["plain-secret-value-9"]);
+  for (const leak of ["abcDEF123456", "abcdefghijklmnop", "sk-ant-abcdefghijk1234", "EAAabcdefghijklmnopqrstuvwxyz0123", "plain-secret-value-9"]) assert.ok(!scrubbed.includes(leak), `scrubbed ${leak.slice(0, 6)}…`);
+});
+
+test("stage blockers: a stage whose provider is not connected is BLOCKED BY that provider", () => {
+  const plan = [{ key: "research", title: "Research" }, { key: "campaign", title: "Lead campaign" }, { key: "outreach", title: "Outreach" }, { key: "social", title: "Social" }, { key: "ads", title: "Paid media" }];
+  assert.deepEqual(stageNeeds("LEAD_GENERATION", "campaign"), ["ai", "discovery", "verification"]);
+  assert.deepEqual(stageNeeds("REVENUE", "campaign"), ["ai"]);
+  const none = stageBlockers("LEAD_GENERATION", plan, { ai: false, discovery: false, verification: false, email: false, social: false, ads: false });
+  assert.ok(none.some((b) => b.message === "Paid media: BLOCKED BY an ad account (Meta Ads, Google Ads or LinkedIn Ads)"));
+  assert.ok(none.some((b) => b.message === "Lead campaign: BLOCKED BY Apollo or Hunter (lead discovery)"));
+  assert.deepEqual(blockingProviders(none)[0], "Anthropic (AI provider)");
+  assert.equal(blockingProviders(none).length, 6);
+  assert.deepEqual(stageBlockers("LEAD_GENERATION", plan, { ai: true, discovery: true, verification: true, email: true, social: true, ads: true }), []);
+  const adsOnly = stageBlockers("LEAD_GENERATION", plan, { ai: true, discovery: true, verification: true, email: true, social: true, ads: false });
+  assert.deepEqual(adsOnly.map((b) => b.stage), ["ads"]);
+});
+
+test("data natures: missing is never zero; stale and not-connected are explicit; attribution states its quality", () => {
+  const now = Date.now();
+  assert.equal(freshness(new Date(now - 3600_000), 24, true, now), "REAL");
+  assert.equal(freshness(new Date(now - 30 * 3600_000), 24, true, now), "STALE");
+  assert.equal(freshness(null, 24, true, now), "UNAVAILABLE");
+  assert.equal(freshness(new Date(now), 24, false, now), "NOT_CONNECTED");
+  assert.deepEqual(attributionOf({ utmCampaign: "q4-fintech", utmSource: "linkedin", utmMedium: "paid-social", source: "WEBSITE" }), { quality: "CAMPAIGN", source: "linkedin", campaign: "q4-fintech", channel: "paid-social" });
+  assert.equal(attributionOf({ source: "REFERRAL" }).quality, "SOURCE");
+  assert.equal(attributionOf({}).quality, "UNATTRIBUTED");
+  assert.equal(attributionOf(null).quality, "UNATTRIBUTED");
 });

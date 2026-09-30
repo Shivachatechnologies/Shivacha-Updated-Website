@@ -36,7 +36,8 @@
     "test:unified:db": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/unified-db.test.ts",
     "test:company": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/company.test.ts",
     "test:company:db": "tsx --require ./tests/os/server-only-shim.cjs --test --test-concurrency=1 tests/os/company-db.test.ts",
-    "test:company:ops": "tsx --require ./tests/os/server-only-shim.cjs --test --test-concurrency=1 tests/os/company-ops-db.test.ts"
+    "test:company:ops": "tsx --require ./tests/os/server-only-shim.cjs --test --test-concurrency=1 tests/os/company-ops-db.test.ts",
+    "test:activation": "tsx --require ./tests/os/server-only-shim.cjs --test --test-concurrency=1 tests/os/activation-db.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

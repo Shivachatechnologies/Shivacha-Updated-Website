@@ -113,6 +113,9 @@ export async function controlObjective(id: string, now = new Date()): Promise<Lo
   const out: LoopStep = { measured: false, messaged: false, task: null };
   const hour = now.toISOString().slice(0, 13);
   const day = now.toISOString().slice(0, 10);
+  // Cancelled or completed objectives are out of the loop, whoever calls it.
+  const current = await db.aIObjective.findUnique({ where: { id }, select: { status: true } });
+  if (!current || current.status === "CANCELLED" || current.status === "COMPLETED") return { ...out, skipped: current ? `objective is ${current.status.toLowerCase()}` : "objective not found" };
   if (!(await takeClaim(`objective-measure:${id}:${hour}`))) return out;
   const before = await db.aIObjective.findUnique({ where: { id }, select: { nextAction: true } });
   const r = await measureObjective(id, now);

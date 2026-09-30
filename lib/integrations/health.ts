@@ -214,7 +214,15 @@ async function http(name: string, url: string, headers: Record<string, string> =
 }
 
 /** Adapter results carry only text; recover the HTTP status from it. */
-const fromAdapter = (error: string, code?: string): ProbeResult => ({ ok: false, evidence: code === "NOT_CONNECTED" ? { message: error } : { status: statusFromText(error), message: error, local: /asked us to slow down|daily API limit/i.test(error) } });
+const fromAdapter = (error: string, code?: string): ProbeResult => {
+  if (code === "NOT_CONNECTED") return { ok: false, evidence: { message: error } };
+  const status = statusFromText(error);
+  if (/\btimed out\b/i.test(error)) return { ok: false, evidence: { timeout: true, message: error } };
+  if (/\bnetwork error\b/i.test(error)) return { ok: false, evidence: { network: true, message: error } };
+  // A 2xx answer the adapter could not use is a malformed response, not a failure code.
+  if (status && status >= 200 && status < 300) return { ok: false, evidence: { status, malformed: true, message: error } };
+  return { ok: false, evidence: { status, message: error, local: /asked us to slow down|daily API limit/i.test(error) } };
+};
 
 async function probe(def: IntegrationDef): Promise<ProbeResult> {
   switch (def.key) {
