@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db/client";
-import { AGENTS, agentBySlug } from "@/lib/ai/catalog";
+import { AGENTS, agentBySlug, type AgentSpec } from "@/lib/ai/catalog";
 import { ensureAgents } from "@/lib/ai/agents";
 import { OPEN_TASK_STATUSES, periodStart, profileFor, startOfLocalDay, type EmployeeStatus } from "./profiles";
 
@@ -72,11 +72,11 @@ export interface EmployeeCard {
   workingStatus: string;
 }
 
-/** Live directory: status, workload and KPIs for all AI employees. */
-export async function employeeDirectory(now = new Date()): Promise<EmployeeCard[]> {
+/** Live directory: status, workload and KPIs for AI employees (the 12 core employees unless a list is given). */
+export async function employeeDirectory(now = new Date(), specs: AgentSpec[] = AGENTS): Promise<EmployeeCard[]> {
   await ensureEmployees();
   const today = startOfLocalDay(now);
-  const slugs = AGENTS.map((a) => a.slug);
+  const slugs = specs.map((a) => a.slug);
   const [rows, open, running, todayTasks, doneToday, doneAll, approvals, lastFinished, goals] = await Promise.all([
     db.aIAgent.findMany({ include: { managerUser: { select: { name: true } } } }),
     db.aITask.groupBy({ by: ["agentSlug", "status"], where: { status: { in: [...OPEN_TASK_STATUSES] } }, _count: { _all: true } }),
@@ -92,7 +92,7 @@ export async function employeeDirectory(now = new Date()): Promise<EmployeeCard[
   const nextQueued = await db.aITask.findMany({ where: { status: { in: ["QUEUED", "PAUSED", "AWAITING_APPROVAL"] } }, orderBy: [{ runAfter: "asc" }], distinct: ["agentSlug"], select: { id: true, agentSlug: true, title: true, progress: true, currentStep: true, status: true } });
   const count = (list: { agentSlug: string; _count: { _all: number } }[], slug: string) => list.filter((r) => r.agentSlug === slug).reduce((n, r) => n + r._count._all, 0);
 
-  return AGENTS.map((spec) => {
+  return specs.map((spec) => {
     const row = bySlug.get(spec.slug);
     const p = profileFor(spec.slug);
     const cur = running.find((t) => t.agentSlug === spec.slug) ?? null;

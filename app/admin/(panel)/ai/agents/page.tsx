@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db/client";
 import { requireAccess } from "@/lib/os/guard";
-import { AGENTS } from "@/lib/ai/catalog";
+import { ALL_AGENTS as AGENTS } from "@/lib/ai/catalog";
 import { canRunAgent, ensureAgents } from "@/lib/ai/agents";
 import { startOfUtcDay } from "@/lib/ai/cost";
 import { daysFromNow } from "@/lib/os/range";

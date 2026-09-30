@@ -2,7 +2,7 @@ import { db } from "@/lib/db/client";
 import type { Automation } from "@/lib/generated/prisma/client";
 import { ROLES } from "@/lib/auth/permissions";
 import { TRIGGERS, TRIGGER_INFO } from "@/lib/automation/rules";
-import { AGENTS } from "@/lib/ai/catalog";
+import { ALL_AGENTS as AGENTS } from "@/lib/ai/catalog";
 import { saveAutomationAction } from "@/lib/automation/actions";
 import { SubmitButton } from "./client";
 import { ActionForm } from "./forms";

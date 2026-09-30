@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db/client";
 import { can } from "@/lib/auth/permissions";
 import { requireAccess } from "@/lib/os/guard";
-import { agentBySlug, AGENTS } from "@/lib/ai/catalog";
+import { agentBySlug, ALL_AGENTS } from "@/lib/ai/catalog";
 import { canRunAgent, getAgentConfig } from "@/lib/ai/agents";
 import { getTool } from "@/lib/ai/tools";
 import { employeeDirectory } from "@/lib/ai/workforce/employees";
@@ -36,7 +36,7 @@ export default async function EmployeeProfile({ params, searchParams }: { params
   const sp = await searchParams;
   const tab: Tab = pick(sp, "tab", TABS) ?? "overview";
   const now = new Date();
-  const dir = await employeeDirectory(now);
+  const dir = await employeeDirectory(now, ALL_AGENTS);
   const e = dir.find((x) => x.slug === slug)!;
   const cfg = (await getAgentConfig(slug))!;
   const row = await db.aIAgent.findUniqueOrThrow({ where: { slug } });
@@ -62,6 +62,7 @@ export default async function EmployeeProfile({ params, searchParams }: { params
           </div>
           <p className="text-sm text-muted">{e.jobTitle} · {e.department}{e.manager ? ` · Reports to ${e.manager}` : ""}</p>
           <p className="mt-0.5 text-xs text-dim">{e.workingStatus} · last activity {ago(e.lastActivity, now)}</p>
+          {spec.limits?.length ? <p className="mt-0.5 text-xs text-amber-700">Cannot: {spec.limits.join("; ")}</p> : null}
         </div>
         <div className="grid grid-cols-3 gap-2 text-center md:w-80">
           {[["Tasks today", e.tasksToday], ["Completed", e.completedToday], ["Pending", e.pending]].map(([k, v]) => (
@@ -97,7 +98,7 @@ async function Overview({ slug, e, responsibilities, capabilities, direct, now }
     db.aIReport.findMany({ where: { agentSlug: slug }, orderBy: { createdAt: "desc" }, take: 2 }),
     db.aIActivity.findMany({ where: { agentSlug: slug }, orderBy: { createdAt: "desc" }, take: 12 }),
   ]);
-  const employees = AGENTS.map((a) => ({ slug: a.slug, name: a.name.replace(/^AI\s+/, "") }));
+  const employees = ALL_AGENTS.map((a) => ({ slug: a.slug, name: a.name.replace(/^AI\s+/, "") }));
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div className="min-w-0 space-y-5">
@@ -415,7 +416,7 @@ async function SettingsTab({ slug, row, configure }: { slug: string; row: { pers
           <TextField name="personaName" label="Display name (optional)" defaultValue={row.personaName} maxLength={60} hint="e.g. Sarah. Leave blank to use the role name." />
           <TextField name="jobTitle" label="Job title" defaultValue={row.jobTitle} maxLength={120} required />
           <TextField name="department" label="Department" defaultValue={row.department} maxLength={80} required />
-          <SelectField name="reportsToSlug" label="Reports to (AI employee)" options={AGENTS.filter((a) => a.slug !== slug).map((a) => [a.slug, a.name] as const)} defaultValue={row.reportsToSlug} blank="No AI manager" />
+          <SelectField name="reportsToSlug" label="Reports to (AI employee)" options={ALL_AGENTS.filter((a) => a.slug !== slug).map((a) => [a.slug, a.name] as const)} defaultValue={row.reportsToSlug} blank="No AI manager" />
           <SelectField name="managerUserId" label="Human manager" options={users.map((u) => [u.id, u.name] as const)} defaultValue={row.managerUserId} blank="None" className="sm:col-span-2" />
           <TextArea name="responsibilities" label="Responsibilities (one per line)" defaultValue={row.responsibilities.join("\n")} rows={6} className="sm:col-span-2" />
           <div className="sm:col-span-2"><SubmitButton>Save profile</SubmitButton></div>

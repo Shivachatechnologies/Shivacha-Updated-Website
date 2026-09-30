@@ -1,7 +1,7 @@
 import { db } from "@/lib/db/client";
 import { can } from "@/lib/auth/permissions";
 import { requireAccess } from "@/lib/os/guard";
-import { AGENTS } from "@/lib/ai/catalog";
+import { ALL_AGENTS as AGENTS } from "@/lib/ai/catalog";
 import { ACTIVE_KILL_KEYS, BUDGET_KEYS, BUDGET_KINDS, ENFORCED_BUDGETS, GROWTH_CHANNELS, IMPLEMENTED_CHANNELS, NOT_IMPLEMENTED_CHANNELS, KILL_SWITCHES, LANGUAGES, PLATFORM_LABELS, SOCIAL_PLATFORMS } from "@/lib/growth/policy";
 import { getGrowthSettings } from "@/lib/growth/settings";
 import { usageOf } from "@/lib/growth/engine";

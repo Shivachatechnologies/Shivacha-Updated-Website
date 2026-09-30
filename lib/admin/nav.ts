@@ -28,6 +28,19 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     ],
   },
   {
+    title: "AI Company",
+    icon: "Building2",
+    flag: "AI_WORKFORCE",
+    items: [
+      { label: "Command Center", href: "/admin/company", icon: "Gauge", permission: "ai:view" },
+      { label: "Objectives", href: "/admin/company/objectives", icon: "Target", permission: "ai:view" },
+      { label: "Organization", href: "/admin/company/org", icon: "Network", permission: "ai:view" },
+      { label: "CEO Briefing", href: "/admin/company/briefing", icon: "Newspaper", permission: "executive:view" },
+      { label: "Performance", href: "/admin/company/performance", icon: "Trophy", permission: "ai:view" },
+      { label: "Company Settings", href: "/admin/company/settings", icon: "Settings", permission: "ai:view" },
+    ],
+  },
+  {
     title: "Human Workforce",
     icon: "IdCard",
     items: [
@@ -129,8 +142,11 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     flag: "GROWTH",
     items: [
       { label: "Growth Dashboard", href: "/admin/marketing/growth", icon: "TrendingUp", permission: "growth:view" },
+      { label: "Market Intelligence", href: "/admin/marketing/market", icon: "Telescope", permission: "growth:view" },
+      { label: "Lead Generation", href: "/admin/marketing/leads", icon: "Crosshair", permission: "growth:view" },
       { label: "Autonomous Control", href: "/admin/marketing/autonomous", icon: "Power", permission: "growth:view" },
       { label: "Social Media", href: "/admin/marketing/social", icon: "Share2", permission: "growth:view" },
+      { label: "Social Calendar", href: "/admin/marketing/social/calendar", icon: "CalendarDays", permission: "growth:view" },
       { label: "Demand Gen", href: "/admin/marketing/demand", icon: "Target", permission: "growth:view" },
       { label: "Content Studio", href: "/admin/marketing/content", icon: "PenLine", permission: "growth:view" },
       { label: "Prospects", href: "/admin/marketing/prospects", icon: "Crosshair", permission: "growth:view" },
@@ -200,6 +216,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     icon: "Server",
     items: [
       { label: "Integrations", href: "/admin/integrations", icon: "Plug", permission: "integrations:view", flag: "INTEGRATIONS" },
+      { label: "API & Integrations", href: "/admin/integrations/connect", icon: "KeyRound", permission: "integrations:view", flag: "INTEGRATIONS" },
       { label: "Security", href: "/admin/security", icon: "Lock", permission: "security:view" },
       { label: "System Health", href: "/admin/system", icon: "HeartPulse", permission: "system:view" },
     ],

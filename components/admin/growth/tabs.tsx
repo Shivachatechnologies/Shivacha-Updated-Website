@@ -2,6 +2,8 @@ import { Tabs } from "@/components/admin/os";
 
 const ITEMS = [
   ["growth", "Dashboard"],
+  ["market", "Market intelligence"],
+  ["leads", "Lead generation"],
   ["autonomous", "Autonomous control"],
   ["social", "Social"],
   ["demand", "Demand gen"],

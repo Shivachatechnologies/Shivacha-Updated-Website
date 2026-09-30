@@ -2,7 +2,7 @@ import { db } from "@/lib/db/client";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { can } from "@/lib/auth/permissions";
 import { requireAccess } from "@/lib/os/guard";
-import { AGENTS } from "@/lib/ai/catalog";
+import { ALL_AGENTS as AGENTS } from "@/lib/ai/catalog";
 import { fmtDate } from "@/components/admin/ui";
 import { ListView, LinkCell, StatusBadge, PAGE_SIZE, pageOf, pick, type SP } from "@/components/admin/os";
 

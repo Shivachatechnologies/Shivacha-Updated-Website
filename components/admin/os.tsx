@@ -32,6 +32,9 @@ const TONES: Record<string, Tone> = {
   PUBLISHED: "green", INTERNAL: "gray", CLIENT: "blue", PUBLIC: "green",
   // growth
   NOT_SUPPORTED: "gray", NOT_IMPLEMENTED: "gray", MANUAL: "blue", AUTOMATED: "violet", DISABLED: "gray",
+  // AI company
+  WAITING: "amber", PLANNING: "blue", PENDING_REVIEW: "amber", REVISION_REQUESTED: "amber", VALID: "green", INVALID: "red", RISKY: "amber", UNKNOWN: "gray", SUPPORTED: "green", STATUS_ONLY: "blue", REAL: "green", ESTIMATED: "amber", UNAVAILABLE: "gray",
+  CHIEF_OF_STAFF: "violet", EXECUTIVE: "violet", DIRECTOR: "blue", MANAGER: "blue", SPECIALIST: "gray", ESCALATION: "red", BLOCKER: "red", DELEGATION: "blue", HANDOFF: "blue", HELP_REQUEST: "blue", RESULT: "green", REVISION_REQUEST: "amber",
   SALES_READY: "green", QUALIFIED: "blue", NURTURE: "amber", LOW_FIT: "gray", NEW: "blue", RESEARCHED: "violet", CONTACTED: "violet", REPLIED: "green", CONVERTED: "green", DISQUALIFIED: "gray", PUBLISHING: "blue", IN_REVIEW: "amber", STOPPED: "gray", PROSPECT: "gray", ENDED: "gray",
 };
 

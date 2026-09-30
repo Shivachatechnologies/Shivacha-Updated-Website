@@ -4,7 +4,7 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 import { can } from "@/lib/auth/permissions";
 import { requireAccess } from "@/lib/os/guard";
 import { runnableAgents } from "@/lib/ai/agents";
-import { agentBySlug, AGENTS } from "@/lib/ai/catalog";
+import { agentBySlug, ALL_AGENTS as AGENTS } from "@/lib/ai/catalog";
 import { providerStatus } from "@/lib/ai/provider";
 import { runWorkforceNowAction } from "@/lib/ai/workforce/actions";
 import { displayName, ensureEmployees } from "@/lib/ai/workforce/employees";
