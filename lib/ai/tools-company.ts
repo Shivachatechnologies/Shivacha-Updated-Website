@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { can } from "@/lib/auth/permissions";
 import { orgChart } from "@/lib/company/organisation";
 import { progressFrom } from "@/lib/company/objective-status";
+import { objectiveScope } from "@/lib/company/access";
 import { regionalPerformance, workforcePerformance } from "@/lib/company/analytics";
 import { leadGenFunnel, runLeadPipeline } from "@/lib/company/leadgen";
 import { addFinding, completeResearch } from "@/lib/company/research";
@@ -37,8 +38,10 @@ export const COMPANY_TOOLS: ToolDef[] = [
     permissions: ["ai:view"],
     kind: "read",
     risk: "LOW",
-    run: async (_c, i) => {
-      const objectives = await db.aIObjective.findMany({ where: i.objectiveId ? { id: i.objectiveId } : { status: { in: ["PLANNING", "ACTIVE", "BLOCKED"] } }, orderBy: { createdAt: "desc" }, take: i.limit });
+    run: async (c, i) => {
+      // Same visibility as the objective pages: own objectives unless executive / AI administrator.
+      const scope = objectiveScope(c.user);
+      const objectives = await db.aIObjective.findMany({ where: { ...scope, ...(i.objectiveId ? { id: i.objectiveId } : { status: { in: ["PLANNING", "ACTIVE", "BLOCKED"] } }) }, orderBy: { createdAt: "desc" }, take: i.limit });
       const out = [];
       for (const o of objectives) {
         const [tasks, esc] = await Promise.all([

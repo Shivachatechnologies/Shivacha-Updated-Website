@@ -12,6 +12,7 @@ import { integrationByKey } from "@/lib/integrations/catalog";
 import { removeSecrets, storeSecret, VaultError } from "@/lib/integrations/vault";
 import { testIntegration } from "@/lib/integrations/health";
 import { cancelObjective, createObjective, ObjectiveError } from "./objectives";
+import { seesAllObjectives } from "./access";
 import { saveCompanyProfile } from "./profile";
 import { DEPARTMENTS, REGIONS, TEMPLATE_KEYS, parseCompanyProfile } from "./org";
 import { LeadGenError, runLeadPipeline } from "./leadgen";
@@ -51,7 +52,9 @@ export async function cancelObjectiveAction(id: string): Promise<ActionState> {
 export async function resolveMessageAction(id: string): Promise<ActionState> {
   try {
     const user = await authorizeAccess("ai:execute", F);
-    const r = await db.aIWorkMessage.updateMany({ where: { id, status: "OPEN" }, data: { status: "RESOLVED", resolvedAt: new Date() } });
+    // A person may close escalations addressed to them; executives and AI administrators may close any.
+    const scope = seesAllObjectives(user.role) ? {} : { toUserId: user.id };
+    const r = await db.aIWorkMessage.updateMany({ where: { id, status: "OPEN", ...scope }, data: { status: "RESOLVED", resolvedAt: new Date() } });
     if (!r.count) throw new UserError("Already resolved.");
     await audit({ userId: user.id, action: "company.message.resolved", entity: "AIWorkMessage", entityId: id });
     revalidatePath("/admin/company");

@@ -51,7 +51,8 @@ ok(await seen(page.locator("li", { hasText: "STOP ALL (every growth action" }).g
 await page.check("input[name=autonomousMode]");
 await page.check("input[name=ch_leadGen]");
 await page.fill("input[name=budget_emailDaily]", "50");
-await page.fill("input[name=budget_socialDaily]", "10");
+// High enough that repeated runs on the same UTC day still reach the provider (the step under test).
+await page.fill("input[name=budget_socialDaily]", "100000");
 await submitIn(page, page.locator("form", { has: page.locator("input[name=autonomousMode]") }), "Save growth controls");
 ok(await page.locator("input[name=autonomousMode]").isChecked(), "autonomous mode saved");
 ok((await page.locator("input[name=budget_emailDaily]").inputValue()) === "50", "email budget saved");

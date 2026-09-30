@@ -374,7 +374,7 @@ export async function processDueTasks(limit = 5): Promise<number> {
   const unavailable = agents.filter((a) => !a.enabled || !a.available).map((a) => a.slug);
   const running = new Map((await db.aITask.groupBy({ by: ["agentSlug"], where: { status: "RUNNING" }, _count: { _all: true } })).map((r) => [r.agentSlug, r._count._all]));
   const capacity = new Map(agents.map((a) => [a.slug, a.maxConcurrentTasks ?? 1]));
-  const due = await db.aITask.findMany({ where: { status: "QUEUED", runAfter: { lte: new Date() }, agentSlug: { notIn: unavailable } }, orderBy: [{ createdAt: "asc" }], take: limit * 6, select: { id: true, priority: true, agentSlug: true, dependsOn: true } });
+  const due = await db.aITask.findMany({ where: { status: "QUEUED", runAfter: { lte: new Date() }, agentSlug: { notIn: unavailable } }, orderBy: [{ createdAt: "asc" }], take: 200, select: { id: true, priority: true, agentSlug: true, dependsOn: true } });
   const rank: Record<string, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
   let n = 0;
   for (const d of due.sort((a, b) => (rank[a.priority] ?? 2) - (rank[b.priority] ?? 2))) {

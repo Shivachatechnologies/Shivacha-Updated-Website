@@ -9,6 +9,7 @@ import { PLAYBOOKS, type Playbook } from "@/lib/company/objective-rules";
 import { campaignScorecard } from "@/lib/company/analytics";
 import { REGIONS } from "@/lib/company/org";
 import type { PlanStage } from "@/lib/company/objectives";
+import { seesAllObjectives } from "@/lib/company/access";
 import { cancelObjectiveAction } from "@/lib/company/actions";
 import { fmtMoney } from "@/lib/os/money";
 import { PageHeader, fmtDate } from "@/components/admin/ui";
@@ -27,7 +28,7 @@ export default async function ObjectivePage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   await refreshObjective(id);
   const o = await db.aIObjective.findUnique({ where: { id } });
-  if (!o) notFound();
+  if (!o || (o.createdById !== user.id && !seesAllObjectives(user.role))) notFound();
   const [tasks, activity, messages, research] = await Promise.all([
     db.aITask.findMany({ where: { objectiveId: id }, orderBy: { createdAt: "asc" } }),
     db.aIActivity.findMany({ where: { objectiveId: id }, orderBy: { createdAt: "desc" }, take: 80 }),

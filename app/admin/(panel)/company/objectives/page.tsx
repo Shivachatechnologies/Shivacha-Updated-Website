@@ -5,6 +5,7 @@ import { requireAccess } from "@/lib/os/guard";
 import { progressFrom, OBJECTIVE_STATUSES } from "@/lib/company/objective-status";
 import { PLAYBOOKS, type Playbook } from "@/lib/company/objective-rules";
 import { createObjectiveAction } from "@/lib/company/actions";
+import { objectiveScope } from "@/lib/company/access";
 import { EmptyState, PageHeader, fmtDate } from "@/components/admin/ui";
 import { ActionForm } from "@/components/admin/forms";
 import { SubmitButton } from "@/components/admin/client";
@@ -18,7 +19,7 @@ export default async function ObjectivesPage({ searchParams }: { searchParams: P
   const user = await requireAccess("ai:view", "AI_WORKFORCE");
   const sp = await searchParams;
   const s = OBJECTIVE_STATUSES.find((x) => x === str(sp, "s", 20));
-  const [rows, counts] = await Promise.all([db.aIObjective.findMany({ where: s ? { status: s } : {}, orderBy: { createdAt: "desc" }, take: 100 }), db.aIObjective.groupBy({ by: ["status"], _count: { _all: true } })]);
+  const [rows, counts] = await Promise.all([db.aIObjective.findMany({ where: { ...objectiveScope(user), ...(s ? { status: s } : {}) }, orderBy: { createdAt: "desc" }, take: 100 }), db.aIObjective.groupBy({ by: ["status"], where: objectiveScope(user), _count: { _all: true } })]);
   const tasks = rows.length ? await db.aITask.findMany({ where: { objectiveId: { in: rows.map((r) => r.id) } }, select: { objectiveId: true, status: true } }) : [];
   return (
     <>

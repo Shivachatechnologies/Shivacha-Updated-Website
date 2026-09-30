@@ -94,7 +94,8 @@ before(async () => {
   assert.ok(users.SUPER_ADMIN && users.SALES_MANAGER, "QA users exist");
   await ensureOrganisation();
   await db.aIAgent.updateMany({ data: { mode: "ASSIST", enabled: true, available: true } });
-  await saveCompanyProfile(DEFAULT_PROFILE);
+  // Repeated runs on the shared test database would otherwise exhaust the real daily delegation limit (200/day).
+  await saveCompanyProfile({ ...DEFAULT_PROFILE, dailyDelegationLimit: 5000 });
   await setGrowth({});
 });
 
@@ -377,11 +378,11 @@ test("governance: strict approval mode turns an AUTONOMOUS employee's change int
   await db.aIAgent.update({ where: { slug: "sales" }, data: { mode: "AUTONOMOUS" } });
   const agent = await db.aIAgent.findUniqueOrThrow({ where: { slug: "sales" }, select: { id: true } });
   await db.aIAgentTool.updateMany({ where: { agentId: agent.id, tool: "createLeadActivity" }, data: { autonomousAllowed: true } });
-  await saveCompanyProfile({ ...DEFAULT_PROFILE, strictApprovals: true });
+  await saveCompanyProfile({ ...DEFAULT_PROFILE, dailyDelegationLimit: 5000, strictApprovals: true });
   const r = await runAgent({ agentSlug: "sales", request: "Add a note", user: users.SUPER_ADMIN, provider: scripted([() => ["createLeadActivity", { leadId: lead.id, note: "Strict mode note" }]]) });
   assert.equal(r.status, "AWAITING_APPROVAL");
   assert.equal(await db.leadNote.count({ where: { leadId: lead.id } }) + (await db.leadActivity.count({ where: { leadId: lead.id, type: "NOTE" } })), 0, "nothing executed");
-  await saveCompanyProfile(DEFAULT_PROFILE);
+  await saveCompanyProfile({ ...DEFAULT_PROFILE, dailyDelegationLimit: 5000 });
   await db.aIAgent.update({ where: { slug: "sales" }, data: { mode: "ASSIST" } });
 });
 
@@ -411,4 +412,81 @@ test("analytics are computed from real rows only", async () => {
   assert.equal(perf.length, ALL_AGENTS.length);
   assert.ok(perf.find((p) => p.slug === "sales-director")!.done >= 1, "the delegated review counts");
   assert.ok(await processDueTasks(1) >= 0);
+});
+
+test("Phase 29 scenario: “100 qualified international leads per day” runs end to end through the AI company to a CEO report", async () => {
+  const statement = `Build a plan to generate 100 qualified international leads per day ${RUN}-s29`;
+  const { id } = await createObjective({ statement, userId: users.SUPER_ADMIN.id });
+  const o = await db.aIObjective.findUniqueOrThrow({ where: { id } });
+  const tasks = await db.aITask.findMany({ where: { objectiveId: id } });
+  const by = (slug: string) => tasks.find((t) => t.agentSlug === slug)!;
+  const research = await db.marketResearch.findFirstOrThrow({ where: { objectiveId: id } });
+  await db.campaign.update({ where: { id: o.campaignId! }, data: { leadGen: { sources: ["apollo"], titles: ["CTO"], countries: ["United States", "India"], industries: ["fintech"], mode: "MANUAL", minFit: 60 } } });
+
+  // 1–7: market research and ICP (sourced findings, Knowledge Base draft).
+  assert.equal(await executeTask(by("intel-director").id, { provider: scripted([
+    () => ["recordMarketFinding", { researchId: research.id, section: "icp", statement: "Fintech CTOs in the US and India are the target buyers.", label: "RECOMMENDATION" }],
+    () => ["recordMarketFinding", { researchId: research.id, section: "opportunity", statement: "Existing fintech clients are the strongest segment in our CRM.", label: "FACT", sourceUrl: "/admin/reports/deals" }],
+    () => ["completeMarketResearch", { researchId: research.id, summary: "Target fintech CTOs in the US and India with a compliance-led offer." }],
+    () => ["completeTask", { summary: "ICP defined: fintech CTOs, US and India." }],
+  ]) }), "DONE");
+  assert.equal((await db.marketResearch.findUniqueOrThrow({ where: { id: research.id } })).status, "COMPLETED");
+  // 8: offer strategy.
+  assert.equal(await executeTask(by("cmo").id, { provider: scripted([() => ["completeTask", { summary: "Offer: compliance-ready payments integration sprint." }]]) }), "DONE");
+  // 9–15: campaign, provider selection, discovery, enrichment, verification, dedupe, qualification — via the approval policy.
+  process.env.APOLLO_API_KEY = "test-apollo";
+  process.env.HUNTER_API_KEY = "test-hunter";
+  apolloPeople = [
+    { name: "Priya S", title: "CTO", country: "India", email: `priya.${RUN}@pay.example`, organization: { name: "Pay In", primary_domain: "pay-in.example", industry: "Fintech" } },
+    { name: "Sam T", title: "CTO", country: "United States", email: `sam.${RUN}@pay.example`, organization: { name: "Pay US", primary_domain: "pay-us.example", industry: "Fintech" } },
+  ];
+  const lg = by("leadgen-director");
+  assert.equal(await executeTask(lg.id, { provider: scripted([() => ["runLeadPipeline", { campaignId: o.campaignId, maxDiscover: 25 }], () => ["completeTask", { summary: "Pipeline run requested (approval)." }]]) }), "AWAITING_APPROVAL");
+  assert.equal(await db.prospect.count({ where: { campaignId: o.campaignId! } }), 0, "nothing runs before a person approves");
+  const approval = await db.aIApproval.findFirstOrThrow({ where: { taskId: lg.id, tool: "runLeadPipeline" } });
+  const { decideApproval } = await import("../../lib/ai/approvals");
+  await decideApproval(approval.id, users.SUPER_ADMIN, { decision: "APPROVE" });
+  assert.equal((await db.aITask.findUniqueOrThrow({ where: { id: lg.id } })).status, "DONE");
+  assert.equal(await db.prospect.count({ where: { campaignId: o.campaignId!, status: "RESEARCHED" } }), 2, "two verified, on-ICP prospects qualified");
+  // 16–17: SDR outreach preparation (drafts only; sending needs approval), supporting content.
+  assert.equal(await executeTask(by("sdr").id, { provider: scripted([() => ["draftEmail", { subject: "Compliance-ready payments", body: "Hi Priya, …" }], () => ["completeTask", { summary: "2 outreach drafts prepared." }]]) }), "DONE");
+  assert.equal(await executeTask(by("content-manager").id, { provider: scripted([() => ["draftContentAsset", { kind: "ARTICLE", title: `Compliance-ready payments ${RUN}`, body: "Draft article." }], () => ["completeTask", { summary: "Article drafted for review." }]]) }), "DONE");
+  assert.ok(await db.contentAsset.findFirst({ where: { title: `Compliance-ready payments ${RUN}`, status: "IN_REVIEW" } }), "content waits for review, not published");
+  // 22–23: analytics and optimisation from real funnel data.
+  assert.equal(await executeTask(by("revenue-analyst").id, { provider: scripted([() => ["getLeadGenFunnel", { campaignId: o.campaignId }], () => ["completeTask", { summary: "2 discovered, 2 qualified; bottleneck: replies not yet tracked." }]]) }), "DONE");
+  // 24: the Chief of Staff reviews every result and reports to the CEO.
+  const root = await db.aITask.findUniqueOrThrow({ where: { id: o.rootTaskId! } });
+  assert.equal(root.status, "QUEUED", "Chief of Staff resumes once all delegated work is back");
+  const children = await db.aITask.findMany({ where: { parentTaskId: root.id } });
+  assert.equal(await executeTask(root.id, { provider: scripted([...children.map((c) => (() => ["reviewDelegatedWork", { taskId: c.id, decision: "accept" }]) as Step), () => ["getObjectiveStatus", { objectiveId: id }], () => ["completeTask", { summary: "Plan executed; 2 qualified prospects so far against a 100/day target." }]], "CEO report: 2 qualified prospects (target 100/day — not met yet). Outreach drafts await approval.") }), "DONE");
+  const done = await db.aIObjective.findUniqueOrThrow({ where: { id } });
+  assert.equal(done.status, "COMPLETED");
+  assert.match(done.result ?? "", /target 100\/day — not met yet/, "the report states actuals against the target");
+  const timeline = await db.aIActivity.count({ where: { objectiveId: id } });
+  assert.ok(timeline >= 20, `a traceable execution timeline (${timeline} events)`);
+  delete process.env.APOLLO_API_KEY;
+  delete process.env.HUNTER_API_KEY;
+});
+
+test("delegation never exceeds the human requester's authority", async () => {
+  assert.ok(users.FINANCE_MANAGER, "QA finance user exists");
+  const o = await db.aIObjective.create({ data: { title: `Authority ${RUN}`, statement: `Authority ${RUN}`, status: "ACTIVE", createdById: users.FINANCE_MANAGER.id } });
+  // Finance Manager may direct the Chief Customer Officer (clients:view) but not the Support employee (support:view).
+  const t = await createEmployeeTask({ agentSlug: "cco", title: `Authority ${RUN}`, requestedById: users.FINANCE_MANAGER.id, objectiveId: o.id });
+  await executeTask(t.id, { provider: scripted([
+    () => ["delegateTask", { assignee: "support", title: `Tickets ${RUN}`, instructions: "x" }],
+    () => ["delegateTask", { assignee: "account-manager", title: `Accounts ${RUN}`, instructions: "x" }],
+  ]) });
+  assert.equal(await db.aITask.count({ where: { title: `Tickets ${RUN}` } }), 0, "outside the requester's permissions: refused");
+  assert.equal(await db.aITask.count({ where: { title: `Accounts ${RUN}` } }), 1, "within the requester's permissions: delegated");
+});
+
+test("runaway protection: the company-wide daily delegation limit is enforced", async () => {
+  const o = await objectiveShell("Daily limit");
+  const today = await db.aITask.count({ where: { delegatedBySlug: { not: null }, createdAt: { gte: new Date(new Date().toISOString().slice(0, 10)) } } });
+  await saveCompanyProfile({ ...DEFAULT_PROFILE, dailyDelegationLimit: Math.max(1, today) });
+  const t = await createEmployeeTask({ agentSlug: "cmo", title: `Limit ${RUN}`, requestedById: users.SUPER_ADMIN.id, objectiveId: o.id });
+  await executeTask(t.id, { provider: scripted([() => ["delegateTask", { assignee: "content-manager", title: `Over limit ${RUN}`, instructions: "x" }]]) });
+  assert.equal(await db.aITask.count({ where: { title: `Over limit ${RUN}` } }), 0);
+  await saveCompanyProfile({ ...DEFAULT_PROFILE, dailyDelegationLimit: 5000 });
 });

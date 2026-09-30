@@ -222,7 +222,8 @@ test("4. AI daily budget: autonomous AI tasks are not created without budget for
   await runGrowthLoop("MANUAL");
   assert.equal(await count(), before, "budget smaller than the task's maximum cost → no task");
   const used = await usageOf("aiDaily");
-  await set({ ...on, budgets: budgets({ aiDaily: used + cost }) });
+  // Money in cents, as a person enters it (JS float sums such as 4.8 + 2.4 = 7.1999… would under-state the limit).
+  await set({ ...on, budgets: budgets({ aiDaily: Math.round((used + cost) * 100) / 100 }) });
   await runGrowthLoop("MANUAL");
   assert.equal(await count(), before + 1, "enough budget → exactly one task");
   assert.ok(Math.abs((await usageOf("aiDaily")) - (used + cost)) < 0.001, "the task's maximum cost was reserved");

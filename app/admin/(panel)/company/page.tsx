@@ -15,6 +15,7 @@ import { buildBriefing } from "@/lib/company/briefing";
 import { DEPARTMENTS } from "@/lib/company/org";
 import { PLAYBOOKS, type Playbook } from "@/lib/company/objective-rules";
 import { createObjectiveAction, resolveMessageAction } from "@/lib/company/actions";
+import { objectiveScope } from "@/lib/company/access";
 import { fmtMoney } from "@/lib/os/money";
 import { PageHeader, fmtDate } from "@/components/admin/ui";
 import { ActionForm } from "@/components/admin/forms";
@@ -35,7 +36,7 @@ export default async function CompanyCommandCenter() {
   const [profile, org, objectives, taskCounts, approvals, messages, today, regions, deptOpen] = await Promise.all([
     getCompanyProfile(),
     orgChart(),
-    db.aIObjective.findMany({ where: { OR: [{ status: { in: ["PLANNING", "ACTIVE", "BLOCKED"] } }, { updatedAt: { gte: since14 } }] }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 12 }),
+    db.aIObjective.findMany({ where: { ...objectiveScope(user), OR: [{ status: { in: ["PLANNING", "ACTIVE", "BLOCKED"] } }, { updatedAt: { gte: since14 } }] }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 12 }),
     db.aITask.groupBy({ by: ["status"], where: { status: { in: ["QUEUED", "RUNNING", "WAITING", "AWAITING_APPROVAL", "PAUSED"] } }, _count: { _all: true } }),
     db.aIApproval.count({ where: { status: "PENDING" } }),
     db.aIWorkMessage.findMany({ where: { status: "OPEN", kind: { in: ["ESCALATION", "BLOCKER"] }, ...(exec ? { OR: [{ toUserId: { not: null } }, { toSlug: "ceo" }] } : { toUserId: user.id }) }, orderBy: { createdAt: "desc" }, take: 10 }),

@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { db } from "@/lib/db/client";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { agentBySlug } from "@/lib/ai/catalog";
+import { canRunAgent } from "@/lib/ai/agents";
+import type { RoleName } from "@/lib/auth/permissions";
 import type { VirtualTool } from "@/lib/ai/runner";
 import { logEmployeeActivity } from "@/lib/ai/workforce/activity";
 import { growthStop } from "@/lib/growth/settings";
@@ -88,6 +90,11 @@ export async function delegate(task: TaskRow, input: { assignee: string; title: 
   if (target && (!target.enabled || !target.available)) return { ok: false, message: `${spec.name} is ${target.enabled ? "clocked out" : "disabled"} and cannot take work. Choose someone else or escalate.` };
   const stop = await growthStop({ kind: "ai", agent: to });
   if (stop) return { ok: false, message: `Not delegated: ${stop}` };
+  // Delegated work runs as the person who started it: they must be allowed to direct the target employee.
+  if (task.requestedById) {
+    const person = await db.user.findUnique({ where: { id: task.requestedById }, select: { role: true, active: true } });
+    if (!person?.active || !canRunAgent(person.role as RoleName, spec)) return { ok: false, message: `The person who started this work is not allowed to direct the ${spec.name}. Do it yourself or escalate.` };
+  }
   if ((await depthOf(task)) + 1 > MAX_DEPTH) return { ok: false, message: `Delegation is limited to ${MAX_DEPTH} levels. Do this work yourself or escalate.` };
   if ((await db.aITask.count({ where: { parentTaskId: task.id } })) >= MAX_CHILDREN_PER_TASK) return { ok: false, message: `This task already has ${MAX_CHILDREN_PER_TASK} delegated tasks (limit).` };
   if (task.objectiveId && (await db.aITask.count({ where: { objectiveId: task.objectiveId } })) >= profile.objectiveTaskLimit) return { ok: false, message: `This objective reached its limit of ${profile.objectiveTaskLimit} tasks. Report what is done and escalate if more is needed.` };
