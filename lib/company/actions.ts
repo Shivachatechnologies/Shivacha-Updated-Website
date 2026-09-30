@@ -11,6 +11,7 @@ import { saveMemory } from "@/lib/ai/workforce/memory";
 import { integrationByKey } from "@/lib/integrations/catalog";
 import { removeSecrets, storeSecret, VaultError } from "@/lib/integrations/vault";
 import { testIntegration } from "@/lib/integrations/health";
+import { OAUTH_TOKENS, OAuthError, selectMetaPage } from "@/lib/integrations/oauth";
 import { cancelObjective, createObjective, ObjectiveError } from "./objectives";
 import { seesAllObjectives } from "./access";
 import { saveCompanyProfile } from "./profile";
@@ -219,11 +220,25 @@ export async function disconnectIntegrationAction(key: string): Promise<ActionSt
     const def = integrationByKey(key);
     if (!def || !def.vault) throw new UserError("Nothing stored for this integration.");
     // Shared credentials (e.g. the Meta page token used by Facebook and Instagram) are removed for both.
-    await removeSecrets(def.fields.map((f) => f.name));
-    await db.integration.deleteMany({ where: { key: `center:${key}` } });
+    // Disconnecting an OAuth app also revokes our copy of every token its sign-in stored.
+    await removeSecrets([...def.fields.map((f) => f.name), ...(def.oauth && def.category === "OAuth apps" ? OAUTH_TOKENS[def.oauth] : [])]);
+    await db.integration.deleteMany({ where: { key: { in: [`center:${key}`, ...(def.oauth && def.category === "OAuth apps" ? [`oauth:${def.oauth}`] : [])] } } });
     await audit({ userId: user.id, action: "integration.credentials.removed", entity: "Integration", entityId: key });
     return okThen("/admin/integrations/connect", `${def.name}: stored credentials removed. Environment variables (if any) are unchanged.`);
   } catch (e) {
     return fail(wrap(e), "integrations");
+  }
+}
+
+/** Chooses which Facebook Page (and its Instagram account) the Meta sign-in should use. */
+export async function selectMetaPageAction(_: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("integrations:manage", "INTEGRATIONS");
+    const name = await selectMetaPage(String(form.get("pageId") ?? ""), user.id);
+    await audit({ userId: user.id, action: "integration.meta.page_selected", entity: "Integration", entityId: "meta" });
+    await testIntegration("facebook").catch(() => null);
+    return okThen("/admin/integrations/connect", `Page "${name}" selected.`);
+  } catch (e) {
+    return fail(e instanceof OAuthError ? new UserError(e.message) : e, "integrations");
   }
 }

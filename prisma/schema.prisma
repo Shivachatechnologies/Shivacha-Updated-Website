@@ -2083,6 +2083,9 @@ model SocialPost {
   campaignId     String?
   sourceAssetId  String?
   createdById    String?
+  /// Platform-reported engagement for this post ({ impressions, reach, likes, comments, shares, clicks }); null = not synced.
+  metrics        Json?
+  metricsAt      DateTime?
   /// Human who approved publishing (AI never approves its own posts).
   approvedById   String?
   createdByAgent String?
@@ -3526,6 +3529,11 @@ model AIObjective {
   campaignId   String?
   blockedReason String?
   result       String?   @db.Text
+  /// Latest measurement against the target ({ day, actual, target, gap, bottleneck, … }) from real records.
+  metrics      Json?
+  measuredAt   DateTime?
+  /// Next action chosen by the control loop (deterministic, from the measurement).
+  nextAction   String?   @db.Text
   createdById  String?
   completedAt  DateTime?
   createdAt    DateTime  @default(now())
@@ -3596,4 +3604,200 @@ model IntegrationSecret {
   updatedAt      DateTime @updatedAt
 
   @@index([provider])
+}
+
+// ═════════════════════════ AI COMPANY — OPERATIONS (additive) ═════════════════════════
+
+/// Provider API calls per day, recorded by the adapters (usage display and rate limits).
+model IntegrationUsage {
+  id       String   @id @default(cuid())
+  date     DateTime @db.Date
+  provider String
+  calls    Int      @default(0)
+  errors   Int      @default(0)
+  /// Provider asked us to slow down (HTTP 429 / Retry-After) until this time.
+  coolUntil DateTime?
+
+  @@unique([date, provider])
+}
+
+/// OAuth authorisation in progress: CSRF state + PKCE verifier. Single use; expires after 10 minutes.
+model OAuthState {
+  state        String   @id
+  provider     String
+  codeVerifier String
+  userId       String
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/// Paid-media campaign managed through a provider API. Created PAUSED; launching and budget increases need approval.
+model AdCampaign {
+  id           String    @id @default(cuid())
+  /// meta | google | linkedin
+  provider     String
+  name         String
+  /// Growth campaign this ad campaign belongs to.
+  campaignId   String?
+  objective    String?
+  /// DRAFT | PAUSED | ACTIVE | ENDED | FAILED
+  status       String    @default("DRAFT")
+  externalId   String?
+  /// Provider ids created alongside the campaign (ad set, ad, budget resource …).
+  externalRefs Json?
+  currency     String    @default("USD")
+  dailyBudget  Decimal   @db.Decimal(12, 2)
+  totalBudget  Decimal?  @db.Decimal(14, 2)
+  /// { countries: [], ageMin, ageMax }
+  targeting    Json?
+  /// { headline, body, link, imageUrl }
+  creative     Json?
+  spend        Decimal   @default(0) @db.Decimal(14, 2)
+  impressions  Int       @default(0)
+  clicks       Int       @default(0)
+  conversions  Int       @default(0)
+  lastSyncedAt DateTime?
+  error        String?   @db.Text
+  createdById  String?
+  approvedById String?
+  launchedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  spendLogs    AdSpendLog[]
+
+  @@unique([provider, externalId])
+  @@index([status])
+}
+
+/// Daily spend and results reported by the ad platform (never entered by the AI).
+model AdSpendLog {
+  id           String     @id @default(cuid())
+  adCampaignId String
+  date         DateTime   @db.Date
+  spend        Decimal    @db.Decimal(14, 2)
+  impressions  Int        @default(0)
+  clicks       Int        @default(0)
+  conversions  Int        @default(0)
+  source       String     @default("PROVIDER")
+  createdAt    DateTime   @default(now())
+  adCampaign   AdCampaign @relation(fields: [adCampaignId], references: [id], onDelete: Cascade)
+
+  @@unique([adCampaignId, date])
+}
+
+/// Recruiting: open role.
+model JobOpening {
+  id             String      @id @default(cuid())
+  title          String
+  departmentKey  String?
+  location       String?
+  employmentType String?
+  description    String?     @db.Text
+  /// DRAFT | OPEN | ON_HOLD | CLOSED
+  status         String      @default("DRAFT")
+  ownerId        String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  candidates     Candidate[]
+
+  @@index([status])
+}
+
+/// Recruiting: a candidate entered by a person (no applicant tracking system is connected).
+model Candidate {
+  id          String      @id @default(cuid())
+  jobId       String?
+  name        String
+  email       String?
+  phone       String?
+  source      String?
+  /// APPLIED | SCREENING | INTERVIEW | OFFER | HIRED | REJECTED | WITHDRAWN
+  stage       String      @default("APPLIED")
+  notes       String?     @db.Text
+  resumeText  String?     @db.Text
+  /// AI screening summary against the role (a draft for the hiring manager, never a decision).
+  aiSummary   String?     @db.Text
+  createdById String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  job         JobOpening? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([jobId, stage])
+}
+
+model Vendor {
+  id          String            @id @default(cuid())
+  name        String
+  category    String?
+  contactName String?
+  email       String?
+  website     String?
+  /// ACTIVE | UNDER_REVIEW | INACTIVE
+  status      String            @default("UNDER_REVIEW")
+  /// LOW | MEDIUM | HIGH
+  riskLevel   String            @default("LOW")
+  notes       String?           @db.Text
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  requests    PurchaseRequest[]
+
+  @@index([status])
+}
+
+/// Procurement request. Approval is a human decision; nothing is purchased or paid by the system.
+model PurchaseRequest {
+  id            String    @id @default(cuid())
+  title         String
+  vendorId      String?
+  amount        Decimal?  @db.Decimal(14, 2)
+  currency      String    @default("USD")
+  justification String?   @db.Text
+  /// DRAFT | SUBMITTED | APPROVED | REJECTED | ORDERED | RECEIVED | CANCELLED
+  status        String    @default("SUBMITTED")
+  requestedById String?
+  decidedById   String?
+  decidedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  vendor        Vendor?   @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+}
+
+/// Compliance / legal-operations checklist item.
+model ComplianceItem {
+  id        String    @id @default(cuid())
+  title     String
+  /// e.g. GDPR, SOC2, CONTRACT, TAX, POLICY
+  framework String?
+  ownerSlug String?
+  ownerId   String?
+  dueDate   DateTime?
+  /// OPEN | IN_PROGRESS | DONE | NOT_APPLICABLE
+  status    String    @default("OPEN")
+  evidence  String?   @db.Text
+  notes     String?   @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([status, dueDate])
+}
+
+/// Risk register entry (likelihood × impact, 1–5 each).
+model RiskItem {
+  id         String    @id @default(cuid())
+  title      String
+  category   String?
+  likelihood Int       @default(3)
+  impact     Int       @default(3)
+  ownerSlug  String?
+  mitigation String?   @db.Text
+  /// OPEN | MITIGATING | ACCEPTED | CLOSED
+  status     String    @default("OPEN")
+  reviewAt   DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([status])
 }

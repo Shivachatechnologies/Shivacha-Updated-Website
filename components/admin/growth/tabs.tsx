@@ -4,6 +4,7 @@ const ITEMS = [
   ["growth", "Dashboard"],
   ["market", "Market intelligence"],
   ["leads", "Lead generation"],
+  ["ads", "Advertising"],
   ["autonomous", "Autonomous control"],
   ["social", "Social"],
   ["demand", "Demand gen"],

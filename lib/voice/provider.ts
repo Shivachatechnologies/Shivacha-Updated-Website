@@ -1,4 +1,5 @@
 import "server-only";
+import { secretValue } from "@/lib/integrations/vault";
 
 /**
  * Voice provider abstraction. The AI brain is always the existing orchestrator (runAgent); a voice provider only turns
@@ -64,7 +65,7 @@ export const openaiVoice: VoiceProvider = {
   id: "openai",
   label: "OpenAI speech (server)",
   serverAudio: true,
-  configured: () => !!process.env.OPENAI_API_KEY,
+  configured: () => !!secretValue("OPENAI_API_KEY"),
   createSession: noop,
   connect: noop,
   interrupt: noop,
@@ -76,7 +77,7 @@ export const openaiVoice: VoiceProvider = {
     return this.synthesize(text, { voice, language: h.language });
   },
   async transcribe(audio, language) {
-    const key = process.env.OPENAI_API_KEY;
+    const key = secretValue("OPENAI_API_KEY");
     if (!key) throw new VoiceProviderError("OpenAI voice is not configured.");
     const form = new FormData();
     form.set("file", audio, "speech.webm");
@@ -89,7 +90,7 @@ export const openaiVoice: VoiceProvider = {
     return { text: (j.text ?? "").trim(), seconds: j.usage?.seconds ?? null };
   },
   async synthesize(text, opts) {
-    const key = process.env.OPENAI_API_KEY;
+    const key = secretValue("OPENAI_API_KEY");
     if (!key) throw new VoiceProviderError("OpenAI voice is not configured.");
     const voice = OPENAI_VOICES.includes((opts.voice ?? "") as (typeof OPENAI_VOICES)[number]) ? opts.voice : "alloy";
     const res = await fetch("https://api.openai.com/v1/audio/speech", {

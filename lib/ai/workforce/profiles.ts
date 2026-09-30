@@ -104,6 +104,12 @@ export const TOOL_PERMISSION_LABELS: Record<string, string> = {
   runLeadPipeline: "Run lead generation (uses provider credits)",
   recordMarketFinding: "Record market research findings",
   completeMarketResearch: "Save market research to the Knowledge Base (draft)",
+  getAdCampaigns: "Read paid-media campaigns",
+  proposeAdCampaign: "Propose ad campaigns (created paused, approval)",
+  requestAdLaunch: "Request an ad launch (approval or autonomous policy)",
+  launchAdCampaign: "Launch ad campaigns (spends money, approval)",
+  pauseAdCampaign: "Pause ad campaigns",
+  changeAdBudget: "Change ad budgets (approval)",
 };
 
 export const permissionLabel = (tool: string) => TOOL_PERMISSION_LABELS[tool] ?? tool;

@@ -144,6 +144,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { label: "Growth Dashboard", href: "/admin/marketing/growth", icon: "TrendingUp", permission: "growth:view" },
       { label: "Market Intelligence", href: "/admin/marketing/market", icon: "Telescope", permission: "growth:view" },
       { label: "Lead Generation", href: "/admin/marketing/leads", icon: "Crosshair", permission: "growth:view" },
+      { label: "Advertising", href: "/admin/marketing/ads", icon: "Megaphone", permission: "growth:view" },
       { label: "Autonomous Control", href: "/admin/marketing/autonomous", icon: "Power", permission: "growth:view" },
       { label: "Social Media", href: "/admin/marketing/social", icon: "Share2", permission: "growth:view" },
       { label: "Social Calendar", href: "/admin/marketing/social/calendar", icon: "CalendarDays", permission: "growth:view" },

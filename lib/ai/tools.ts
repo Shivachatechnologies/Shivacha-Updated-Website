@@ -21,6 +21,7 @@ import { WORKFORCE_TOOLS } from "./tools-workforce";
 import { COUNT_TOOLS } from "./tools-counts";
 import { GROWTH_TOOLS } from "./tools-growth";
 import { COMPANY_TOOLS } from "./tools-company";
+import { ADS_TOOLS } from "./tools-ads";
 
 /**
  * Controlled tools — the only way an agent can touch data. Every call is checked against the requesting user's
@@ -729,6 +730,7 @@ const TOOLS: ToolDef[] = [
   ...COUNT_TOOLS,
   ...GROWTH_TOOLS,
   ...COMPANY_TOOLS,
+  ...ADS_TOOLS,
 ];
 
 const STOP = new Set(["the", "and", "for", "with", "our", "you", "your", "that", "this", "are", "need", "want", "from", "have", "will", "can", "into", "platform", "solution", "system"]);

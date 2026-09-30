@@ -6,6 +6,9 @@ import { webSearchEnabled } from "@/lib/ai/provider";
 import { openaiVoice } from "@/lib/voice/provider";
 import type { SocialPlatform } from "./policy";
 import { secretValue } from "@/lib/integrations/vault";
+import { trackedFetch } from "@/lib/integrations/usage";
+import { refreshXToken } from "@/lib/integrations/oauth";
+import { adsProviders } from "@/lib/ads/providers";
 
 /**
  * Growth provider abstraction. Every provider reports NOT_CONNECTED when its credentials are missing and never
@@ -41,7 +44,8 @@ const TIMEOUT = 15_000;
 
 async function call(url: string, init: RequestInit & { json?: unknown } = {}): Promise<{ ok: boolean; status: number; body: Record<string, unknown>; headers: Headers }> {
   const { json, ...rest } = init;
-  const res = await fetch(url, { ...rest, body: json !== undefined ? JSON.stringify(json) : rest.body, headers: { ...(json !== undefined ? { "Content-Type": "application/json" } : {}), ...(rest.headers ?? {}) }, signal: AbortSignal.timeout(TIMEOUT), cache: "no-store" });
+  // Counted per provider per day, paused during a 429 cool-down, capped daily (lib/integrations/usage.ts).
+  const res = await trackedFetch(url, { ...rest, body: json !== undefined ? JSON.stringify(json) : rest.body, headers: { ...(json !== undefined ? { "Content-Type": "application/json" } : {}), ...(rest.headers ?? {}) }, signal: AbortSignal.timeout(TIMEOUT), cache: "no-store" });
   const text = await res.text();
   let body: Record<string, unknown> = {};
   try {
@@ -159,6 +163,14 @@ const instagram: SocialProvider = {
       : Promise.resolve(notConnected("Instagram", IG_KEYS)),
 };
 
+/** X call with the stored user token; on 401 the OAuth refresh token is used once to get a new access token. */
+async function xCall(url: string, init: RequestInit & { json?: unknown } = {}) {
+  const auth = () => ({ ...(init.headers ?? {}), Authorization: `Bearer ${env("X_ACCESS_TOKEN")}` });
+  let r = await call(url, { ...init, headers: auth() });
+  if (r.status === 401 && (await refreshXToken())) r = await call(url, { ...init, headers: auth() });
+  return r;
+}
+
 const x: SocialProvider = {
   platform: "X",
   status: () => ({ key: "x", kind: "social", name: "X (API v2, OAuth 2.0 user token)", connected: set(...X_KEYS), env: X_KEYS }),
@@ -166,7 +178,7 @@ const x: SocialProvider = {
     set(...X_KEYS)
       ? guard("X", async () => {
           const text = p.link ? `${p.body}\n\n${p.link}` : p.body;
-          const r = await call("https://api.x.com/2/tweets", { method: "POST", headers: { Authorization: `Bearer ${env("X_ACCESS_TOKEN")}` }, json: { text } });
+          const r = await xCall("https://api.x.com/2/tweets", { method: "POST", json: { text } });
           const id = (r.body.data as { id?: string } | undefined)?.id;
           return r.ok && id ? { ok: true, data: { externalId: id } } : apiError("X", r);
         })
@@ -174,7 +186,7 @@ const x: SocialProvider = {
   followers: () =>
     set(...X_KEYS)
       ? guard("X", async () => {
-          const r = await call(`https://api.x.com/2/users/${encodeURIComponent(env("X_USER_ID"))}?user.fields=public_metrics`, { headers: { Authorization: `Bearer ${env("X_ACCESS_TOKEN")}` } });
+          const r = await xCall(`https://api.x.com/2/users/${encodeURIComponent(env("X_USER_ID"))}?user.fields=public_metrics`);
           const n = Number((r.body.data as { public_metrics?: { followers_count?: number } } | undefined)?.public_metrics?.followers_count);
           return r.ok && Number.isFinite(n) ? { ok: true, data: { followers: n } } : apiError("X", r);
         })
@@ -274,7 +286,12 @@ export function providerStatuses(): ProviderStatus[] {
   const withState = (p: ProviderStatus): ProviderStatus => ({ ...p, state: p.state ?? (p.connected ? "CONNECTED" : "NOT_CONNECTED") });
   const list: ProviderStatus[] = [
     // Automated ad actions do not exist: credentials only enable the existing manual spend reporting.
-    ...ads.filter((a) => adKeys.has(a.key)).map((a): ProviderStatus => ({ key: `ads-${a.key}`, kind: "ads", name: a.name, connected: false, state: "NOT_SUPPORTED", env: a.env, note: `Automated ad buying and spend sync are not implemented${a.connected ? " (credentials are set but unused)" : ""}. Enter spend on each campaign.` })),
+    // Paid media runs in the Advertising OS (lib/ads): connected only with its own ad account + token; campaigns are
+    // created paused and launched only through approval and spend limits. The growth loop itself never buys ads.
+    ...ads.filter((a) => adKeys.has(a.key)).map((a): ProviderStatus => {
+      const adapter = adsProviders[a.key === "gads" ? "google" : (a.key as "meta" | "linkedin")];
+      return { key: `ads-${a.key}`, kind: "ads", name: adapter.name, connected: adapter.connected(), state: adapter.connected() ? "CONNECTED" : "NOT_CONNECTED", env: a.env, note: "Managed on Growth → Advertising: created paused; launch and budget increases need approval and spend limits; spend is synced from the platform." };
+    }),
     ...Object.values(SOCIAL_PROVIDERS).map((p) => p.status()),
     emailProvider.status(),
     leadProviders.apollo.status(),

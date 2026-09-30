@@ -3,8 +3,9 @@ import { requireAccess } from "@/lib/os/guard";
 import { encryptionConfigured } from "@/lib/auth/totp";
 import { integrationStatuses } from "@/lib/integrations/health";
 import { vaultEntries } from "@/lib/integrations/vault";
-import { connectIntegrationAction, disconnectIntegrationAction, testIntegrationAction } from "@/lib/company/actions";
-import { Kpi, KpiGrid, StatusBadge, TextField } from "@/components/admin/os";
+import { oauthStatus, redirectUri } from "@/lib/integrations/oauth";
+import { connectIntegrationAction, disconnectIntegrationAction, selectMetaPageAction, testIntegrationAction } from "@/lib/company/actions";
+import { Kpi, KpiGrid, SelectField, StatusBadge, TextField } from "@/components/admin/os";
 import { PageHeader, fmtDate } from "@/components/admin/ui";
 import { ActionForm } from "@/components/admin/forms";
 import { ConfirmButton, SubmitButton } from "@/components/admin/client";
@@ -17,14 +18,15 @@ const SUPPORT_TEXT = { SUPPORTED: "Supported", STATUS_ONLY: "Status only", NOT_S
 export default async function IntegrationsCenter() {
   const user = await requireAccess("integrations:view", "INTEGRATIONS");
   const manage = can(user.role, "integrations:manage");
-  const [rows, stored] = await Promise.all([integrationStatuses(), vaultEntries()]);
+  const [rows, stored, oauth] = await Promise.all([integrationStatuses(), vaultEntries(), oauthStatus()]);
+  const redirect = redirectUri();
   const hints = new Map(stored.map((s) => [s.name, s]));
   const encryption = encryptionConfigured();
   const cats = [...new Set(rows.map((r) => r.def.category))];
   const n = (s: string) => rows.filter((r) => r.state === s).length;
   return (
     <>
-      <PageHeader title="API & Integrations" description="Connect, configure, test and disconnect providers without editing environment variables. Credentials are encrypted (AES-256-GCM) on the server, masked here, never logged and never sent to the browser; environment variables, when set, always take precedence. Statuses are real: CONNECTED only when credentials exist (and ERROR when the last real test failed)." crumbs={[{ label: "Platform" }, { label: "API & Integrations" }]} />
+      <PageHeader title="API & Integrations" description="Connect providers with OAuth sign-in or API keys, then configure, test and disconnect them without editing environment variables. Credentials are encrypted (AES-256-GCM) on the server, masked here, never logged and never sent to the browser; environment variables, when set, always take precedence. Statuses are real: CONNECTED only when credentials exist (and ERROR when the last real test failed)." crumbs={[{ label: "Platform" }, { label: "API & Integrations" }]} />
       {!encryption && <p className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">BLOCKED: APP_ENCRYPTION_KEY (32+ characters) is not set on the server, so credentials cannot be stored here. Environment-variable configuration still works.</p>}
       <KpiGrid cols={4}>
         <Kpi label="Connected" value={n("CONNECTED")} tone="green" />
@@ -48,7 +50,22 @@ export default async function IntegrationsCenter() {
                   </div>
                   {def.capabilities.length > 0 && <p className="mt-2 text-xs text-muted">Can: {def.capabilities.join(" · ")}</p>}
                   {def.note && <p className="mt-1 text-xs text-muted">{def.note}</p>}
-                  {def.oauthNote && <p className="mt-1 text-xs text-amber-700">{def.oauthNote}</p>}
+                  {def.oauth && def.category === "OAuth apps" && (() => {
+                    const o = oauth.find((x) => x.provider === def.oauth);
+                    return (
+                      <div className="mt-2 rounded-md border border-line bg-ink-850 p-2 text-xs">
+                        <p className="text-muted">Redirect URL to register at the provider: <span className="font-mono break-all text-fg">{redirect}</span></p>
+                        <p className="mt-1">Sign-in: <StatusBadge value={o?.status === "CONNECTED" ? "CONNECTED" : o?.status === "ERROR" ? "ERROR" : "NOT_CONNECTED"} />{o?.lastError ? <span className="ml-1 text-red-700">{o.lastError}</span> : null}</p>
+                        {manage && (o?.clientReady ? <a href={`/api/integrations/oauth/start?provider=${def.oauth}`} className="btn-primary mt-2 inline-flex h-8 items-center px-3 text-xs">Sign in with {def.name.split(" ")[0]}</a> : <p className="mt-1 text-dim">Save the client ID and secret first.</p>)}
+                        {def.oauth === "meta" && manage && Array.isArray(o?.config?.pages) && (o!.config!.pages as { id: string; name: string; instagram: string | null }[]).length > 0 && (
+                          <ActionForm action={selectMetaPageAction} className="mt-2 flex flex-wrap items-end gap-2">
+                            <SelectField name="pageId" label="Facebook Page to use" options={(o!.config!.pages as { id: string; name: string; instagram: string | null }[]).map((p) => [p.id, `${p.name}${p.instagram ? " (+ Instagram)" : ""}`] as const)} />
+                            <SubmitButton variant="secondary">Use this Page</SubmitButton>
+                          </ActionForm>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {usage && <p className="mt-1 text-xs text-dim">Usage: {usage}</p>}
                   {lastTestedAt && <p className="mt-1 text-xs text-dim">Last tested {fmtDate(lastTestedAt, true)}{lastError ? "" : " · OK"}</p>}
                   {lastError && <p className="mt-1 text-xs text-red-700">Last test failed: {lastError}</p>}

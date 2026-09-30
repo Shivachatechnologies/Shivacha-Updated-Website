@@ -2,13 +2,16 @@ import "server-only";
 import { db } from "@/lib/db/client";
 import { mailMode } from "@/lib/email/mailer";
 import { openaiVoice } from "@/lib/voice/provider";
-import { analyticsConnections } from "@/lib/marketing/attribution";
 import { webSearchEnabled } from "@/lib/ai/provider";
 import { channels } from "@/lib/communication/providers";
 import { SOCIAL_PROVIDERS } from "@/lib/growth/providers";
 import type { SocialPlatform } from "@/lib/growth/policy";
 import { INTEGRATIONS, integrationByKey, type IntegrationDef } from "./catalog";
 import { hydrateVault, secretSource, secretValue } from "./vault";
+import { trackedFetch, usageSince, usageToday } from "./usage";
+import { googleAccessToken } from "./oauth";
+import { ga4Summary, gscSummary } from "./google";
+import { adsProviders } from "@/lib/ads/providers";
 
 export type HealthState = "CONNECTED" | "NOT_CONNECTED" | "NOT_SUPPORTED" | "ERROR";
 
@@ -21,6 +24,8 @@ export interface IntegrationStatusRow {
   usage: string | null;
 }
 
+/** Catalogue key → provider name used by the usage counters. */
+const USAGE_PROVIDER: Record<string, string> = { facebook: "meta", instagram: "meta", "meta-app": "meta", "meta-ads": "meta", "linkedin-app": "linkedin", "linkedin-ads": "linkedin", "x-app": "x", ga4: "google", gsc: "google", "google-app": "google" };
 const SOCIAL: Record<string, SocialPlatform> = { linkedin: "LINKEDIN", facebook: "FACEBOOK", instagram: "INSTAGRAM", x: "X", youtube: "YOUTUBE" };
 const healthKey = (k: string) => `center:${k}`;
 
@@ -29,9 +34,18 @@ function configured(d: IntegrationDef): boolean {
   switch (d.key) {
     case "email": return mailMode() !== "none";
     case "tts": return openaiVoice.configured();
-    case "ga4": return analyticsConnections().some((a) => /ga4|google analytics/i.test(`${a.key} ${a.name}`) && a.connected);
+    case "ga4": return !!secretValue("GA4_PROPERTY_ID") && !!secretValue("GOOGLE_REFRESH_TOKEN");
+    case "gsc": return !!secretValue("GSC_SITE_URL") && !!secretValue("GOOGLE_REFRESH_TOKEN");
+    case "google-ads": return ["GOOGLE_ADS_DEVELOPER_TOKEN", "GOOGLE_ADS_CUSTOMER_ID", "GOOGLE_REFRESH_TOKEN"].every((k) => !!secretValue(k));
+    case "meta-ads": return !!secretValue("META_AD_ACCOUNT_ID") && !!(secretValue("META_ADS_ACCESS_TOKEN") || secretValue("META_USER_ACCESS_TOKEN"));
+    case "linkedin-ads": return !!secretValue("LINKEDIN_AD_ACCOUNT_ID") && !!secretValue("LINKEDIN_ACCESS_TOKEN");
     case "whatsapp": return channels().some((c) => /whatsapp/i.test(c.key) && c.connected);
     case "web-search": return webSearchEnabled();
+    // OAuth apps are CONNECTED only after a real sign-in (token exchange) succeeded.
+    case "linkedin-app": return !!secretValue("LINKEDIN_CLIENT_ID") && !!secretValue("LINKEDIN_ACCESS_TOKEN");
+    case "meta-app": return !!secretValue("META_APP_ID") && !!secretValue("META_USER_ACCESS_TOKEN");
+    case "x-app": return !!secretValue("X_CLIENT_ID") && !!secretValue("X_ACCESS_TOKEN");
+    case "google-app": return !!secretValue("GOOGLE_OAUTH_CLIENT_ID") && !!secretValue("GOOGLE_REFRESH_TOKEN");
     default: return d.fields.length > 0 && d.fields.filter((f) => !f.optional).every((f) => !!secretValue(f.name));
   }
 }
@@ -68,6 +82,15 @@ async function usageSummary(): Promise<Map<string, string>> {
     if (n) m.set(k, `${n} posts published with platform confirmation (30 days)`);
   }
   m.set("email", `${emails} growth sequence emails sent (30 days)`);
+  // API calls counted by the adapters (lib/integrations/usage.ts), with today's cool-down if a provider rate-limited us.
+  const [calls, today] = await Promise.all([usageSince(30), usageToday()]);
+  for (const def of INTEGRATIONS) {
+    const p = USAGE_PROVIDER[def.key] ?? def.key;
+    const c = calls.find((x) => x.provider === p);
+    const t = today.find((x) => x.provider === p);
+    const parts = [m.get(def.key), c ? `${(c._sum.calls ?? 0).toLocaleString("en-US")} API calls, ${c._sum.errors ?? 0} errors (30 days)` : null, t?.coolUntil && t.coolUntil > new Date() ? `rate-limited until ${t.coolUntil.toISOString().slice(11, 16)} UTC` : null].filter(Boolean);
+    if (parts.length) m.set(def.key, parts.join(" · "));
+  }
   return m;
 }
 
@@ -92,7 +115,7 @@ export async function testIntegration(key: string): Promise<{ state: HealthState
 }
 
 async function get(url: string, headers: Record<string, string> = {}) {
-  const res = await fetch(url, { headers, signal: AbortSignal.timeout(15_000), cache: "no-store" });
+  const res = await trackedFetch(url, { headers, signal: AbortSignal.timeout(15_000), cache: "no-store" });
   return res.status;
 }
 
@@ -107,13 +130,41 @@ async function probe(def: IntegrationDef): Promise<{ ok: boolean; message: strin
       return status(await get("https://api.apollo.io/v1/auth/health", { "X-Api-Key": secretValue("APOLLO_API_KEY") }), "Apollo");
     case "hunter":
       return status(await get(`https://api.hunter.io/v2/account?api_key=${encodeURIComponent(secretValue("HUNTER_API_KEY"))}`), "Hunter");
+    case "neverbounce":
+      return status(await get(`https://api.neverbounce.com/v4/account/info?key=${encodeURIComponent(secretValue("NEVERBOUNCE_API_KEY"))}`), "NeverBounce");
+    case "gemini":
+      return status(await get(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(secretValue("GEMINI_API_KEY"))}`), "Gemini");
+    case "google-app": {
+      const t = await googleAccessToken();
+      return t ? { ok: true, message: "Google issued an access token from the stored refresh token." } : { ok: false, message: "Google did not issue an access token (sign in again)." };
+    }
+    case "ga4": {
+      const r = await ga4Summary(7);
+      return r.ok ? { ok: true, message: `GA4 responded: ${r.data.sessions.toLocaleString("en-US")} sessions in 7 days.` } : { ok: false, message: r.error };
+    }
+    case "gsc": {
+      const r = await gscSummary(28);
+      return r.ok ? { ok: true, message: `Search Console responded: ${r.data.clicks.toLocaleString("en-US")} clicks in 28 days.` } : { ok: false, message: r.error };
+    }
+    case "meta-app":
+      return status(await get(`https://graph.facebook.com/${secretValue("META_GRAPH_VERSION") || "v21.0"}/me?fields=id&access_token=${encodeURIComponent(secretValue("META_USER_ACCESS_TOKEN"))}`), "Meta");
+    case "x-app":
+      return status(await get("https://api.x.com/2/users/me", { Authorization: `Bearer ${secretValue("X_ACCESS_TOKEN")}` }), "X");
+    case "linkedin-app":
+      return probe(integrationByKey("linkedin")!);
+    case "meta-ads":
+    case "google-ads":
+    case "linkedin-ads": {
+      const r = await adsProviders[def.key === "meta-ads" ? "meta" : def.key === "google-ads" ? "google" : "linkedin"].account();
+      return r.ok ? { ok: true, message: `${def.name} account reachable: ${r.data.name} (${r.data.currency}).` } : { ok: false, message: r.error };
+    }
     default: {
       const platform = SOCIAL[def.key];
       if (platform) {
         const r = await SOCIAL_PROVIDERS[platform].followers();
         return r.ok ? { ok: true, message: `${def.name} responded (followers: ${r.data.followers.toLocaleString("en-US")}).` } : { ok: false, message: r.error };
       }
-      if (def.key === "email" || def.key === "tts" || def.key === "ga4" || def.key === "whatsapp" || def.key === "web-search") return { ok: true, message: "Configuration present. This integration has no read-only test call; it is exercised when used." };
+      if (def.key === "email" || def.key === "tts" || def.key === "whatsapp" || def.key === "web-search") return { ok: true, message: "Configuration present. This integration has no read-only test call; it is exercised when used." };
       return { ok: false, message: "No test is available for this integration." };
     }
   }

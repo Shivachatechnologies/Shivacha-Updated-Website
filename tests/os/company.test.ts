@@ -172,5 +172,9 @@ test("security: secrets never enter memory; the vault accepts only catalogued cr
   for (const bad of ["DATABASE_URL", "APP_ENCRYPTION_KEY", "AUTH_SECRET", "CRON_SECRET", "SMTP_PASS"]) assert.ok(!VAULT_NAMES.has(bad), `${bad} can never be stored or overridden from the UI`);
   assert.ok(VAULT_NAMES.has("HUNTER_API_KEY") && VAULT_NAMES.has("ANTHROPIC_API_KEY"));
   assert.equal(maskHint("abcdef1234"), "••••1234");
-  for (const i of INTEGRATIONS.filter((x) => x.category === "Advertising")) assert.equal(i.support, "NOT_SUPPORTED", `${i.name} is not simulated`);
+  // Phase 34: ad platforms have real adapters, but spend is never autonomous by default and always approval-gated.
+  for (const i of INTEGRATIONS.filter((x) => x.category === "Advertising")) assert.ok(i.support === "SUPPORTED" && i.oauth, `${i.name}: real adapter behind OAuth`);
+  for (const t of ["launchAdCampaign", "changeAdBudget", "proposeAdCampaign"]) assert.equal(getTool(t)!.alwaysApprove, true, `${t} always needs a person`);
+  assert.equal(getTool("launchAdCampaign")!.risk, "CRITICAL");
+  assert.ok(!ORG_EMPLOYEES.some((e) => e.tools.includes("launchAdCampaign")), "no AI employee can launch ads directly");
 });

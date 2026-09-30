@@ -467,7 +467,7 @@ test("M/R. concurrent publishes of the same approved post: one platform call, on
   await set({});
 });
 
-test("N. provider states are honest: unused capabilities are NOT_SUPPORTED even with credentials; the Integration hub lists growth providers", async () => {
+test("N. provider states are honest: unused capabilities are NOT_SUPPORTED even with credentials, ads need their own account; the Integration hub lists growth providers", async () => {
   const { providerStatuses } = await import("../../lib/growth/providers");
   const { integrations } = await import("../../lib/os/integrations");
   process.env.META_ADS_ACCESS_TOKEN = "unused";
@@ -476,7 +476,9 @@ test("N. provider states are honest: unused capabilities are NOT_SUPPORTED even 
     const st = providerStatuses();
     for (const k of ["image", "video"]) assert.equal(st.find((x) => x.key === k)!.state, "NOT_SUPPORTED");
     const ads = st.find((x) => x.key === "ads-meta")!;
-    assert.equal(ads.state, "NOT_SUPPORTED", "ad credentials never make ad automation look connected");
+    // Phase 34 added real ad adapters: stray ad env variables still never make ads look connected — only the
+    // Advertising OS's own ad account + token do (META_AD_ACCOUNT_ID + a Meta token).
+    assert.equal(ads.state, "NOT_CONNECTED", "ad credentials without an ad account never make ad automation look connected");
     assert.equal(ads.connected, false);
     assert.equal(st.find((x) => x.key === "linkedin")!.state, "NOT_CONNECTED");
     const hub = integrations().filter((i) => i.key.startsWith("growth-"));
