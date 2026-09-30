@@ -91,10 +91,14 @@ export async function clientHealth(): Promise<ClientHealthRow[]> {
       for (const i of inv) amt[i.currency] = Math.round(((amt[i.currency] ?? 0) + Number(i.balanceDue)) * 100) / 100;
       const signals: string[] = [];
       let score = 100;
-      if (b) (score -= 25 * Math.min(2, b), signals.push(`${b} ticket(s) past SLA`));
-      if (t >= 5) (score -= 10, signals.push(`${t} open tickets`));
-      if (inv.length) (score -= 15 * Math.min(2, inv.length), signals.push(`${inv.length} overdue invoice(s)`));
-      if (r) (score -= 20 * Math.min(2, r), signals.push(`${r} red project(s)`));
+      const hit = (penalty: number, signal: string) => {
+        score -= penalty;
+        signals.push(signal);
+      };
+      if (b) hit(25 * Math.min(2, b), `${b} ticket(s) past SLA`);
+      if (t >= 5) hit(10, `${t} open tickets`);
+      if (inv.length) hit(15 * Math.min(2, inv.length), `${inv.length} overdue invoice(s)`);
+      if (r) hit(20 * Math.min(2, r), `${r} red project(s)`);
       score = Math.max(0, score);
       return { id: cl.id, number: cl.number, name: cl.name, score, label: (score < 50 ? "AT_RISK" : score < 80 ? "WATCH" : "HEALTHY") as ClientHealthRow["label"], openTickets: t, breachedTickets: b, overdueInvoices: inv.length, overdueAmount: amt, redProjects: r, signals, href: `/admin/clients/${cl.id}` };
     })

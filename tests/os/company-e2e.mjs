@@ -101,7 +101,9 @@ await hunter2.getByRole("button", { name: "Disconnect" }).click();
 await submit(page, page.locator("[role=dialog], form").filter({ has: page.getByRole("button", { name: /^Confirm$/ }) }), "Confirm").catch(() => null);
 await page.goto("/admin/integrations/connect");
 ok(await seen(page.locator("article", { hasText: "Hunter.io" }).getByText("Not connected")), "disconnect removes the stored credential");
-ok(await seen(page.locator("article", { hasText: "Meta Ads" }).getByText("Not supported")), "ads shown as NOT SUPPORTED, never simulated");
+ok(await seen(page.locator("article", { hasText: "Meta Ads" }).getByText("Not connected")), "ads shown as NOT CONNECTED (real adapter, no account) — never simulated");
+ok(await seen(page.getByText("Redirect URL to register at the provider").first()), "OAuth apps show the exact redirect URL");
+ok(await seen(page.getByText("Save the client ID and secret first.").first()), "no sign-in link before the app credentials exist (no fake OAuth)");
 
 // 6. Company settings: strict approval mode + department budget.
 await page.goto("/admin/company/settings");
@@ -118,6 +120,60 @@ ok(await seen(page.getByText("AI Chief Revenue Officer").first()), "org chart li
 ok((await page.locator("li", { hasText: "AI-00" }).count()) >= 60, "all 60 employees have codes");
 await page.goto(objectiveUrl);
 ok(await seen(page.getByRole("button", { name: "Cancel objective" })), "CEO can cancel the objective");
+
+// 7b. Phase 30+: control loop, workforce intelligence, sales/delivery autonomy, internal systems, ads, social performance.
+await page.goto(objectiveUrl);
+ok(await seen(page.getByText("Measurement & next action (control loop)")), "objective shows the control-loop measurement");
+ok(await seen(page.getByText(/Unblock first: AI provider NOT CONNECTED/)), "next action is to unblock, from the real blocker");
+for (const stage of ["Social posts supporting the campaign (drafts for approval)", "Paid media proposal (only where an ad account is connected)", "Review channel results and optimise"]) ok(await seen(page.getByText(stage)), `growth loop stage: ${stage}`);
+await page.goto("/admin/company/performance");
+for (const t of ["Last 14 days: finished tasks", "Objective KPIs (measured from records)"]) ok(await seen(page.getByText(t)), `performance: ${t}`);
+ok(await seen(page.getByText(/Stuck or blocked work \(\d+\)/)), "performance: stuck work");
+await page.goto("/admin/company/sales");
+ok(await seen(page.getByRole("heading", { name: /Sales/ }).first()), "sales autonomy page renders");
+await page.goto("/admin/company/delivery");
+ok(await seen(page.getByRole("heading", { name: /Delivery/ }).first()), "delivery autonomy page renders");
+
+await page.goto("/admin/company/internal?tab=recruiting");
+const role = page.locator("form", { has: page.getByRole("button", { name: "Open role" }) });
+await role.locator("input[name=title]").fill(`Engineer ${TAG}`);
+await submit(page, role, "Open role");
+ok(await seen(page.getByText(`Engineer ${TAG}`)), "recruiting: role opened");
+const cand = page.locator("form", { has: page.getByRole("button", { name: "Add candidate" }) });
+await cand.locator("input[name=name]").fill(`Cand ${TAG}`);
+await submit(page, cand, "Add candidate");
+ok(await seen(page.getByText(`Cand ${TAG}`)), "recruiting: candidate added by a person");
+await page.goto("/admin/company/internal?tab=procurement");
+const pr = page.locator("form", { has: page.getByRole("button", { name: "Submit" }) }).filter({ has: page.locator("textarea[name=justification]") });
+await pr.locator("input[name=title]").fill(`Laptops ${TAG}`);
+await pr.locator("input[name=amount]").fill("2400");
+await pr.locator("textarea[name=justification]").fill("Two laptops for new engineers joining next month.");
+await submit(page, pr, "Submit");
+const prRow = page.locator("tr", { hasText: `Laptops ${TAG}` });
+ok(await seen(prRow), "procurement: request submitted");
+await submit(page, prRow, "Approved");
+ok(await seen(page.getByText(/cannot approve your own/i)), "procurement: no self-approval");
+await page.goto("/admin/company/internal?tab=risk");
+const risk = page.locator("form", { has: page.getByRole("button", { name: "Add risk" }) });
+await risk.locator("input[name=title]").fill(`Key supplier outage ${TAG}`);
+await risk.locator("input[name=likelihood]").fill("4");
+await risk.locator("input[name=impact]").fill("5");
+await submit(page, risk, "Add risk");
+ok(await seen(page.locator("tr", { hasText: `Key supplier outage ${TAG}` }).getByText("20 (4×5)")), "risk register scores likelihood × impact");
+
+await page.goto("/admin/marketing/ads");
+ok(!(await page.locator("input[name=autonomous]").isChecked()), "ads: autonomous advertising is OFF by default");
+const newAd = page.locator("form", { has: page.getByRole("button", { name: "Create paused" }) });
+await newAd.locator("input[name=name]").fill(`Test ad e2e ${TAG}`);
+await newAd.locator("input[name=dailyBudget]").fill("10");
+await newAd.locator("input[name=countries]").fill("US");
+await submit(page, newAd, "Create paused");
+ok(await seen(page.getByText(/not connected/i).first()), "ads: creating on an unconnected account is refused honestly");
+ok(!(await seen(page.getByText(`Test ad e2e ${TAG}`), 2000)), "ads: no simulated campaign row");
+await page.goto("/admin/marketing/autonomous");
+ok(await seen(page.getByText("Stop paid ads")), "the paid-ads kill switch is offered now that ad actions exist");
+await page.goto("/admin/marketing/social/performance");
+ok(await seen(page.getByRole("heading", { name: /Social/ }).first()), "social performance page renders");
 
 // 8. A role without executive:view cannot create objectives.
 const sales = await login("qa-sales@shivacha.test");
