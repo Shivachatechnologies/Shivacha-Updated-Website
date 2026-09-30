@@ -7,6 +7,7 @@ import { agentBySlug } from "@/lib/ai/catalog";
 import { refreshObjective, progressFrom } from "@/lib/company/objective-status";
 import { PLAYBOOKS, type Playbook } from "@/lib/company/objective-rules";
 import { campaignScorecard } from "@/lib/company/analytics";
+import { measureObjective, parseMeasurement } from "@/lib/company/measure";
 import { REGIONS } from "@/lib/company/org";
 import type { PlanStage } from "@/lib/company/objectives";
 import { seesAllObjectives } from "@/lib/company/access";
@@ -27,8 +28,14 @@ export default async function ObjectivePage({ params }: { params: Promise<{ id: 
   const user = await requireAccess("ai:view", "AI_WORKFORCE");
   const { id } = await params;
   await refreshObjective(id);
-  const o = await db.aIObjective.findUnique({ where: { id } });
+  let o = await db.aIObjective.findUnique({ where: { id } });
   if (!o || (o.createdById !== user.id && !seesAllObjectives(user.role))) notFound();
+  const renderedAt = new Date();
+  if (!["COMPLETED", "CANCELLED"].includes(o.status) && (!o.measuredAt || renderedAt.getTime() - o.measuredAt.getTime() > 15 * 60_000)) {
+    await measureObjective(id, renderedAt);
+    o = (await db.aIObjective.findUnique({ where: { id } }))!;
+  }
+  const measured = parseMeasurement(o.metrics);
   const [tasks, activity, messages, research] = await Promise.all([
     db.aITask.findMany({ where: { objectiveId: id }, orderBy: { createdAt: "asc" } }),
     db.aIActivity.findMany({ where: { objectiveId: id }, orderBy: { createdAt: "desc" }, take: 80 }),
@@ -110,6 +117,16 @@ export default async function ObjectivePage({ params }: { params: Promise<{ id: 
             )}
             {o.campaignId && <p className="mt-3 text-sm"><Link href={`/admin/marketing/leads/${o.campaignId}`} className="text-brand-blue hover:underline">Lead campaign →</Link></p>}
             {research.map((r) => <p key={r.id} className="mt-1 text-sm"><Link href={`/admin/marketing/market/${r.id}`} className="text-brand-blue hover:underline">{r.title}</Link> <StatusBadge value={r.status} /></p>)}
+          </Card>
+          <Card title="Measurement & next action (control loop)">
+            {measured ? (
+              <>
+                <KV items={[["Measured", `${measured.label}${measured.nature === "REAL" ? "" : " — UNAVAILABLE"}`], ["Actual", measured.actual != null ? `${measured.actual}${measured.target != null ? ` of ${measured.target}` : ""}` : "UNAVAILABLE"], ["Bottleneck", measured.bottleneck ? measured.bottleneck.replace(/_/g, " ").toLowerCase() : "—"], ["Owner", measured.owner ? name(measured.owner) : "—"], ["As of", o.measuredAt ? fmtDate(o.measuredAt, true) : "—"]]} />
+                {measured.funnel && <p className="mt-2 text-xs text-dim">Funnel: {measured.funnel.discovered} discovered · {measured.funnel.withEmail} with email · {measured.funnel.verified} verified · {measured.funnel.qualified} qualified · {measured.funnel.contacted} contacted · {measured.funnel.replied} replied</p>}
+                <p className="mt-3 rounded-md border border-line bg-ink-800 px-3 py-2 text-sm text-fg">{o.nextAction ?? "No action needed from the measurement."}</p>
+                <p className="mt-2 text-xs text-dim">Measured from records hourly. The owner is told about a changed next action once a day; at most one optimisation task a day (max 10 per objective), only while the objective is active — writes still need approval.</p>
+              </>
+            ) : <p className="text-sm text-dim">Not measured yet.</p>}
           </Card>
           <Card title="Work breakdown (real tasks)">{tasks.length ? <Tree pid={null} depth={0} /> : <p className="text-sm text-dim">No tasks.</p>}</Card>
           {score && (

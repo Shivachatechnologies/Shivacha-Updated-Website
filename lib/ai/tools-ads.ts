@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db/client";
 import { createAdCampaign, getAdsPolicy, launchAdCampaign, pauseAdCampaign, setAdBudget } from "@/lib/ads/engine";
 import { checkLaunch } from "@/lib/ads/policy";
+import { adsReady } from "@/lib/ads/providers";
 import { createApproval } from "./runner";
 import { getTool, type ToolDef } from "./tools";
 
@@ -18,14 +19,14 @@ const money = (n: number, c: string) => `${n.toFixed(2)} ${c}`;
 export const ADS_TOOLS: ToolDef[] = [
   def({
     name: "getAdCampaigns",
-    description: "Paid-media campaigns (Meta, Google, LinkedIn) with status, daily budget, provider-reported spend, impressions, clicks, conversions and the ads policy limits.",
+    description: "Paid-media campaigns (Meta, Google, LinkedIn) with status, daily budget, provider-reported spend, impressions, clicks, conversions, the ads policy limits and which ad accounts are CONNECTED.",
     input: z.object({ status: z.enum(["DRAFT", "PAUSED", "ACTIVE", "ENDED", "FAILED"]).optional(), limit: z.number().int().min(1).max(25).default(10) }),
     permissions: ["marketing:view"],
     kind: "read",
     risk: "LOW",
     run: async (_c, i) => {
-      const [rows, policy] = await Promise.all([db.adCampaign.findMany({ where: { status: i.status }, orderBy: { createdAt: "desc" }, take: i.limit }), getAdsPolicy()]);
-      return { data: { policy, campaigns: rows.map((r) => ({ id: r.id, provider: r.provider, name: r.name, status: r.status, dailyBudget: money(Number(r.dailyBudget), r.currency), spendToDate: money(Number(r.spend), r.currency), impressions: r.impressions, clicks: r.clicks, conversions: r.conversions, lastSyncedAt: r.lastSyncedAt, link: "/admin/marketing/ads" })) }, records: rows.map((r) => `AdCampaign:${r.id}`) };
+      const [rows, policy, accounts] = await Promise.all([db.adCampaign.findMany({ where: { status: i.status }, orderBy: { createdAt: "desc" }, take: i.limit }), getAdsPolicy(), adsReady()]);
+      return { data: { policy, accounts: accounts.map((a) => ({ provider: a.key, name: a.name, status: a.connected ? "CONNECTED" : "NOT_CONNECTED" })), campaigns: rows.map((r) => ({ id: r.id, provider: r.provider, name: r.name, status: r.status, dailyBudget: money(Number(r.dailyBudget), r.currency), spendToDate: money(Number(r.spend), r.currency), impressions: r.impressions, clicks: r.clicks, conversions: r.conversions, lastSyncedAt: r.lastSyncedAt, link: "/admin/marketing/ads" })) }, records: rows.map((r) => `AdCampaign:${r.id}`) };
     },
   }),
   def({

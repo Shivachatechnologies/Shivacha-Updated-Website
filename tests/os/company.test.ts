@@ -106,7 +106,10 @@ test("objective understanding: playbook, target and plan for the six example obj
     assert.equal(t?.value ?? null, value, text);
   }
   const plan = planFor("LEAD_GENERATION", "x", null);
-  assert.deepEqual(plan.map((s) => s.owner), ["intel-director", "cmo", "leadgen-director", "sdr", "content-manager", "revenue-analyst"]);
+  assert.deepEqual(plan.map((s) => s.owner), ["intel-director", "cmo", "leadgen-director", "sdr", "content-manager", "social-manager", "campaign-manager", "revenue-analyst", "growth-director"]);
+  // Phase 35: the growth loop covers social and paid media, and ends in an optimisation review of real results.
+  assert.deepEqual(plan.find((s) => s.key === "optimize")?.after, ["measure", "social", "ads"]);
+  assert.match(plan.find((s) => s.key === "ads")!.instructions, /reportBlocker/, "no connected ad account → blocker, never planned spend");
   for (const pb of ["LEAD_GENERATION", "MARKET_ENTRY", "REVENUE", "PIPELINE", "DELIVERY", "PRODUCT_LAUNCH"] as const) {
     const stages = planFor(pb, "x", "mena");
     const keys = new Set(stages.map((s) => s.key));

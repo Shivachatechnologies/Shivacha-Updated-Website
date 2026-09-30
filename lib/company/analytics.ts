@@ -174,3 +174,54 @@ export async function campaignScorecard(campaignId: string): Promise<Scorecard |
     funnel: c.leadGen ? await leadGenFunnel(campaignId) : null,
   };
 }
+
+export interface TrendDay {
+  day: string;
+  done: number;
+  failed: number;
+  costUsd: number;
+}
+
+/** Daily finished tasks and metered AI cost for the last `days` days (UTC). Days without work are zero, not skipped. */
+export async function workforceTrend(days = 14): Promise<TrendDay[]> {
+  const start = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) - (days - 1) * DAY);
+  const [tasks, usage] = await Promise.all([
+    db.aITask.findMany({ where: { status: { in: ["DONE", "FAILED"] }, completedAt: { gte: start } }, select: { status: true, completedAt: true } }),
+    db.aIUsage.findMany({ where: { createdAt: { gte: start } }, select: { createdAt: true, costUsd: true } }),
+  ]);
+  const out = Array.from({ length: days }, (_, i) => ({ day: new Date(start.getTime() + i * DAY).toISOString().slice(0, 10), done: 0, failed: 0, costUsd: 0 }));
+  const at = (d: Date) => out[Math.floor((d.getTime() - start.getTime()) / DAY)];
+  for (const t of tasks) {
+    const r = at(t.completedAt!);
+    if (r && t.status === "DONE") r.done++;
+    else if (r) r.failed++;
+  }
+  for (const u of usage) {
+    const r = at(u.createdAt);
+    if (r) r.costUsd = Math.round((r.costUsd + Number(u.costUsd)) * 10000) / 10000;
+  }
+  return out;
+}
+
+export interface StuckTask {
+  id: string;
+  agentSlug: string;
+  title: string;
+  status: string;
+  hours: number;
+  overdue: boolean;
+  reason: string;
+}
+
+/** Open work that is not moving: waiting/approval/paused for over 24h, queued past its deadline, or running over 2h. */
+export async function stuckTasks(limit = 25): Promise<StuckTask[]> {
+  const now = Date.now();
+  const rows = await db.aITask.findMany({
+    where: { OR: [{ status: { in: ["WAITING", "AWAITING_APPROVAL", "PAUSED"] }, updatedAt: { lt: new Date(now - DAY) } }, { status: "QUEUED", deadline: { lt: new Date(now) } }, { status: "RUNNING", updatedAt: { lt: new Date(now - 2 * 3600_000) } }] },
+    orderBy: { updatedAt: "asc" },
+    take: limit,
+    select: { id: true, agentSlug: true, title: true, status: true, updatedAt: true, deadline: true },
+  });
+  const why: Record<string, string> = { WAITING: "waiting on delegated work or a dependency", AWAITING_APPROVAL: "waiting for a person's approval", PAUSED: "paused", QUEUED: "queued past its deadline", RUNNING: "running for over 2 hours" };
+  return rows.map((t) => ({ id: t.id, agentSlug: t.agentSlug, title: t.title, status: t.status, hours: Math.round((now - t.updatedAt.getTime()) / 3600_000), overdue: !!t.deadline && t.deadline.getTime() < now, reason: why[t.status] ?? t.status }));
+}
