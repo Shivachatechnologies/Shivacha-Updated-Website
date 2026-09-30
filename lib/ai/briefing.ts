@@ -8,6 +8,7 @@ import { startOfUtcDay } from "./cost";
 import { getProvider } from "./provider";
 import { runAgent, SYSTEM_USER } from "./runner";
 import { getTool } from "./tools";
+import { growthBriefingLines } from "@/lib/growth/briefing";
 
 export const BRIEFING_PREFIX = "Daily CEO briefing";
 
@@ -58,14 +59,14 @@ export async function generateBriefing(opts: { force?: boolean; actorId?: string
       agentSlug: "ceo",
       user: SYSTEM_USER,
       trigger: "SCHEDULE",
-      request: `${BRIEFING_PREFIX}: prepare today's executive briefing for the CEO. Use getBusinessSummary and getInsights, then write: 1) headline numbers (per currency), 2) important deals and pipeline movement, 3) overdue payments, 4) project and support risks, 5) the 3–5 most important recommendations for today. Do not call tools that change data.`,
+      request: `${BRIEFING_PREFIX}: prepare today's executive briefing for the CEO. Use getBusinessSummary, getInsights and getGrowthSummary, then write: 1) headline numbers (per currency), 2) important deals and pipeline movement, 3) overdue payments, 4) project and support risks, 5) Growth: qualified and sales-ready leads vs the configured daily target (a target, never a guarantee), followers, spend and cost per qualified lead only where the data exists, pending content approvals and any kill switch that is on — under a FACTS heading, 6) the 3–5 most important recommendations for today under a separate RECOMMENDATIONS heading. Do not call tools that change data.`,
     });
     if (r.status === "FAILED" || r.status === "BLOCKED") return 0;
     executionId = r.executionId;
   } else {
     const snap = (await getTool("getBusinessSummary")!.run({ user: SYSTEM_USER, agentSlug: "ceo", executionId: null }, {})).data as Snapshot;
     const risks = await db.aIRecommendation.findMany({ where: { status: "OPEN", severity: { in: ["CRITICAL", "HIGH"] } }, orderBy: [{ severity: "desc" }, { createdAt: "desc" }], take: 7, select: { title: true, severity: true } });
-    const text = rulesBriefing(snap, risks);
+    const text = `${rulesBriefing(snap, risks)}\n\n${(await growthBriefingLines()).join("\n")}`;
     const e = await db.aIExecution.create({ data: { agentSlug: "ceo", trigger: "SCHEDULE", mode: "OBSERVE", request: `${BRIEFING_PREFIX} (rules)`, status: "SUCCEEDED", provider: "none", toolsUsed: [{ tool: "getBusinessSummary", ok: true, ms: 0 }], result: { text, snapshot: JSON.parse(JSON.stringify(snap)) as Prisma.InputJsonValue }, finishedAt: new Date(), durationMs: 0 } });
     executionId = e.id;
   }

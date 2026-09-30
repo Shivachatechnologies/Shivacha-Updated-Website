@@ -49,7 +49,30 @@ const rows = (list: unknown): Line[] =>
 
 const LEADS: Say = say("lead count", "leads ki ginti", "लीड की संख्या");
 
+/** "qualified / sales-ready / nurture / low-fit / unscored leads" → the growth qualification tier on the lead. */
+const TIER_WORDS: [RegExp, string, Say][] = [
+  [/sales[- ]?ready|ready (for|to) (sales|buy)|सेल्स[- ]?रेडी/i, "sales_ready", say("sales-ready", "sales-ready", "सेल्स-रेडी")],
+  [/low[- ]?fit|poor[- ]?fit|not a fit|लो[- ]?फिट/i, "low_fit", say("low-fit", "low-fit", "लो-फिट")],
+  [/\bnurtur(e|ing)\b/i, "nurture", say("nurture", "nurture", "नर्चर")],
+  [/\b(unscored|not (yet )?scored|not (yet )?qualified)\b/i, "unscored", say("unscored", "unscored", "बिना स्कोर")],
+  [/\bqualified\b|क्वालिफाइड/i, "qualified", say("qualified", "qualified", "क्वालिफाइड")],
+];
+const tierOf = (t: string) => TIER_WORDS.find(([re]) => re.test(t));
+
 const METRICS: Metric[] = [
+  {
+    id: "leads_tier",
+    match: /(sales[- ]?ready|low[- ]?fit|poor[- ]?fit|nurtur(e|ing)|unscored|not (yet )?scored|(not (yet )?)?qualified|सेल्स[- ]?रेडी|क्वालिफाइड|लो[- ]?फिट)[^?.!]*\b(leads?|prospects? in (the )?crm)\b|\bleads?\b[^?.!]*(sales[- ]?ready|low[- ]?fit|nurtur(e|ing)|unscored|qualified)|(क्वालिफाइड|सेल्स[- ]?रेडी).*लीड/i,
+    area: LEADS,
+    calls: (t) => [{ tool: "countLeads", input: { tier: tierOf(t)?.[1] ?? "qualified", period: TODAY.test(t) ? "today" : "all", list: LIST.test(t) } }],
+    render: ([o], t) => {
+      const n = num(o.count);
+      const w = tierOf(t)?.[2] ?? say("qualified", "qualified", "क्वालिफाइड");
+      const when = TODAY.test(t);
+      const note = tierOf(t)?.[1] === "qualified" ? say(" (growth tier Qualified or Sales-ready)", " (growth tier Qualified ya Sales-ready)", " (ग्रोथ टियर Qualified या Sales-ready)") : say("", "", "");
+      return [{ say: say(`${plural(n, `${w.en} lead`)}${when ? " created today" : ""}${note.en}.`, `${when ? "Aaj ke " : ""}${n} ${w.hinglish} leads hain${note.hinglish}.`, `${when ? "आज के " : ""}${n} ${w.hi} लीड हैं${note.hi}।`), href: "/admin/marketing/growth" }, ...rows(o.leads)];
+    },
+  },
   {
     id: "website_leads",
     match: /\b(website|site|web form|online form)\b.*\bleads?\b|\bleads?\b.*\b(website|site|web form)\b|वेबसाइट.*लीड/i,

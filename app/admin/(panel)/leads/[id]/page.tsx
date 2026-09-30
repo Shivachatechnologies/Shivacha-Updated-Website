@@ -17,6 +17,7 @@ import { getFlags } from "@/lib/os/flags";
 import { StatusBadge } from "@/components/admin/os";
 import { CommunicationPanel } from "@/components/admin/comms/panel";
 import { AiActions } from "@/components/admin/ai/contextual";
+import { LeadQualificationPanel } from "@/components/admin/growth/lead-qualification";
 
 export const metadata = { title: "Lead" };
 
@@ -180,6 +181,8 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
           </Panel>
 
           {can(user.role, "visitors:view") && <LeadWebsiteActivity leadId={lead.id} />}
+
+          {flags.GROWTH && can(user.role, "growth:view") && <LeadQualificationPanel leadId={lead.id} canRescore={can(user.role, "growth:manage")} />}
 
           {caps.edit && (
             <Panel title="Edit lead">

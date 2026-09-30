@@ -124,6 +124,21 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     ],
   },
   {
+    title: "Growth",
+    icon: "Rocket",
+    flag: "GROWTH",
+    items: [
+      { label: "Growth Dashboard", href: "/admin/marketing/growth", icon: "TrendingUp", permission: "growth:view" },
+      { label: "Autonomous Control", href: "/admin/marketing/autonomous", icon: "Power", permission: "growth:view" },
+      { label: "Social Media", href: "/admin/marketing/social", icon: "Share2", permission: "growth:view" },
+      { label: "Demand Gen", href: "/admin/marketing/demand", icon: "Target", permission: "growth:view" },
+      { label: "Content Studio", href: "/admin/marketing/content", icon: "PenLine", permission: "growth:view" },
+      { label: "Prospects", href: "/admin/marketing/prospects", icon: "Crosshair", permission: "growth:view" },
+      { label: "Email Sequences", href: "/admin/marketing/email", icon: "MailPlus", permission: "growth:view" },
+      { label: "Partners", href: "/admin/marketing/partners", icon: "Handshake", permission: "growth:view" },
+    ],
+  },
+  {
     title: "Communication",
     icon: "MessagesSquare",
     flag: "COMMUNICATION",

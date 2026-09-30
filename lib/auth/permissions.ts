@@ -48,6 +48,11 @@ export const PERMISSIONS = [
   // Marketing & communication
   "marketing:view",
   "marketing:manage",
+  // Growth department (autonomous marketing, social, lead generation)
+  "growth:view",
+  "growth:manage",
+  /** Autonomous mode, channel toggles, kill switches and budgets. Humans only — no AI tool can use it. */
+  "growth:control",
   "communication:view",
   "communication:send",
   "calls:view",
@@ -129,13 +134,13 @@ export const ROLE_PERMISSIONS: Record<RoleName, readonly Permission[]> = {
   SUPER_ADMIN: ALL,
   // Operational administration: everything, but cannot manage Super Admin accounts (enforced in user actions).
   ADMIN: ALL,
-  MARKETING_MANAGER: ["dashboard:view", "leads:view", "leads:export", "services:manage", "products:manage", "pages:manage", "blog:manage", "caseStudies:manage", "seo:manage", "media:manage", "marketing:view", "marketing:manage", "communication:view", "knowledge:view", "reports:view", "visitors:view", "visitors:export", ...AI_USER, ...SELF],
+  MARKETING_MANAGER: ["dashboard:view", "leads:view", "leads:export", "services:manage", "products:manage", "pages:manage", "blog:manage", "caseStudies:manage", "seo:manage", "media:manage", "marketing:view", "marketing:manage", "growth:view", "growth:manage", "communication:view", "knowledge:view", "reports:view", "visitors:view", "visitors:export", ...AI_USER, ...SELF],
   SALES_MANAGER: [
     "dashboard:view", "leads:view", "leads:create", "leads:edit", "leads:assign", "leads:archive", "leads:export", "leads:import", "leads:merge", "followups:manage",
     "deals:view", "deals:manage", "proposals:view", "proposals:manage", "proposals:approve", "contracts:view", "clients:view",
-    "communication:view", "communication:send", "calls:view", "performance:view", "knowledge:view", "reports:view", "marketing:view", "visitors:view", ...AI_USER, "ai:approve", ...SELF,
+    "communication:view", "communication:send", "calls:view", "performance:view", "knowledge:view", "reports:view", "marketing:view", "growth:view", "visitors:view", ...AI_USER, "ai:approve", ...SELF,
   ],
-  SEO_MANAGER: ["dashboard:view", "seo:manage", "pages:manage", "blog:manage", "redirects:manage", "marketing:view", "knowledge:view", ...AI_USER, ...SELF],
+  SEO_MANAGER: ["dashboard:view", "seo:manage", "pages:manage", "blog:manage", "redirects:manage", "marketing:view", "growth:view", "knowledge:view", ...AI_USER, ...SELF],
   CONTENT_MANAGER: ["dashboard:view", "pages:manage", "services:manage", "products:manage", "blog:manage", "caseStudies:manage", "industries:manage", "technologies:manage", "faqs:manage", "media:manage", "knowledge:view", "knowledge:manage", ...AI_USER, ...SELF],
   FINANCE_MANAGER: [
     "dashboard:view", "finance:view", "finance:manage", "payments:confirm", "refunds:issue", "clients:view", "deals:view", "proposals:view", "contracts:view", "contracts:manage",

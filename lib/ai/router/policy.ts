@@ -62,6 +62,10 @@ const HEAVY_WORK = [
   /\b(market research|competitor (analysis|research|landscape)|find (new )?(prospects|leads|companies)|build (a )?(list|pipeline)|prepare (a |the )?(report|deck|plan|proposal|strategy|analysis)|write (a |the )?(report|proposal|plan|strategy|blog|article)|weekly report|monthly report|deep dive|step[- ]by[- ]step plan)\b/i,
   /\b(for each|one by one|over the next|every (day|morning|evening|week|monday))\b/i,
   /(रिसर्च|रिपोर्ट तैयार|सभी .* (लीड|क्लाइंट))/,
+  // "Run today's marketing", "start the daily growth loop", "aaj ki marketing chalao": a whole day's multi-channel work.
+  /\b(run|execute|start|kick ?off|do|handle|chalao|chala do)\b[^.?!]*\b(today'?s|todays|daily|the day'?s|this week'?s|aaj ki)\s+(marketing|growth|outreach|campaigns?|social( media)?|content( plan)?|lead gen(eration)?)\b/i,
+  /\b(run|execute|start|kick ?off)\s+(the\s+)?(daily\s+)?(marketing|growth)\s+(loop|plan|work|routine|cycle)\b/i,
+  /\b(aaj ki|roz ki|daily)\s+(marketing|growth|outreach)\b[^.?!]*\b(chalao|chala do|run kar(o| do)?|shuru kar(o| do)?|kar do)\b/i,
 ];
 
 /* Actions that always need a person's approval: customer contact, money, deletion, publishing, pricing. */
@@ -69,6 +73,9 @@ const APPROVAL_VERBS = [
   /\b(send|email|mail|message|whatsapp|sms|text|call)\b.*\b(to|client|customer|lead|prospect|them|him|her|invoice|proposal|quote|reminder)\b/i,
   /\b(delete|remove|archive|purge|erase|void|refund|write ?off|cancel (the |this |an? )?(invoice|payment|project|contract|subscription))\b/i,
   /\b(approve|reject|sign|publish|go live|deploy|discount|change (the )?price|pricing change|pay|make (a )?payments?|payout|transfer|mark (as )?paid|record (a )?payment|issue (the |this |an? )?invoice)\b/i,
+  // Sending or launching a campaign, newsletter or broadcast contacts many people at once, recipient named or not.
+  /\b(send|launch|blast|email|mail|broadcast|push|roll ?out|go live with|start sending)\b[^.?!]*\b(campaigns?|newsletters?|mailers?|mailshots?|blasts?|broadcasts?|sequences?|drips?|e-?mail campaigns?)\b/i,
+  /\b(campaign|newsletter|mailer|sequence)\b[^.?!]*\b(bhej do|bhejo|launch kar(o| do)?|chala do|shuru kar(o| do)?)\b/i,
   /\b(bhej do|bhejo|bhej de|delete kar|hata do|mita do|approve kar|refund kar)\b/i,
   /(भेज दो|भेजो|डिलीट|हटा दो|रिफंड|अप्रूव)/,
 ];
@@ -83,6 +90,9 @@ const ACTION_VERBS = [
   /\b(add|create|save)\b.*\b(contacts?|clients?|reminders?)\b/i,
   /\b(notify|ping|alert|remind)\b/i,
   /\b(draft|prepare)\b.*\b(email|reply|message|update|proposal)\b/i,
+  // Growth drafts: creating a campaign, post or content draft is a change (a saved draft), never a read-only answer.
+  /\b(create|make|draft|write|prepare|add|set ?up|plan|compose)\b.*\b(campaigns?|(social )?posts?|drafts?|captions?|content|articles?|scripts?|reels?|carousels?|newsletters?|sequences?|creatives?|ad copy)\b/i,
+  /\b(campaign|post|content|reel|caption)\b.*\b(bana do|banao|likh do|likho|draft kar)\b/i,
   /\b(assign kar|add kar|note (add|daal)|follow ?up (bana|laga|set)|bana do|kar do|kardo|daal do|laga do|set kar|update kar|move kar|shift kar)\b/i,
   /(असाइन|नोट (जोड़|डाल)|फॉलो ?अप (बना|लगा)|बना दो|कर दो|अपडेट कर)/,
 ];

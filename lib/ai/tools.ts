@@ -19,6 +19,7 @@ import { notify } from "@/lib/os/notify";
 import { newLeadId } from "@/lib/leads/id";
 import { WORKFORCE_TOOLS } from "./tools-workforce";
 import { COUNT_TOOLS } from "./tools-counts";
+import { GROWTH_TOOLS } from "./tools-growth";
 
 /**
  * Controlled tools — the only way an agent can touch data. Every call is checked against the requesting user's
@@ -54,6 +55,9 @@ export interface ToolDef<S extends z.ZodType = z.ZodType> {
   extra?: (input: z.infer<S>) => Permission[];
   /** read: returns data. draft: produces text only, changes nothing. write: changes data (approval-governed). */
   kind: "read" | "draft" | "write";
+  /** A draft that saves an inert review record (e.g. a post awaiting approval). Still a mutation: never allowed in a
+   *  read-only (INSTANT_READ) request or in OBSERVE mode. */
+  stores?: boolean;
   risk: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   /** External communication: approval is required in every mode. */
   alwaysApprove?: boolean;
@@ -722,6 +726,7 @@ const TOOLS: ToolDef[] = [
   }),
   ...WORKFORCE_TOOLS,
   ...COUNT_TOOLS,
+  ...GROWTH_TOOLS,
 ];
 
 const STOP = new Set(["the", "and", "for", "with", "our", "you", "your", "that", "this", "are", "need", "want", "from", "have", "will", "can", "into", "platform", "solution", "system"]);

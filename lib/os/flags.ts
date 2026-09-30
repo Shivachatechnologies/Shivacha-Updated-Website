@@ -20,6 +20,7 @@ export const FEATURE_FLAGS = {
   COMMUNICATION: "Communication center",
   IVR: "Calls & IVR",
   INTEGRATIONS: "Integration hub",
+  GROWTH: "Growth department (social, demand generation, qualification)",
 } as const;
 export type FeatureFlag = keyof typeof FEATURE_FLAGS;
 export const FLAG_KEYS = Object.keys(FEATURE_FLAGS) as FeatureFlag[];
