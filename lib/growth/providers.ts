@@ -236,6 +236,8 @@ export interface ProspectRecord {
   country: string | null;
   industry: string | null;
   confidence: number | null;
+  /** Provider's own id for the person (used for enrichment later). */
+  externalId?: string | null;
 }
 
 export const leadProviders = {
@@ -258,17 +260,52 @@ export const leadProviders = {
       return guard("Apollo", async () => {
         const r = await call("https://api.apollo.io/api/v1/mixed_people/search", { method: "POST", headers: { "X-Api-Key": env("APOLLO_API_KEY"), "Cache-Control": "no-cache" }, json: { q_organization_domains_list: q.domains, person_titles: q.titles, person_locations: q.countries, page: 1, per_page: Math.min(q.perPage ?? 10, 25) } });
         if (!r.ok) return apiError("Apollo", r);
-        const people = (r.body.people as { name?: string; title?: string; country?: string; email?: string | null; organization?: { name?: string; primary_domain?: string; industry?: string } }[] | undefined) ?? [];
-        return { ok: true, data: people.map((p) => ({ company: p.organization?.name ?? "(unknown)", domain: p.organization?.primary_domain ?? null, contactName: p.name ?? null, title: p.title ?? null, email: p.email && !/not_unlocked|email_not_unlocked/.test(p.email) ? p.email : null, country: p.country ?? null, industry: p.organization?.industry ?? null, confidence: null })) };
+        const people = (r.body.people as { id?: string; name?: string; title?: string; country?: string; email?: string | null; organization?: { name?: string; primary_domain?: string; industry?: string } }[] | undefined) ?? [];
+        return { ok: true, data: people.map((p) => ({ company: p.organization?.name ?? "(unknown)", domain: p.organization?.primary_domain ?? null, contactName: p.name ?? null, title: p.title ?? null, email: p.email && !/not_unlocked|email_not_unlocked/.test(p.email) ? p.email : null, country: p.country ?? null, industry: p.organization?.industry ?? null, confidence: null, externalId: p.id ?? null })) };
       });
     },
   },
 };
 
+/** Email enrichment: Apollo people/match (uses Apollo credits) or Hunter email-finder. Returns the provider's email only. */
+export const emailEnrichment = {
+  async apolloMatch(apolloId: string): Promise<ProviderResult<{ email: string | null }>> {
+    if (!set("APOLLO_API_KEY")) return notConnected("Apollo", ["APOLLO_API_KEY"]);
+    return guard("Apollo", async () => {
+      const r = await call("https://api.apollo.io/api/v1/people/match", { method: "POST", headers: { "X-Api-Key": env("APOLLO_API_KEY"), "Cache-Control": "no-cache" }, json: { id: apolloId, reveal_personal_emails: false } });
+      if (!r.ok) return apiError("Apollo", r);
+      const e = (r.body.person as { email?: string | null } | undefined)?.email ?? null;
+      return { ok: true, data: { email: e && !/not_unlocked/.test(e) ? e : null } };
+    });
+  },
+  async hunterFind(domain: string, fullName: string): Promise<ProviderResult<{ email: string | null; score: number | null }>> {
+    if (!set("HUNTER_API_KEY")) return notConnected("Hunter", ["HUNTER_API_KEY"]);
+    const [first, ...rest] = fullName.trim().split(/\s+/);
+    if (!first || !rest.length) return { ok: true, data: { email: null, score: null } };
+    return guard("Hunter", async () => {
+      const r = await call(`https://api.hunter.io/v2/email-finder?domain=${encodeURIComponent(domain)}&first_name=${encodeURIComponent(first)}&last_name=${encodeURIComponent(rest.join(" "))}&api_key=${encodeURIComponent(env("HUNTER_API_KEY"))}`);
+      if (!r.ok) return apiError("Hunter", r);
+      const d = r.body.data as { email?: string | null; score?: number } | undefined;
+      return { ok: true, data: { email: d?.email ?? null, score: d?.score ?? null } };
+    });
+  },
+};
+
+/** Email verification: NeverBounce when connected (first choice), otherwise Hunter. */
 export const enrichmentProvider = {
-  status: (): ProviderStatus => ({ key: "hunter-verify", kind: "enrichment", name: "Email verification (Hunter)", connected: set("HUNTER_API_KEY"), env: ["HUNTER_API_KEY"] }),
+  status: (): ProviderStatus => ({ key: "hunter-verify", kind: "enrichment", name: set("NEVERBOUNCE_API_KEY") ? "Email verification (NeverBounce)" : "Email verification (Hunter)", connected: set("HUNTER_API_KEY") || set("NEVERBOUNCE_API_KEY"), env: ["NEVERBOUNCE_API_KEY", "HUNTER_API_KEY"] }),
   async verifyEmail(email: string): Promise<ProviderResult<{ status: string; deliverable: boolean }>> {
-    if (!set("HUNTER_API_KEY")) return notConnected("Email verification", ["HUNTER_API_KEY"]);
+    if (set("NEVERBOUNCE_API_KEY")) {
+      return guard("NeverBounce", async () => {
+        const r = await call(`https://api.neverbounce.com/v4/single/check?key=${encodeURIComponent(env("NEVERBOUNCE_API_KEY"))}&email=${encodeURIComponent(email)}`);
+        if (!r.ok || r.body.status !== "success") return apiError("NeverBounce", { status: r.status, body: { message: String(r.body.message ?? r.body.status ?? "request failed") } });
+        // NeverBounce results: valid | invalid | disposable | catchall | unknown
+        const s = String(r.body.result ?? "unknown");
+        const mapped = s === "catchall" ? "accept_all" : s === "disposable" ? "disposable" : s;
+        return { ok: true, data: { status: mapped, deliverable: s === "valid" } };
+      });
+    }
+    if (!set("HUNTER_API_KEY")) return notConnected("Email verification", ["NEVERBOUNCE_API_KEY or HUNTER_API_KEY"]);
     return guard("Hunter", async () => {
       const r = await call(`https://api.hunter.io/v2/email-verifier?email=${encodeURIComponent(email)}&api_key=${encodeURIComponent(env("HUNTER_API_KEY"))}`);
       if (!r.ok) return apiError("Hunter", r);

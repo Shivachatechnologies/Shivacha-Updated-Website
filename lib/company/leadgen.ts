@@ -2,7 +2,7 @@ import "server-only";
 import { db } from "@/lib/db/client";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { audit } from "@/lib/audit";
-import { enrichmentProvider, leadProviders, type ProspectRecord } from "@/lib/growth/providers";
+import { emailEnrichment, enrichmentProvider, leadProviders, type ProspectRecord } from "@/lib/growth/providers";
 import { growthStop } from "@/lib/growth/settings";
 import { releaseClaim, takeClaim } from "@/lib/growth/engine";
 import { isEmail, normalizeEmail } from "@/lib/growth/email-rules";
@@ -25,7 +25,7 @@ export class LeadGenError extends Error {}
  * Each step reports DONE / NOT_CONNECTED / SKIPPED / BLOCKED with real counts; nothing is simulated.
  * One run per campaign at a time (named claim), and discovery never exceeds the campaign's daily target.
  */
-export async function runLeadPipeline(campaignId: string, opts: { actor: string; autonomous?: boolean; maxDiscover?: number; maxVerify?: number }): Promise<RunSummary> {
+export async function runLeadPipeline(campaignId: string, opts: { actor: string; autonomous?: boolean; maxDiscover?: number; maxVerify?: number; maxEnrich?: number }): Promise<RunSummary> {
   await hydrateVault();
   const stop = await growthStop({ kind: "channel", channel: "leadGen", autonomous: !!opts.autonomous });
   if (stop) throw new LeadGenError(`Lead generation is stopped: ${stop}`);
@@ -39,6 +39,8 @@ export async function runLeadPipeline(campaignId: string, opts: { actor: string;
   const out: RunSummary = { at: new Date().toISOString(), by: opts.actor, discovered: 0, duplicates: 0, alreadyInCrm: 0, suppressed: 0, verified: 0, qualified: 0, disqualified: 0, steps };
   try {
     await discover(campaignId, cfg, campaign.dailyLeadTarget, opts, out);
+    await enrich(campaignId, opts.maxEnrich ?? 10, out);
+    await resuppress(campaignId, out);
     await verify(campaignId, opts.maxVerify ?? 25, out);
     await intent(campaignId, out);
     await scoreAndQualify(campaignId, cfg, out);
@@ -121,13 +123,57 @@ async function discover(campaignId: string, cfg: LeadGenConfig, dailyTarget: num
       out.alreadyInCrm++;
       continue;
     }
-    await db.prospect.create({ data: { company: r.company.slice(0, 200), domain: r.domain, contactName: r.contactName, title: r.title, email, country: r.country, industry: r.industry, source, campaignId, provenance: json({ provider: source, campaignId, confidence: r.confidence, by: opts.actor, at: new Date().toISOString() }) } });
+    await db.prospect.create({ data: { company: r.company.slice(0, 200), domain: r.domain, contactName: r.contactName, title: r.title, email, country: r.country, industry: r.industry, source, campaignId, provenance: json({ provider: source, campaignId, confidence: r.confidence, externalId: r.externalId ?? null, by: opts.actor, at: new Date().toISOString() }) } });
     out.discovered++;
   }
   if (noContact) notes.push(`${noContact} provider record(s) without a contact were ignored`);
   out.steps.push({ key: "discover", status: "DONE", count: out.discovered, note: notes.length ? notes.join(" · ") : undefined });
   out.steps.push({ key: "dedupe", status: "DONE", count: out.duplicates + out.alreadyInCrm, note: `${out.duplicates} duplicate prospect(s), ${out.alreadyInCrm} already in the CRM` });
   out.steps.push({ key: "suppress", status: "DONE", count: out.suppressed, note: "Unsubscribed, bounced or complained addresses are never added." });
+}
+
+/**
+ * ENRICH: find a business email for prospects that have a name but no email — Apollo people/match for Apollo
+ * records (uses Apollo credits), otherwise Hunter email-finder by name + company domain. Found emails go through the
+ * same suppression and duplicate checks as discovery. Bounded per run.
+ */
+async function enrich(campaignId: string, max: number, out: RunSummary) {
+  const apollo = leadProviders.apollo.status().connected;
+  const hunter = leadProviders.hunter.status().connected;
+  if (!apollo && !hunter) {
+    out.steps.push({ key: "enrich", status: "NOT_CONNECTED", count: 0, note: "No enrichment provider connected (Apollo or Hunter)." });
+    return;
+  }
+  const rows = await db.prospect.findMany({ where: { campaignId, email: null, status: "NEW", contactName: { not: null } }, select: { id: true, contactName: true, domain: true, provenance: true }, take: max });
+  let found = 0;
+  const notes: string[] = [];
+  for (const p of rows) {
+    const prov = (p.provenance && typeof p.provenance === "object" && !Array.isArray(p.provenance) ? p.provenance : {}) as Record<string, unknown>;
+    if (prov.enrichTried) continue;
+    const apolloId = typeof prov.externalId === "string" && prov.provider === "apollo" ? prov.externalId : null;
+    const r = apolloId && apollo ? await emailEnrichment.apolloMatch(apolloId) : hunter && p.domain ? await emailEnrichment.hunterFind(p.domain, p.contactName!) : null;
+    if (r && !r.ok) {
+      notes.push(r.error);
+      if (r.code !== "PROVIDER_ERROR") break;
+      continue;
+    }
+    const email = r?.data.email && isEmail(r.data.email) ? normalizeEmail(r.data.email) : null;
+    const clash = email ? (await db.prospect.findFirst({ where: { email, id: { not: p.id } }, select: { id: true } })) || (await db.emailSuppression.findUnique({ where: { email } })) || (await db.lead.findFirst({ where: { email: { equals: email, mode: "insensitive" }, archivedAt: null }, select: { id: true } })) : null;
+    await db.prospect.update({ where: { id: p.id }, data: clash || !email ? { provenance: json({ ...prov, enrichTried: new Date().toISOString(), enrichResult: clash ? "duplicate, suppressed or already in CRM" : "no email found" }) } : { email, provenance: json({ ...prov, enrichTried: new Date().toISOString(), enrichedBy: apolloId ? "apollo" : "hunter" }) } });
+    if (email && !clash) found++;
+  }
+  out.enriched = found;
+  out.steps.push({ key: "enrich", status: "DONE", count: found, note: notes.length ? notes.slice(0, 2).join(" · ") : `${rows.length} prospect(s) without email checked` });
+}
+
+/** Unsubscribes, bounces and complaints recorded after discovery disqualify the prospect immediately. */
+async function resuppress(campaignId: string, out: RunSummary) {
+  const rows = await db.prospect.findMany({ where: { campaignId, email: { not: null }, status: { in: ["NEW", "RESEARCHED"] } }, select: { id: true, email: true } });
+  if (!rows.length) return;
+  const sup = new Set((await db.emailSuppression.findMany({ where: { email: { in: rows.map((r) => r.email!) } }, select: { email: true } })).map((s) => s.email));
+  const hit = rows.filter((r) => sup.has(r.email!));
+  if (hit.length) await db.prospect.updateMany({ where: { id: { in: hit.map((h) => h.id) } }, data: { status: "DISQUALIFIED" } });
+  out.suppressed += hit.length;
 }
 
 async function verify(campaignId: string, max: number, out: RunSummary) {
@@ -243,3 +289,28 @@ export async function leadGenFunnel(campaignId?: string | null): Promise<Funnel>
   };
 }
 
+
+/**
+ * OUTREACH: enrols qualified prospects (verified email, not suppressed, not yet enrolled) in an OUTBOUND sequence.
+ * Enrolling sends nothing by itself: the existing email engine sends each step later, and only while the email
+ * channel, the outbound kill switch and the daily email budget allow it; unsubscribes, bounces, complaints and
+ * replies stop the sequence. Called by a person, or by an AI employee's request after human approval.
+ */
+export async function enrollQualified(campaignId: string, sequenceId: string, opts: { actor: string; max?: number }) {
+  const seq = await db.emailSequence.findUnique({ where: { id: sequenceId }, select: { id: true, name: true, purpose: true, active: true } });
+  if (!seq) throw new LeadGenError("Sequence not found.");
+  if (seq.purpose !== "OUTBOUND") throw new LeadGenError("Only an OUTBOUND sequence can be used for prospects.");
+  const stop = await growthStop({ kind: "channel", channel: "email", autonomous: false, outbound: true });
+  if (stop) throw new LeadGenError(`Outreach is stopped: ${stop}`);
+  const rows = await db.prospect.findMany({ where: { campaignId, status: "RESEARCHED", verification: "VALID", email: { not: null } }, select: { id: true, email: true, contactName: true }, orderBy: { fitScore: "desc" }, take: Math.min(opts.max ?? 50, 200) });
+  const { enroll } = await import("@/lib/growth/email");
+  let enrolled = 0;
+  let skipped = 0;
+  for (const p of rows) {
+    const r = await enroll(sequenceId, { email: p.email!, name: p.contactName, prospectId: p.id });
+    if (r.ok && r.reason !== "Already enrolled.") enrolled++;
+    else skipped++;
+  }
+  await audit({ userId: /^c[a-z0-9]{20,}$/.test(opts.actor) ? opts.actor : null, action: "company.leadgen.enrolled", entity: "Campaign", entityId: campaignId, metadata: { sequenceId, enrolled, skipped, by: opts.actor } });
+  return { enrolled, skipped, sequence: seq.name, active: seq.active };
+}

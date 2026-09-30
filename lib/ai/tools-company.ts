@@ -6,9 +6,10 @@ import { orgChart } from "@/lib/company/organisation";
 import { progressFrom } from "@/lib/company/objective-status";
 import { objectiveScope } from "@/lib/company/access";
 import { regionalPerformance, workforcePerformance } from "@/lib/company/analytics";
-import { leadGenFunnel, runLeadPipeline } from "@/lib/company/leadgen";
+import { enrollQualified, leadGenFunnel, runLeadPipeline } from "@/lib/company/leadgen";
 import { addFinding, completeResearch } from "@/lib/company/research";
 import { RESEARCH_SECTIONS } from "@/lib/company/research-rules";
+import { engagementOf, getSocialStrategy, parseMetrics } from "@/lib/growth/social-metrics";
 import type { ToolDef } from "./tools";
 
 /**
@@ -102,6 +103,32 @@ export const COMPANY_TOOLS: ToolDef[] = [
       const r = await runLeadPipeline(i.campaignId, { actor: `${c.agentSlug}:${c.user.id}`, maxDiscover: i.maxDiscover });
       return { data: r, records: [`Campaign:${i.campaignId}`] };
     },
+  }),
+  def({
+    name: "getSocialPerformance",
+    description: "Social strategy (pillars, audience, tone, posts per week) and real post performance for the last 30 days from the platforms (null = not provided by the platform).",
+    input: z.object({ days: z.number().int().min(1).max(90).default(30) }),
+    permissions: ["growth:view"],
+    kind: "read",
+    risk: "LOW",
+    run: async (_c, i) => {
+      const [strategy, posts] = await Promise.all([getSocialStrategy(), db.socialPost.findMany({ where: { status: "PUBLISHED", publishedAt: { gte: new Date(Date.now() - i.days * 86400_000) } }, select: { id: true, platform: true, body: true, publishedAt: true, metrics: true }, orderBy: { publishedAt: "desc" }, take: 50 })]);
+      return { data: { strategy, posts: posts.map((p) => ({ platform: p.platform, published: p.publishedAt, excerpt: p.body.slice(0, 140), metrics: parseMetrics(p.metrics), engagement: engagementOf(parseMetrics(p.metrics)) })) }, records: posts.map((p) => `SocialPost:${p.id}`) };
+    },
+  }),
+  def({
+    name: "enrollProspectsInSequence",
+    description: "Request outreach: enrol a lead campaign's qualified prospects (verified email, not suppressed) in an OUTBOUND email sequence. Always needs a person's approval; sending then follows the email kill switches, daily email budget and unsubscribe rules.",
+    input: z.object({ campaignId: id, sequenceId: id, max: z.number().int().min(1).max(200).default(50) }),
+    permissions: ["growth:manage"],
+    kind: "write",
+    risk: "HIGH",
+    alwaysApprove: true,
+    preview: async (i) => {
+      const [c, s, n] = await Promise.all([db.campaign.findUnique({ where: { id: i.campaignId }, select: { name: true } }), db.emailSequence.findUnique({ where: { id: i.sequenceId }, select: { name: true } }), db.prospect.count({ where: { campaignId: i.campaignId, status: "RESEARCHED", verification: "VALID" } })]);
+      return { summary: `Enrol up to ${Math.min(i.max, n)} qualified prospects of "${c?.name ?? i.campaignId}" in sequence "${s?.name ?? i.sequenceId}"`, affected: [{ entity: "Campaign", id: i.campaignId }] };
+    },
+    run: async (c, i) => ({ data: await enrollQualified(i.campaignId, i.sequenceId, { actor: c.user.id, max: i.max }), records: [`Campaign:${i.campaignId}`] }),
   }),
   def({
     name: "recordMarketFinding",

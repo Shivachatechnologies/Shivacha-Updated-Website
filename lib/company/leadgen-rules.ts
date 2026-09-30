@@ -9,7 +9,7 @@ export const LEADGEN_MODES = { MANUAL: "Manual — a person runs each step", AUT
 export type LeadGenMode = keyof typeof LEADGEN_MODES;
 
 export interface RunStep {
-  key: "discover" | "dedupe" | "suppress" | "verify" | "intent" | "score" | "qualify" | "crm" | "sdr";
+  key: "discover" | "enrich" | "dedupe" | "suppress" | "verify" | "intent" | "score" | "qualify" | "crm" | "sdr";
   status: "DONE" | "NOT_CONNECTED" | "SKIPPED" | "BLOCKED" | "ERROR";
   count: number;
   note?: string;
@@ -19,6 +19,7 @@ export interface RunSummary {
   at: string;
   by: string;
   discovered: number;
+  enriched?: number;
   duplicates: number;
   alreadyInCrm: number;
   suppressed: number;

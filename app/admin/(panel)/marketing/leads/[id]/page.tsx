@@ -7,9 +7,9 @@ import { hydrateVault } from "@/lib/integrations/vault";
 import { campaignScorecard } from "@/lib/company/analytics";
 import { LEADGEN_MODES, parseLeadGen } from "@/lib/company/leadgen-rules";
 import { REGIONS } from "@/lib/company/org";
-import { runLeadPipelineAction, saveLeadCampaignAction } from "@/lib/company/actions";
+import { enrollQualifiedAction, runLeadPipelineAction, saveLeadCampaignAction } from "@/lib/company/actions";
 import { fmtMoney } from "@/lib/os/money";
-import { DataTable, Kpi, KpiGrid, StatusBadge, Tabs, str, type SP } from "@/components/admin/os";
+import { DataTable, Kpi, KpiGrid, SelectField, StatusBadge, Tabs, TextField, str, type SP } from "@/components/admin/os";
 import { EmptyState, PageHeader, fmtDate } from "@/components/admin/ui";
 import { ActionForm } from "@/components/admin/forms";
 import { SubmitButton } from "@/components/admin/client";
@@ -21,7 +21,7 @@ export const metadata = { title: "Lead campaign" };
 export const dynamic = "force-dynamic";
 
 const STATUSES = ["ALL", "NEW", "RESEARCHED", "CONTACTED", "REPLIED", "CONVERTED", "DISQUALIFIED"] as const;
-const STEP_LABEL: Record<string, string> = { discover: "Discover", dedupe: "Deduplicate", suppress: "Suppression list", verify: "Verify email", intent: "Website intent", score: "ICP score", qualify: "Qualify", crm: "CRM", sdr: "SDR outreach" };
+const STEP_LABEL: Record<string, string> = { discover: "Discover", enrich: "Enrich (find email)", dedupe: "Deduplicate", suppress: "Suppression list", verify: "Verify email", intent: "Website intent", score: "ICP score", qualify: "Qualify", crm: "CRM", sdr: "SDR outreach" };
 
 export default async function LeadCampaignPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<SP> }) {
   const user = await requireAccess("growth:view", "GROWTH");
@@ -38,6 +38,8 @@ export default async function LeadCampaignPage({ params, searchParams }: { param
     db.prospect.findMany({ where: { campaignId: id, ...(status === "ALL" ? {} : { status }) }, orderBy: [{ fitScore: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }], take: 100 }),
     db.aIObjective.findFirst({ where: { campaignId: id }, select: { id: true, title: true } }),
   ]);
+  const sequences = manage ? await db.emailSequence.findMany({ where: { purpose: "OUTBOUND" }, select: { id: true, name: true, active: true }, orderBy: { createdAt: "desc" } }) : [];
+  const ready = await db.prospect.count({ where: { campaignId: id, status: "RESEARCHED", verification: "VALID" } });
   const f = score?.funnel;
   const run = cfg.lastRun;
   return (
@@ -104,9 +106,23 @@ export default async function LeadCampaignPage({ params, searchParams }: { param
           </Card>
         </div>
         {manage && (
+          <div className="space-y-4">
+          <Card title={`Outreach (${ready} qualified & verified)`}>
+            {sequences.length ? (
+              <ActionForm action={enrollQualifiedAction.bind(null, id)} className="space-y-2">
+                <SelectField name="sequenceId" label="Outbound sequence" options={sequences.map((s) => [s.id, `${s.name}${s.active ? "" : " (inactive)"}`] as const)} />
+                <TextField name="max" type="number" label="At most" defaultValue={50} />
+                <SubmitButton variant="secondary">Enrol qualified prospects</SubmitButton>
+                <p className="text-xs text-dim">Sending follows the email kill switches, the outbound switch and the daily email budget; unsubscribes, bounces, complaints and replies stop it.</p>
+              </ActionForm>
+            ) : (
+              <p className="text-sm text-dim">No OUTBOUND sequence exists. Create one on <Link href="/admin/marketing/email" className="text-brand-blue hover:underline">Email sequences</Link>.</p>
+            )}
+          </Card>
           <Card title="Campaign setup">
             <LeadCampaignForm action={saveLeadCampaignAction.bind(null, id)} modes={Object.entries(LEADGEN_MODES)} regions={REGIONS.map((r) => [r.key, r.name])} v={{ name: c.name, market: c.market, icp: c.icp, offer: c.offer, dailyLeadTarget: c.dailyLeadTarget, regionKey: c.regionKey, cfg }} />
           </Card>
+          </div>
         )}
       </div>
     </>

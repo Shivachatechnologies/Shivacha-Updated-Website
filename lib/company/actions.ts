@@ -16,10 +16,12 @@ import { cancelObjective, createObjective, ObjectiveError } from "./objectives";
 import { seesAllObjectives } from "./access";
 import { saveCompanyProfile } from "./profile";
 import { DEPARTMENTS, REGIONS, TEMPLATE_KEYS, parseCompanyProfile } from "./org";
-import { LeadGenError, runLeadPipeline } from "./leadgen";
+import { enrollQualified, LeadGenError, runLeadPipeline } from "./leadgen";
 import { LEADGEN_SOURCES, parseLeadGen } from "./leadgen-rules";
 import { requestMarketResearch } from "./research-request";
 import { RESEARCH_PARAMS } from "./research-rules";
+import { parseStrategy, syncPostMetrics } from "@/lib/growth/social-metrics";
+import { SOCIAL_PLATFORMS } from "@/lib/growth/policy";
 
 const F = "AI_WORKFORCE" as const;
 const json = (v: unknown) => JSON.parse(JSON.stringify(v ?? null));
@@ -240,5 +242,180 @@ export async function selectMetaPageAction(_: ActionState, form: FormData): Prom
     return okThen("/admin/integrations/connect", `Page "${name}" selected.`);
   } catch (e) {
     return fail(e instanceof OAuthError ? new UserError(e.message) : e, "integrations");
+  }
+}
+
+/** OUTREACH: a person enrols the campaign's qualified prospects in an outbound sequence. */
+export async function enrollQualifiedAction(campaignId: string, _: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("growth:manage", "GROWTH");
+    const r = await enrollQualified(campaignId, String(form.get("sequenceId") ?? ""), { actor: user.id, max: Number(form.get("max")) || 50 });
+    return okThen(`/admin/marketing/leads/${campaignId}`, `${r.enrolled} prospect(s) enrolled in "${r.sequence}"${r.skipped ? `, ${r.skipped} skipped (already enrolled or suppressed)` : ""}${r.active ? "" : " — the sequence is inactive, so nothing is sent until it is activated"}.`);
+  } catch (e) {
+    return fail(wrap(e), "company");
+  }
+}
+
+/* ───────────────────────── social strategy & performance ───────────────────────── */
+
+export async function saveSocialStrategyAction(_: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("growth:manage", "GROWTH");
+    const cadence = Object.fromEntries(SOCIAL_PLATFORMS.map((p) => [p, Number(form.get(`cad_${p}`))]));
+    const v = parseStrategy({ pillars: String(form.get("pillars") ?? "").split(/\n|,/).map((x) => x.trim()).filter(Boolean), audience: String(form.get("audience") ?? ""), tone: String(form.get("tone") ?? ""), cadence });
+    await db.setting.upsert({ where: { key: "socialStrategy" }, update: { value: json(v) }, create: { key: "socialStrategy", value: json(v) } });
+    await audit({ userId: user.id, action: "growth.social.strategy_saved" });
+    return okThen("/admin/marketing/social/performance", "Social strategy saved.");
+  } catch (e) {
+    return fail(e, "growth");
+  }
+}
+
+export async function syncSocialMetricsAction(): Promise<ActionState> {
+  try {
+    await authorizeAccess("growth:manage", "GROWTH");
+    const r = await syncPostMetrics(100);
+    return okThen("/admin/marketing/social/performance", `Synced ${r.synced} post(s)${r.skipped.length ? ` · NOT CONNECTED: ${r.skipped.join(", ")}` : ""}${r.errors.length ? ` · ${r.errors.length} error(s): ${r.errors[0]}` : ""}.`);
+  } catch (e) {
+    return fail(e, "growth");
+  }
+}
+
+/* ───────────────────────── internal systems (recruiting, procurement, compliance, risk) ───────────────────────── */
+
+const INTERNAL = "/admin/company/internal";
+const opt = (v: FormDataEntryValue | null, max = 500) => {
+  const s = String(v ?? "").trim();
+  return s ? s.slice(0, max) : null;
+};
+const req = (v: FormDataEntryValue | null, max = 200) => {
+  const s = String(v ?? "").trim();
+  if (!s) throw new UserError("Required fields are missing.");
+  return s.slice(0, max);
+};
+
+export async function saveJobOpeningAction(_: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("employees:manage", F);
+    const j = await db.jobOpening.create({ data: { title: req(form.get("title")), departmentKey: opt(form.get("departmentKey"), 40), location: opt(form.get("location"), 120), employmentType: opt(form.get("employmentType"), 40), description: opt(form.get("description"), 8000), status: "OPEN", ownerId: user.id } });
+    await audit({ userId: user.id, action: "company.recruiting.role_created", entity: "JobOpening", entityId: j.id });
+    return okThen(`${INTERNAL}?tab=recruiting`, "Role opened.");
+  } catch (e) {
+    return fail(e, "company");
+  }
+}
+
+export async function saveCandidateAction(_: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("employees:manage", F);
+    const c = await db.candidate.create({ data: { name: req(form.get("name")), email: opt(form.get("email"), 200), phone: opt(form.get("phone"), 40), source: opt(form.get("source"), 80), jobId: opt(form.get("jobId"), 40), notes: opt(form.get("notes"), 8000), resumeText: opt(form.get("resumeText"), 40_000), createdById: user.id } });
+    await audit({ userId: user.id, action: "company.recruiting.candidate_added", entity: "Candidate", entityId: c.id });
+    return okThen(`${INTERNAL}?tab=recruiting`, "Candidate added.");
+  } catch (e) {
+    return fail(e, "company");
+  }
+}
+
+const CANDIDATE_STAGES = ["APPLIED", "SCREENING", "INTERVIEW", "OFFER", "HIRED", "REJECTED", "WITHDRAWN"];
+/** Hiring decisions are human: only a person moves a candidate between stages. */
+export async function setCandidateStageAction(id: string, stage: string): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("employees:manage", F);
+    if (!CANDIDATE_STAGES.includes(stage)) throw new UserError("Invalid stage.");
+    await db.candidate.update({ where: { id }, data: { stage } });
+    await audit({ userId: user.id, action: "company.recruiting.stage", entity: "Candidate", entityId: id, metadata: { stage } });
+    return okThen(`${INTERNAL}?tab=recruiting`, `Moved to ${stage.toLowerCase()}.`);
+  } catch (e) {
+    return fail(e, "company");
+  }
+}
+
+export async function saveVendorAction(_: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("finance:manage", F);
+    const risk = String(form.get("riskLevel") ?? "LOW");
+    const v = await db.vendor.create({ data: { name: req(form.get("name")), category: opt(form.get("category"), 80), contactName: opt(form.get("contactName"), 120), email: opt(form.get("email"), 200), website: opt(form.get("website"), 300), riskLevel: ["LOW", "MEDIUM", "HIGH"].includes(risk) ? risk : "LOW", notes: opt(form.get("notes"), 4000) } });
+    await audit({ userId: user.id, action: "company.procurement.vendor_added", entity: "Vendor", entityId: v.id });
+    return okThen(`${INTERNAL}?tab=procurement`, "Vendor added (under review).");
+  } catch (e) {
+    return fail(e, "company");
+  }
+}
+
+export async function submitPurchaseRequestAction(_: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("finance:view", F);
+    const amount = String(form.get("amount") ?? "").trim();
+    if (amount && !/^\d{1,12}(\.\d{1,2})?$/.test(amount)) throw new UserError("Enter a valid amount.");
+    const r = await db.purchaseRequest.create({ data: { title: req(form.get("title")), vendorId: opt(form.get("vendorId"), 40), amount: amount || null, currency: (opt(form.get("currency"), 3) ?? "USD").toUpperCase(), justification: opt(form.get("justification"), 4000), status: "SUBMITTED", requestedById: user.id } });
+    await audit({ userId: user.id, action: "company.procurement.request_submitted", entity: "PurchaseRequest", entityId: r.id, metadata: { amount, currency: r.currency } });
+    return okThen(`${INTERNAL}?tab=procurement`, "Purchase request submitted for approval.");
+  } catch (e) {
+    return fail(e, "company");
+  }
+}
+
+const PR_NEXT: Record<string, string[]> = { SUBMITTED: ["APPROVED", "REJECTED", "CANCELLED"], APPROVED: ["ORDERED", "CANCELLED"], ORDERED: ["RECEIVED"] };
+/** Procurement decisions are human; the system never buys or pays. */
+export async function decidePurchaseRequestAction(id: string, to: string): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("finance:manage", F);
+    const r = await db.purchaseRequest.findUnique({ where: { id } });
+    if (!r) throw new UserError("Request not found.");
+    if (!(PR_NEXT[r.status] ?? []).includes(to)) throw new UserError(`A ${r.status.toLowerCase()} request cannot become ${to.toLowerCase()}.`);
+    if (to === "APPROVED" && r.requestedById === user.id) throw new UserError("You cannot approve your own request.");
+    await db.purchaseRequest.update({ where: { id }, data: { status: to, decidedById: ["APPROVED", "REJECTED"].includes(to) ? user.id : r.decidedById, decidedAt: ["APPROVED", "REJECTED"].includes(to) ? new Date() : r.decidedAt } });
+    await audit({ userId: user.id, action: "company.procurement.request_status", entity: "PurchaseRequest", entityId: id, metadata: { from: r.status, to } });
+    return okThen(`${INTERNAL}?tab=procurement`, `Request ${to.toLowerCase()}.`);
+  } catch (e) {
+    return fail(e, "company");
+  }
+}
+
+export async function saveComplianceItemAction(_: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("contracts:manage", F);
+    const due = String(form.get("dueDate") ?? "").trim();
+    const c = await db.complianceItem.create({ data: { title: req(form.get("title")), framework: opt(form.get("framework"), 40), ownerSlug: opt(form.get("ownerSlug"), 40), dueDate: /^\d{4}-\d{2}-\d{2}$/.test(due) ? new Date(`${due}T00:00:00Z`) : null, notes: opt(form.get("notes"), 4000), ownerId: user.id } });
+    await audit({ userId: user.id, action: "company.compliance.item_added", entity: "ComplianceItem", entityId: c.id });
+    return okThen(`${INTERNAL}?tab=compliance`, "Compliance item added.");
+  } catch (e) {
+    return fail(e, "company");
+  }
+}
+
+export async function setComplianceStatusAction(id: string, status: string): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("contracts:manage", F);
+    if (!["OPEN", "IN_PROGRESS", "DONE", "NOT_APPLICABLE"].includes(status)) throw new UserError("Invalid status.");
+    await db.complianceItem.update({ where: { id }, data: { status } });
+    await audit({ userId: user.id, action: "company.compliance.status", entity: "ComplianceItem", entityId: id, metadata: { status } });
+    return okThen(`${INTERNAL}?tab=compliance`, "Updated.");
+  } catch (e) {
+    return fail(e, "company");
+  }
+}
+
+export async function saveRiskAction(_: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("contracts:manage", F);
+    const n = (k: string) => Math.max(1, Math.min(5, Number(form.get(k)) || 3));
+    const r = await db.riskItem.create({ data: { title: req(form.get("title")), category: opt(form.get("category"), 60), likelihood: n("likelihood"), impact: n("impact"), ownerSlug: opt(form.get("ownerSlug"), 40), mitigation: opt(form.get("mitigation"), 4000) } });
+    await audit({ userId: user.id, action: "company.risk.added", entity: "RiskItem", entityId: r.id });
+    return okThen(`${INTERNAL}?tab=risk`, "Risk added.");
+  } catch (e) {
+    return fail(e, "company");
+  }
+}
+
+export async function setRiskStatusAction(id: string, status: string): Promise<ActionState> {
+  try {
+    const user = await authorizeAccess("contracts:manage", F);
+    if (!["OPEN", "MITIGATING", "ACCEPTED", "CLOSED"].includes(status)) throw new UserError("Invalid status.");
+    await db.riskItem.update({ where: { id }, data: { status } });
+    await audit({ userId: user.id, action: "company.risk.status", entity: "RiskItem", entityId: id, metadata: { status } });
+    return okThen(`${INTERNAL}?tab=risk`, "Updated.");
+  } catch (e) {
+    return fail(e, "company");
   }
 }
