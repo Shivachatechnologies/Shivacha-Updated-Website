@@ -7,7 +7,7 @@ import { can } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
 import { authorizeAccess } from "@/lib/os/guard";
 import { fail, okThen, UserError, type ActionState } from "@/lib/os/action";
-import { agentBySlug, AGENTS } from "./catalog";
+import { agentBySlug, ALL_AGENTS } from "./catalog";
 import { canRunAgent, ensureAgents } from "./agents";
 import { decideApproval } from "./approvals";
 import { generateBriefing } from "./briefing";
@@ -133,7 +133,7 @@ export async function generateBriefingAction(): Promise<ActionState> {
   }
 }
 
-const taskSchema = z.object({ agent: z.string().refine((s) => AGENTS.some((a) => a.slug === s), "Choose an agent"), title: z.string().trim().min(1, "Required").max(200), request: z.string().trim().min(3, "Describe the task").max(4000), runAfter: z.string().trim().optional() });
+const taskSchema = z.object({ agent: z.string().refine((s) => ALL_AGENTS.some((a) => a.slug === s), "Choose an agent"), title: z.string().trim().min(1, "Required").max(200), request: z.string().trim().min(3, "Describe the task").max(4000), runAfter: z.string().trim().optional() });
 
 export async function queueTaskAction(_: ActionState, form: FormData): Promise<ActionState> {
   try {

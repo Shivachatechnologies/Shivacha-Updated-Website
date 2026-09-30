@@ -31,6 +31,8 @@ export const NOTIFICATION_TYPES = {
   "announcement": "Announcement",
   "visitor.alert": "Website visitor alert",
   "growth.salesReady": "Sales-ready lead (growth qualification)",
+  "ai.objective": "AI company objective update",
+  "ai.escalation": "AI employee escalation or blocker",
 } as const;
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
 

@@ -88,7 +88,7 @@ export function TaskControls({ id, status, size = "sm" }: { id: string; status: 
       {(status === "QUEUED" || status === "RUNNING") && btn("pause", "Pause")}
       {status === "PAUSED" && btn("resume", "Resume")}
       {status === "FAILED" && btn("retry", "Retry")}
-      {["QUEUED", "RUNNING", "PAUSED", "AWAITING_APPROVAL"].includes(status) && btn("cancel", "Cancel", "danger")}
+      {["QUEUED", "RUNNING", "PAUSED", "AWAITING_APPROVAL", "WAITING"].includes(status) && btn("cancel", "Cancel", "danger")}
     </div>
   );
 }

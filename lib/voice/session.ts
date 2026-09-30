@@ -4,6 +4,7 @@ import { audit } from "@/lib/audit";
 import { can } from "@/lib/auth/permissions";
 import type { SessionUser } from "@/lib/auth/session";
 import { UserError } from "@/lib/os/action";
+import { secretValue } from "@/lib/integrations/vault";
 import { rateLimited } from "@/lib/os/ratelimit";
 import { isEnabled } from "@/lib/os/flags";
 import { agentBySlug } from "@/lib/ai/catalog";
@@ -54,7 +55,7 @@ export async function voiceReadiness(user: SessionUser, agentSlug: string, provi
   return {
     provider: { id: provider.id, ok: provider.configured(), detail: provider.configured() ? `${provider.label} configured` : `${provider.label} is not configured on the server` },
     employee,
-    aiConnected: !!process.env.ANTHROPIC_API_KEY,
+    aiConnected: !!secretValue("ANTHROPIC_API_KEY"),
   };
 }
 

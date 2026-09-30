@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { isEnabled } from "@/lib/os/flags";
 import { runEvent } from "@/lib/automation/engine";
 import { processDueTasks } from "./engine";
+import { pumpCompany, type CompanyPump } from "@/lib/company/loop";
 import { generateCeoBriefing, generateEndOfDayReports, generateMorningPlans } from "./reports";
 import { localParts, type ScheduleTrigger } from "./profiles";
 
@@ -31,6 +32,7 @@ export interface PumpReport {
   fired: string[];
   reports: number;
   tasks: number;
+  company?: CompanyPump | { error: string };
 }
 
 /**
@@ -64,6 +66,8 @@ export async function pumpWorkforce(now = new Date()): Promise<PumpReport> {
   const bucket = Math.floor(now.getTime() / (CONTINUOUS_MINUTES * 60_000));
   if (await fire("SCHEDULE_CONTINUOUS", String(bucket))) out.fired.push("SCHEDULE_CONTINUOUS");
 
+  // AI company: objectives, insight escalations, autonomous lead campaigns, research status.
+  out.company = await pumpCompany(now).catch((e) => ({ error: (e as Error).message }));
   out.tasks = await processDueTasks(3);
   return out;
 }

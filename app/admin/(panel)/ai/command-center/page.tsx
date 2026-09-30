@@ -73,7 +73,7 @@ export default async function CeoCommandCenter() {
             ["Waiting", c("WAITING"), "text-sky-300"],
             ["Approval required", c("AWAITING_APPROVAL"), "text-amber-300"],
             ["Offline", c("OFFLINE") + c("ERROR"), c("ERROR") ? "text-red-300" : "text-[#8b97ab]"],
-            ["Today's tasks", t(["QUEUED", "RUNNING", "PAUSED", "AWAITING_APPROVAL", "DONE", "FAILED", "CANCELLED"]), "text-white"],
+            ["Today's tasks", t(["QUEUED", "RUNNING", "PAUSED", "AWAITING_APPROVAL", "WAITING", "DONE", "FAILED", "CANCELLED"]), "text-white"],
             ["Completed", t(["DONE"]), "text-emerald-300"],
             ["Failed", t(["FAILED"]), t(["FAILED"]) ? "text-red-300" : "text-[#8b97ab]"],
             ["Pending approvals", approvals.length, approvals.length ? "text-amber-300" : "text-[#8b97ab]"],

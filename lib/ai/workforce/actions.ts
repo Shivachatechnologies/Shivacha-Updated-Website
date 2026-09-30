@@ -8,19 +8,20 @@ import type { SessionUser } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { authorizeAccess } from "@/lib/os/guard";
 import { fail, okThen, UserError, type ActionState } from "@/lib/os/action";
-import { agentBySlug, AGENTS } from "@/lib/ai/catalog";
+import { agentBySlug, ALL_AGENTS } from "@/lib/ai/catalog";
 import { canRunAgent } from "@/lib/ai/agents";
 import { getTool } from "@/lib/ai/tools";
 import { logEmployeeActivity } from "./activity";
 import { createEmployeeTask, kickTask } from "./engine";
 import { ensureEmployees } from "./employees";
 import { saveMemory } from "./memory";
+import { settleTask } from "@/lib/company/delegation";
 import { MEMORY_KINDS, OPEN_TASK_STATUSES, SCHEDULES, TASK_PRIORITIES, type MemoryKind, type ScheduleTrigger } from "./profiles";
 import { generateCeoBriefing, generateEndOfDayReports, generateMorningPlans } from "./reports";
 import { pumpWorkforce } from "./scheduler";
 import { executeRequest } from "@/lib/ai/router";
 
-const agentSlug = z.string().refine((s) => AGENTS.some((a) => a.slug === s), "Choose an AI employee");
+const agentSlug = z.string().refine((s) => ALL_AGENTS.some((a) => a.slug === s), "Choose an AI employee");
 
 function assertCanDirect(user: SessionUser, slug: string) {
   const spec = agentBySlug(slug);
@@ -118,6 +119,9 @@ export async function taskControlAction(id: string, op: "pause" | "resume" | "ca
       // Actions the task queued must not run after the task was cancelled.
       await db.aIApproval.updateMany({ where: { taskId: id, status: "PENDING" }, data: { status: "EXPIRED", decisionNote: `Task cancelled by ${who}` } });
       summary = `Task cancelled by ${who}: ${t.title}`;
+      // AI company: the delegating manager is told and resumes; dependents that can no longer run are failed.
+      const resume = await settleTask(id);
+      if (resume) kickTask(resume);
     }
     await logEmployeeActivity({ agentSlug: t.agentSlug, taskId: id, type: `task.${op === "retry" ? "retried" : op === "pause" ? "paused" : op === "resume" ? "resumed" : "cancelled"}`, summary, actorId: user.id });
     await audit({ userId: user.id, action: `ai.task.${op}`, entity: "AITask", entityId: id });

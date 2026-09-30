@@ -37,7 +37,7 @@ export function ProgressBar({ value, tone = "blue", className }: { value: number
   );
 }
 
-export const taskTone = (status: string) => (status === "DONE" ? "green" : status === "FAILED" ? "red" : status === "AWAITING_APPROVAL" || status === "PAUSED" ? "amber" : status === "CANCELLED" ? "gray" : "blue");
+export const taskTone = (status: string) => (status === "DONE" ? "green" : status === "FAILED" ? "red" : status === "AWAITING_APPROVAL" || status === "PAUSED" || status === "WAITING" ? "amber" : status === "CANCELLED" ? "gray" : "blue");
 
 export function GoalBar({ g }: { g: GoalProgress }) {
   return (

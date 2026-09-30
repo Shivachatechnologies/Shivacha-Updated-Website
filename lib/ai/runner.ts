@@ -6,6 +6,8 @@ import { can, ROLE_LABELS, type Permission } from "@/lib/auth/permissions";
 import type { SessionUser } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { isEnabled } from "@/lib/os/flags";
+import { hydrateVault } from "@/lib/integrations/vault";
+import { getCompanyProfile } from "@/lib/company/profile";
 import { notify } from "@/lib/os/notify";
 import { AGENTS, agentBySlug } from "./catalog";
 import { canRunAgent, getAgentConfig, type AgentConfig, type AIModeName } from "./agents";
@@ -183,6 +185,7 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
   const base = (agent: string, error: string, status: RunOutput["status"] = "BLOCKED"): RunOutput => ({ executionId: null, agent, status, text: error, provider: "none", drafts: [], actions: [], toolsUsed: [], conversationId: input.conversationId ?? null, error });
 
   if (!(await isEnabled("AI_WORKFORCE"))) return base(input.agentSlug ?? "-", "The AI workforce module is switched off.");
+  await hydrateVault();
   if (!isSystem(user) && !can(user.role, "ai:execute")) return base(input.agentSlug ?? "-", "You do not have permission to run AI agents.");
 
   const routed = input.agentSlug ? { slug: input.agentSlug, request: input.request } : routeRequest(input.request, user, context);
@@ -196,7 +199,10 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
   if (halted) return base(cfg.spec.slug, `AI is stopped by a kill switch: ${halted}`);
 
   // System (automation/scheduled) runs never act autonomously.
-  const mode: AIModeName = isSystem(user) && cfg.mode === "AUTONOMOUS" ? "ASSIST" : cfg.mode;
+  // AI company governance: strict approval mode sends every change through the Approval Center (no autonomous or
+  // instant actions), whatever an employee's own mode says.
+  const strict = (await getCompanyProfile().catch(() => null))?.strictApprovals === true;
+  const mode: AIModeName = (isSystem(user) || strict) && cfg.mode === "AUTONOMOUS" ? "ASSIST" : cfg.mode;
   const provider = input.provider !== undefined ? input.provider : getProvider();
   const limits = aiLimits();
   const model = cfg.model || process.env.AI_MODEL || DEFAULT_MODEL;
@@ -274,7 +280,7 @@ export async function runAgent(input: RunInput): Promise<RunOutput> {
       const autonomous = mode === "AUTONOMOUS" && !isSystem(user) && tool.risk === "LOW" && !tool.alwaysApprove && cfg.tools.get(name) === true && !cfg.approvalActions.includes(name);
       // The person asked for this exact change and holds every permission it needs (checked above), so a simple internal
       // change runs now, as if they did it themselves. Customer contact, HIGH/CRITICAL risk and admin-listed tools still go to approval.
-      const instant = !autonomous && input.route?.cls === "INSTANT_ACTION" && !isSystem(user) && !input.task && (tool.risk === "LOW" || tool.risk === "MEDIUM") && !tool.alwaysApprove && !cfg.approvalActions.includes(name);
+      const instant = !autonomous && !strict && input.route?.cls === "INSTANT_ACTION" && !isSystem(user) && !input.task && (tool.risk === "LOW" || tool.risk === "MEDIUM") && !tool.alwaysApprove && !cfg.approvalActions.includes(name);
       if (autonomous || instant) {
         const r = await tool.run(ctx, parsed.data);
         r.records?.forEach((x) => records.add(x));

@@ -3,6 +3,7 @@
  * AI employees; these defaults give each one a job title, department, reporting line, responsibilities and starter
  * goals. Everything here can be changed per employee in the profile's Settings and Goals tabs.
  */
+import { DEPARTMENTS, orgEmployee } from "@/lib/company/org";
 
 export const EMPLOYEE_STATUSES = ["ONLINE", "WORKING", "WAITING", "AWAITING_APPROVAL", "OFFLINE", "ERROR"] as const;
 export type EmployeeStatus = (typeof EMPLOYEE_STATUSES)[number];
@@ -10,10 +11,10 @@ export type EmployeeStatus = (typeof EMPLOYEE_STATUSES)[number];
 export const TASK_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 
-export const TASK_KINDS = { TASK: "Assigned task", INSTRUCTION: "CEO instruction", RECURRING: "Recurring responsibility" } as const;
+export const TASK_KINDS = { TASK: "Assigned task", INSTRUCTION: "CEO instruction", RECURRING: "Recurring responsibility", OBJECTIVE: "Company objective" } as const;
 
 /** Tasks still on an employee's desk. */
-export const OPEN_TASK_STATUSES = ["QUEUED", "RUNNING", "PAUSED", "AWAITING_APPROVAL"] as const;
+export const OPEN_TASK_STATUSES = ["QUEUED", "RUNNING", "PAUSED", "AWAITING_APPROVAL", "WAITING"] as const;
 
 export interface GoalDefault {
   label: string;
@@ -47,7 +48,14 @@ export const EMPLOYEE_PROFILES: Record<string, EmployeeProfile> = {
   knowledge: { jobTitle: "AI Knowledge Manager", department: "Operations", reportsTo: "ceo", responsibilities: ["Knowledge answers with citations", "Policy & playbook lookups"], goals: [done(5)] },
 };
 
-export const profileFor = (slug: string): EmployeeProfile => EMPLOYEE_PROFILES[slug] ?? { jobTitle: "AI Employee", department: "Operations", reportsTo: "ceo", responsibilities: [], goals: [] };
+/** Profiles for the AI company organisation (lib/company/org.ts): title, department, manager and a weekly starter goal. */
+function orgProfile(slug: string): EmployeeProfile | null {
+  const o = orgEmployee(slug);
+  if (!o) return null;
+  return { jobTitle: o.jobTitle, department: DEPARTMENTS.find((d) => d.key === o.department)?.name ?? "Operations", reportsTo: o.manager, responsibilities: o.capabilities, goals: [done(3, "WEEKLY")] };
+}
+
+export const profileFor = (slug: string): EmployeeProfile => EMPLOYEE_PROFILES[slug] ?? orgProfile(slug) ?? { jobTitle: "AI Employee", department: "Operations", reportsTo: "ceo", responsibilities: [], goals: [] };
 
 /** Human-language permission names for each tool, shown on the Permissions tab. */
 export const TOOL_PERMISSION_LABELS: Record<string, string> = {
@@ -88,6 +96,14 @@ export const TOOL_PERMISSION_LABELS: Record<string, string> = {
   sendEmail: "Send external email",
   createProposalDraft: "Create proposal drafts",
   updateTicket: "Update support tickets",
+  getOrgChart: "Read the AI organisation",
+  getObjectiveStatus: "Read company objectives",
+  getRegionalPerformance: "Read regional performance",
+  getWorkforcePerformance: "Read AI workforce performance",
+  getLeadGenFunnel: "Read the lead generation funnel",
+  runLeadPipeline: "Run lead generation (uses provider credits)",
+  recordMarketFinding: "Record market research findings",
+  completeMarketResearch: "Save market research to the Knowledge Base (draft)",
 };
 
 export const permissionLabel = (tool: string) => TOOL_PERMISSION_LABELS[tool] ?? tool;

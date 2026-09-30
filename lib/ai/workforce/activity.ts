@@ -7,10 +7,10 @@ import type { Prisma } from "@/lib/generated/prisma/client";
  * (task assigned/started/finished, a tool returned, an approval was requested or decided, a report was produced),
  * so the timeline is a record of what actually happened, never a narrative.
  */
-export async function logEmployeeActivity(e: { agentSlug: string; type: string; summary: string; taskId?: string | null; data?: Record<string, unknown>; actorId?: string | null }) {
+export async function logEmployeeActivity(e: { agentSlug: string; type: string; summary: string; taskId?: string | null; data?: Record<string, unknown>; actorId?: string | null; objectiveId?: string | null }) {
   const now = new Date();
   await db.$transaction([
-    db.aIActivity.create({ data: { agentSlug: e.agentSlug, type: e.type, summary: e.summary.slice(0, 500), taskId: e.taskId ?? null, actorId: e.actorId ?? null, data: e.data ? (JSON.parse(JSON.stringify(e.data)) as Prisma.InputJsonValue) : undefined, createdAt: now } }),
+    db.aIActivity.create({ data: { agentSlug: e.agentSlug, type: e.type, summary: e.summary.slice(0, 500), taskId: e.taskId ?? null, actorId: e.actorId ?? null, objectiveId: e.objectiveId ?? null, data: e.data ? (JSON.parse(JSON.stringify(e.data)) as Prisma.InputJsonValue) : undefined, createdAt: now } }),
     db.aIAgent.updateMany({ where: { slug: e.agentSlug }, data: { lastActivityAt: now } }),
   ]).catch((err) => console.error("[workforce] activity not recorded", (err as Error).message));
 }

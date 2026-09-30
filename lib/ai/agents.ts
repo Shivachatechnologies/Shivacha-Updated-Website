@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "@/lib/db/client";
 import { can, type Permission, type RoleName } from "@/lib/auth/permissions";
-import { AGENTS, agentBySlug, type AgentSpec } from "./catalog";
+import { ALL_AGENTS, agentBySlug, type AgentSpec } from "./catalog";
 import { getTool } from "./tools";
 
 export type AIModeName = "OBSERVE" | "ASSIST" | "AUTONOMOUS";
@@ -10,7 +10,7 @@ export type AIModeName = "OBSERVE" | "ASSIST" | "AUTONOMOUS";
 export async function ensureAgents() {
   const existing = await db.aIAgent.findMany({ select: { slug: true, id: true, tools: { select: { tool: true } } } });
   const bySlug = new Map(existing.map((a) => [a.slug, a]));
-  for (const spec of AGENTS) {
+  for (const spec of ALL_AGENTS) {
     let row = bySlug.get(spec.slug);
     if (!row) {
       const created = await db.aIAgent.upsert({ where: { slug: spec.slug }, update: {}, create: { slug: spec.slug, name: spec.name, description: spec.description, mode: "ASSIST" }, select: { id: true, slug: true } });
@@ -61,5 +61,5 @@ export async function getAgentConfig(slug: string): Promise<AgentConfig | null> 
 }
 
 export const canRunAgent = (role: RoleName, spec: AgentSpec) => can(role, "ai:execute") && can(role, spec.requires);
-export const runnableAgents = (role: RoleName) => AGENTS.filter((a) => canRunAgent(role, a));
+export const runnableAgents = (role: RoleName) => ALL_AGENTS.filter((a) => canRunAgent(role, a));
 export const agentPermission = (slug: string): Permission => agentBySlug(slug)?.requires ?? "ai:configure";

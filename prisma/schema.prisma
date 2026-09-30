@@ -993,6 +993,8 @@ enum AITaskStatus {
   CANCELLED
   PAUSED
   AWAITING_APPROVAL
+  /// Waiting on delegated work (or a dependency) before it continues.
+  WAITING
 }
 
 enum RecommendationStatus {
@@ -1963,6 +1965,10 @@ model Campaign {
   /// Configurable daily qualified-lead target. A target, never a guarantee.
   dailyLeadTarget Int?
   cta             String?
+  /// Lead generation campaign config: { sources, titles, countries, domains, industries, totalTarget, mode, lastRun }.
+  leadGen         Json?
+  /// AIRegion.key the campaign targets.
+  regionKey       String?
   socialPosts     SocialPost[]
   sequences       EmailSequence[]
   touches         GrowthTouch[]
@@ -2148,9 +2154,17 @@ model Prospect {
   notes       String?  @db.Text
   provenance  Json?
   leadId      String?
+  // Lead generation pipeline (additive, all optional)
+  campaignId   String?
+  /// VALID | INVALID | RISKY | UNKNOWN (from the verification provider; null = not verified)
+  verification String?
+  verifiedAt   DateTime?
+  /// Real website engagement of the prospect's company (visitor intelligence); null = no data.
+  intentScore  Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([campaignId, status])
   @@unique([source, email])
   @@index([status, createdAt])
   @@index([domain])
@@ -2374,6 +2388,18 @@ model AIAgent {
   /// false = clocked out: the employee takes no new work until switched back on.
   available        Boolean       @default(true)
   lastActivityAt   DateTime?
+  // AI company organisation (additive, all optional)
+  /// Stable employee ID shown in the org chart (e.g. AI-0007).
+  employeeCode       String?  @unique
+  /// CHIEF_OF_STAFF | EXECUTIVE | DIRECTOR | MANAGER | SPECIALIST
+  level              String?
+  /// AIDepartment.key
+  departmentKey      String?
+  /// AIRegion.key for regional leaders and regional specialists.
+  regionKey          String?
+  skills             String[] @default([])
+  /// Most tasks this employee works on at once (null = platform default of 1).
+  maxConcurrentTasks Int?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   tools           AIAgentTool[]
@@ -2520,9 +2546,27 @@ model AITask {
   attempts        Int          @default(0)
   automationId    String?
   reassignedFrom  String?
+  // AI company delegation (additive, all optional)
+  /// Company objective this task serves.
+  objectiveId     String?
+  /// Task of the manager who delegated this one.
+  parentTaskId    String?
+  delegatedBySlug String?
+  /// Task ids that must be DONE before this task may start.
+  dependsOn       String[]     @default([])
+  /// Deduplicates delegation: the same manager task cannot create the same work twice.
+  idempotencyKey  String?      @unique
+  /// PENDING_REVIEW | ACCEPTED | REVISION_REQUESTED (manager review of delegated work)
+  reviewStatus    String?
+  reviewNote      String?      @db.Text
+  revisions       Int          @default(0)
+  blockedReason   String?
+  escalatedAt     DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
+  @@index([objectiveId, status])
+  @@index([parentTaskId])
   @@index([status, runAfter])
   @@index([agentSlug, createdAt])
   @@index([agentSlug, status])
@@ -2649,8 +2693,11 @@ model AIActivity {
   data      Json?
   /// Person who caused the event (assigning, approving …); null for the employee's own work.
   actorId   String?
+  /// Company objective the event belongs to (AI company timeline).
+  objectiveId String?
   createdAt DateTime @default(now())
 
+  @@index([objectiveId, createdAt])
   @@index([agentSlug, createdAt])
   @@index([taskId, createdAt])
   @@index([type, createdAt])
@@ -2688,9 +2735,14 @@ model AIEmployeeMemory {
   taskId      String?
   createdById String?
   expiresAt   DateTime?
+  /// EMPLOYEE (default) | COMPANY | DEPARTMENT | REGION | CLIENT | PROJECT | CAMPAIGN
+  scope       String    @default("EMPLOYEE")
+  /// Department key, region key or record id for scoped memory.
+  scopeKey    String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  @@index([scope, scopeKey])
   @@index([agentSlug, kind, createdAt])
   @@index([shared, kind])
 }
@@ -3420,4 +3472,128 @@ model AIEmployeeVoiceProfile {
   rate      Decimal  @default(1) @db.Decimal(3, 2)
   style     String?
   updatedAt DateTime @updatedAt
+}
+
+// ═════════════════════════ AI COMPANY (additive) ═════════════════════════
+// Organisation, objectives and AI-to-AI work on top of the existing AI workforce (AIAgent / AITask).
+
+/// AI company department. Departments group AI employees; they never replace the human Department model.
+model AIDepartment {
+  key              String   @id
+  name             String
+  parentKey        String?
+  /// AI employee who heads the department.
+  headSlug         String?
+  description      String?
+  active           Boolean  @default(true)
+  sort             Int      @default(0)
+  /// USD per calendar month across the department's AI employees (null = no department limit).
+  monthlyCostLimit Decimal? @db.Decimal(12, 4)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+/// Operating region (North America, UK/Europe, MENA, Asia, India). Same application, regional context.
+model AIRegion {
+  key        String   @id
+  name       String
+  leaderSlug String?
+  countries  String[] @default([])
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+/// A goal the CEO gives the company. It is decomposed into AITask rows across the org chart.
+model AIObjective {
+  id           String    @id @default(cuid())
+  title        String
+  statement    String    @db.Text
+  /// PLANNING | ACTIVE | BLOCKED | COMPLETED | CANCELLED
+  status       String    @default("PLANNING")
+  /// LEAD_GENERATION | MARKET_ENTRY | REVENUE | PIPELINE | DELIVERY | PRODUCT_LAUNCH | GENERAL
+  playbook     String    @default("GENERAL")
+  ownerSlug    String    @default("ceo")
+  departmentKey String?
+  regionKey    String?
+  /// Measurable target, e.g. qualified_leads_per_day = 100. A target, never a guarantee.
+  targetMetric String?
+  targetValue  Float?
+  dueAt        DateTime?
+  /// Plan stages: [{ key, title, ownerSlug, taskId? }]
+  plan         Json?
+  rootTaskId   String?
+  campaignId   String?
+  blockedReason String?
+  result       String?   @db.Text
+  createdById  String?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status, createdAt])
+}
+
+/// AI-to-AI (and AI-to-human) work communication: delegation, handoff, help, escalation, blockers, reviews.
+model AIWorkMessage {
+  id          String    @id @default(cuid())
+  objectiveId String?
+  taskId      String?
+  fromSlug    String
+  /// AI employee recipient (null when addressed to a person).
+  toSlug      String?
+  toUserId    String?
+  /// DELEGATION | HANDOFF | HELP_REQUEST | ESCALATION | BLOCKER | RESULT | REVIEW | REVISION_REQUEST
+  kind        String
+  subject     String
+  body        String    @db.Text
+  /// OPEN | RESOLVED
+  status      String    @default("OPEN")
+  data        Json?
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([toSlug, status])
+  @@index([objectiveId, createdAt])
+  @@index([taskId])
+  @@index([kind, status])
+}
+
+/// Market research request and its sourced findings (Market Intelligence department).
+model MarketResearch {
+  id                 String    @id @default(cuid())
+  title              String
+  /// { country, region, industry, companySize, revenue, buyerRole, technology, product, service, competitors, market }
+  params             Json
+  /// QUEUED | RUNNING | COMPLETED | BLOCKED | FAILED
+  status             String    @default("QUEUED")
+  taskId             String?
+  objectiveId        String?
+  /// [{ section, statement, label: FACT|SOURCE|INFERENCE|RECOMMENDATION, sourceUrl?, sourceTitle? }]
+  findings           Json?
+  summary            String?   @db.Text
+  knowledgeArticleId String?
+  blockedReason      String?
+  createdById        String?
+  completedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([status, createdAt])
+}
+
+/// Provider credential entered in the API & Integrations Center. AES-256-GCM encrypted with APP_ENCRYPTION_KEY;
+/// never logged, never sent to the browser (only `hint`). Environment variables always take precedence.
+model IntegrationSecret {
+  /// Credential name, e.g. HUNTER_API_KEY.
+  name           String   @id
+  provider       String
+  valueEncrypted String   @db.Text
+  /// Last four characters for display.
+  hint           String
+  updatedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([provider])
 }

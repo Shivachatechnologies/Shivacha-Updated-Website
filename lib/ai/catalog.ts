@@ -1,4 +1,5 @@
 import type { Permission } from "@/lib/auth/permissions";
+import { ORG_EMPLOYEES } from "@/lib/company/org";
 
 /**
  * The AI Workforce: specialised agents. Each agent may only use its listed tools, and only the tools the requesting
@@ -13,6 +14,8 @@ export interface AgentSpec {
   requires: Permission;
   tools: string[];
   capabilities: string[];
+  /** What this employee cannot do (shown on its profile so nobody assumes more). */
+  limits?: string[];
 }
 
 export const AGENTS: AgentSpec[] = [
@@ -30,4 +33,7 @@ export const AGENTS: AgentSpec[] = [
   { slug: "knowledge", name: "AI Knowledge Agent", description: "Answers from the internal Knowledge Base, respecting article visibility and the user's permissions.", requires: "knowledge:view", tools: ["searchKnowledge"], capabilities: ["Knowledge answers with citations", "Respects visibility"] },
 ];
 
-export const agentBySlug = (slug: string) => AGENTS.find((a) => a.slug === slug);
+/** The whole AI company: the 12 core employees above plus the organisation added by lib/company/org.ts. */
+export const ALL_AGENTS: AgentSpec[] = [...AGENTS, ...ORG_EMPLOYEES.map(({ slug, name, description, requires, tools, capabilities, limits }): AgentSpec => ({ slug, name, description, requires, tools, capabilities, limits }))];
+
+export const agentBySlug = (slug: string) => ALL_AGENTS.find((a) => a.slug === slug);

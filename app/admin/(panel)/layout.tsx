@@ -10,13 +10,14 @@ import { hasDatabase } from "@/lib/db/client";
 import { getFlags } from "@/lib/os/flags";
 import { voiceConsoleOptions } from "@/lib/voice/options";
 import { TalkButton } from "@/components/admin/voice/talk-button";
+import { hydrateVault } from "@/lib/integrations/vault";
 
 export const dynamic = "force-dynamic";
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   if (!hasDatabase()) return <DatabaseMissing />;
   const user = await requireUser();
-  const flags = await getFlags();
+  const [flags] = await Promise.all([getFlags(), hydrateVault()]);
   const ai = flags.AI_WORKFORCE && can(user.role, "ai:view");
   const talk = flags.AI_WORKFORCE && can(user.role, "voice:use") && can(user.role, "ai:execute");
   const [status, jar, voice] = await Promise.all([shellStatus(user.id, { ai }), cookies(), talk ? voiceConsoleOptions(user.role).catch(() => null) : null]);

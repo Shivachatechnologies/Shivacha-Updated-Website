@@ -8,7 +8,7 @@ import { audit } from "@/lib/audit";
 import { authorizeAccess } from "@/lib/os/guard";
 import { fail, formObject, okThen, optText, optUrl, reqText, UserError, type ActionState } from "@/lib/os/action";
 import { can } from "@/lib/auth/permissions";
-import { AGENTS } from "@/lib/ai/catalog";
+import { ALL_AGENTS } from "@/lib/ai/catalog";
 import { growthSettingsSchema, isHumanActor, ACTIVE_KILL_KEYS, IMPLEMENTED_CHANNELS, KILL_KEYS, CHANNEL_KEYS, BUDGET_KEYS, BUDGET_KINDS, SOCIAL_PLATFORMS, type KillSwitch } from "./policy";
 import { getGrowthSettings, GROWTH_SETTING } from "./settings";
 import { contentQa, excerptFor, repurposePlan, ASSET_KINDS, POST_FORMATS } from "./content";
@@ -18,6 +18,7 @@ import { enroll, handleReply, parseSteps, processDueEmails, suppress, SUPPRESSIO
 import { publishPost } from "./social";
 import { qualifyLeadById, qualifyPending, upsertGrowthLead } from "./engine";
 import { leadProviders } from "./providers";
+import { hydrateVault } from "@/lib/integrations/vault";
 import { runGrowthLoop } from "./loop";
 import { siteConfig } from "@/data/siteConfig";
 
@@ -39,7 +40,7 @@ export async function saveGrowthControlAction(_: ActionState, form: FormData): P
       channels: Object.fromEntries(CHANNEL_KEYS.map((k) => [k, IMPLEMENTED_CHANNELS.includes(k) ? form.get(`ch_${k}`) : false])),
       // Kill switches change only through their own buttons, so a stale form can never resume a stop.
       stops: before.stops,
-      stoppedAgents: form.getAll("stoppedAgents").map(String).filter((s) => AGENTS.some((a) => a.slug === s)),
+      stoppedAgents: form.getAll("stoppedAgents").map(String).filter((s) => ALL_AGENTS.some((a) => a.slug === s)),
       stoppedPlatforms: form.getAll("stoppedPlatforms").map(String),
       // Only enforced budgets are editable; the others keep their stored value (they control nothing yet).
       budgets: Object.fromEntries(BUDGET_KEYS.map((k) => [k, BUDGET_KINDS[k].enforced ? f[`budget_${k}`] : before.budgets[k]])),
@@ -200,6 +201,7 @@ export async function reviewPostAction(postId: string, decision: "approve" | "re
 
 export async function publishNowAction(postId: string): Promise<ActionState> {
   try {
+    await hydrateVault();
     const user = await authorizeAccess("growth:manage", F);
     const r = await publishPost(postId, { autonomous: false });
     await audit({ userId: user.id, action: r.ok ? "growth.post.published" : "growth.post.publish_failed", entity: "SocialPost", entityId: postId, metadata: { message: r.message } });
@@ -309,6 +311,7 @@ export async function addProspectAction(_: ActionState, form: FormData): Promise
 /** Pulls business contacts from a connected, legitimate B2B data provider. Never scrapes. */
 export async function importProspectsAction(_: ActionState, form: FormData): Promise<ActionState> {
   try {
+    await hydrateVault();
     const user = await authorizeAccess("growth:manage", F);
     const provider = String(form.get("provider") ?? "");
     const domain = String(form.get("domain") ?? "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
@@ -458,6 +461,7 @@ export async function suppressAction(_: ActionState, form: FormData): Promise<Ac
 
 export async function sendDueEmailsAction(): Promise<ActionState> {
   try {
+    await hydrateVault();
     const user = await authorizeAccess("growth:manage", F);
     const r = await processDueEmails({ autonomous: false, limit: 100 });
     await audit({ userId: user.id, action: "growth.email.run", metadata: { ...r } });

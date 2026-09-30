@@ -12,6 +12,9 @@ import { runAgent, SYSTEM_USER, type EntityRef, type VirtualTool } from "@/lib/a
 import { logEmployeeActivity, toolSummary } from "./activity";
 import { memoryPrompt, saveMemory } from "./memory";
 import { parseSubtasks, progressOf, TASK_KINDS, type Subtask } from "./profiles";
+import { companyTools, dependencyState, isTransientError, MAX_ATTEMPTS, openChildren, resolveMessages, retryDelayMs, settleTask, teamBrief } from "@/lib/company/delegation";
+import { refreshObjective } from "@/lib/company/objective-status";
+import { hydrateVault } from "@/lib/integrations/vault";
 
 const ENTITIES = ["Lead", "Deal", "Project", "Invoice", "Ticket", "Client"] as const;
 const json = (v: unknown) => JSON.parse(JSON.stringify(v ?? null)) as Prisma.InputJsonValue;
@@ -30,6 +33,14 @@ export interface NewTask {
   runAfter?: Date;
   entity?: string | null;
   entityId?: string | null;
+  /** AI company: objective, delegating manager task, prerequisites and a dedupe key (all optional). */
+  objectiveId?: string | null;
+  parentTaskId?: string | null;
+  delegatedBySlug?: string | null;
+  dependsOn?: string[];
+  idempotencyKey?: string | null;
+  /** Create without starting (e.g. a manager task that first waits for its team). */
+  status?: "QUEUED" | "WAITING";
 }
 
 /** Assigns work to an AI employee: creates the task, records it on the timeline and starts it when it is due. */
@@ -38,6 +49,10 @@ export const taskTokenLimit = () => (Number(process.env.MAX_TASK_TOKENS) > 0 ? N
 
 export async function createEmployeeTask(t: NewTask) {
   const runAfter = t.runAfter ?? new Date();
+  if (t.idempotencyKey) {
+    const existing = await db.aITask.findUnique({ where: { idempotencyKey: t.idempotencyKey } });
+    if (existing) return existing;
+  }
   const task = await db.aITask.create({
     data: {
       agentSlug: t.agentSlug,
@@ -53,11 +68,18 @@ export async function createEmployeeTask(t: NewTask) {
       runAfter,
       entity: t.entity ?? null,
       entityId: t.entityId ?? null,
+      objectiveId: t.objectiveId ?? null,
+      parentTaskId: t.parentTaskId ?? null,
+      delegatedBySlug: t.delegatedBySlug ?? null,
+      dependsOn: t.dependsOn ?? [],
+      idempotencyKey: t.idempotencyKey ?? null,
+      status: t.status ?? "QUEUED",
+      currentStep: t.status === "WAITING" ? "Waiting on delegated work" : null,
     },
   });
   const by = t.requestedById ? (await db.user.findUnique({ where: { id: t.requestedById }, select: { name: true } }))?.name : null;
-  await logEmployeeActivity({ agentSlug: t.agentSlug, taskId: task.id, type: "task.assigned", summary: `${t.kind === "INSTRUCTION" ? "Instruction received" : t.kind === "RECURRING" ? "Recurring responsibility started" : "Task assigned"}${by ? ` by ${by}` : ""}: ${task.title}`, actorId: t.requestedById ?? null, data: { priority: task.priority, deadline: task.deadline } });
-  if (runAfter <= new Date()) kickTask(task.id);
+  await logEmployeeActivity({ agentSlug: t.agentSlug, taskId: task.id, objectiveId: task.objectiveId, type: "task.assigned", summary: `${t.kind === "INSTRUCTION" ? "Instruction received" : t.kind === "RECURRING" ? "Recurring responsibility started" : t.kind === "OBJECTIVE" ? "Company objective received" : t.delegatedBySlug ? `Delegated by ${agentBySlug(t.delegatedBySlug)?.name ?? t.delegatedBySlug}` : "Task assigned"}${by && !t.delegatedBySlug ? ` by ${by}` : ""}: ${task.title}`, actorId: t.requestedById ?? null, data: { priority: task.priority, deadline: task.deadline, parentTaskId: task.parentTaskId } });
+  if (task.status === "QUEUED" && runAfter <= new Date() && !task.dependsOn.length) kickTask(task.id);
   return task;
 }
 
@@ -115,21 +137,44 @@ function brief(task: { title: string; instructions: string | null; priority: str
  * Executes one AI employee task: claims it, plans, runs the employee's tool loop under the assigner's permissions with
  * live progress, routes risky actions to the Human Approval Center, and records the result, memory and timeline.
  */
-export async function executeTask(id: string, opts: { provider?: AIProvider | null } = {}): Promise<"DONE" | "FAILED" | "AWAITING_APPROVAL" | "STOPPED" | "SKIPPED"> {
+export async function executeTask(id: string, opts: { provider?: AIProvider | null } = {}): Promise<"DONE" | "FAILED" | "AWAITING_APPROVAL" | "WAITING" | "STOPPED" | "SKIPPED"> {
   const t = await db.aITask.findUnique({ where: { id } });
   if (!t || t.status !== "QUEUED" || t.runAfter > new Date()) return "SKIPPED";
+  await hydrateVault();
   const employee = await db.aIAgent.findUnique({ where: { slug: t.agentSlug }, select: { enabled: true, available: true } });
   if (employee && (!employee.enabled || !employee.available)) return "SKIPPED";
+  // AI company: a task starts only after its prerequisites are DONE; one that can never start fails with the reason.
+  const deps = await dependencyState(t.dependsOn);
+  if (deps === "wait") return "SKIPPED";
+  if (typeof deps === "object") {
+    const r = await db.aITask.updateMany({ where: { id, status: "QUEUED" }, data: { status: "FAILED", error: `Dependency "${deps.failed}" did not complete.`, completedAt: new Date() } });
+    if (r.count) await afterSettle(id);
+    return r.count ? "FAILED" : "SKIPPED";
+  }
+  // Objective work waits (stays queued) for the AI provider instead of failing; the objective shows it as BLOCKED.
+  if (t.objectiveId && (opts.provider !== undefined ? opts.provider : getProvider()) === null) {
+    await refreshObjective(t.objectiveId);
+    return "SKIPPED";
+  }
   const claimed = await db.aITask.updateMany({ where: { id, status: "QUEUED" }, data: { status: "RUNNING", startedAt: t.startedAt ?? new Date(), attempts: { increment: 1 }, error: null, currentStep: t.currentStep ?? "Understanding the task" } });
   if (!claimed.count) return "SKIPPED";
   const slug = t.agentSlug;
   const name = agentBySlug(slug)?.name ?? slug;
-  await logEmployeeActivity({ agentSlug: slug, taskId: id, type: "task.started", summary: t.attempts ? `Resumed task: ${t.title}` : `Started task: ${t.title}` });
+  await logEmployeeActivity({ agentSlug: slug, taskId: id, objectiveId: t.objectiveId, type: "task.started", summary: t.attempts ? `Resumed task: ${t.title}` : `Started task: ${t.title}` });
 
   const fail = async (error: string) => {
+    // Transient provider problems (rate limit, overload, timeout) are retried later with backoff, a bounded number of times.
+    if (isTransientError(error) && t.attempts + 1 < MAX_ATTEMPTS) {
+      const retry = await db.aITask.updateMany({ where: { id, status: "RUNNING" }, data: { status: "QUEUED", runAfter: new Date(Date.now() + retryDelayMs(t.attempts + 1)), currentStep: "Waiting to retry after a temporary provider error", error: error.slice(0, 500) } });
+      if (retry.count) {
+        await logEmployeeActivity({ agentSlug: slug, taskId: id, objectiveId: t.objectiveId, type: "task.retry", summary: `Temporary error, will retry (attempt ${t.attempts + 2} of ${MAX_ATTEMPTS}): ${error.slice(0, 200)}` });
+        return "FAILED" as const;
+      }
+    }
     await db.aITask.updateMany({ where: { id, status: "RUNNING" }, data: { status: "FAILED", error: error.slice(0, 500), currentStep: null, completedAt: new Date() } });
-    await logEmployeeActivity({ agentSlug: slug, taskId: id, type: "task.failed", summary: `Task failed: ${error.slice(0, 300)}` });
+    await logEmployeeActivity({ agentSlug: slug, taskId: id, objectiveId: t.objectiveId, type: "task.failed", summary: `Task failed: ${error.slice(0, 300)}` });
     if (t.requestedById) await notify({ type: "ai.task", title: `${name} could not complete "${t.title}"`.slice(0, 200), body: error.slice(0, 300), href: taskHref(id), userIds: [t.requestedById] });
+    await afterSettle(id);
     return "FAILED" as const;
   };
 
@@ -201,6 +246,10 @@ export async function executeTask(id: string, opts: { provider?: AIProvider | nu
     },
   ];
 
+  // AI company: organisation, delegated work and inbox in the brief; delegation / review / escalation tools.
+  const team = await teamBrief(t);
+  tools.push(...companyTools(t, (x) => createEmployeeTask({ ...x, kind: "TASK" }), team.hasChildren));
+
   const recordsAffected = new Set<string>();
   const context: EntityRef | null = t.entity && t.entityId && (ENTITIES as readonly string[]).includes(t.entity) ? { entity: t.entity as EntityRef["entity"], id: t.entityId } : null;
   let r: Awaited<ReturnType<typeof runAgent>>;
@@ -214,7 +263,7 @@ export async function executeTask(id: string, opts: { provider?: AIProvider | nu
       provider,
       task: {
         taskId: id,
-        system: brief(t, user, subtasks, await memoryPrompt(slug)),
+        system: [brief(t, user, subtasks, await memoryPrompt(slug, 6000, { taskEntity: t.entity, taskEntityId: t.entityId })), team.text].filter(Boolean).join("\n\n"),
         tools,
         maxIterations: 24,
         requestTokens: taskTokenLimit(),
@@ -225,7 +274,7 @@ export async function executeTask(id: string, opts: { provider?: AIProvider | nu
         },
         onTool: async (e) => {
           if (e.action?.status === "EXECUTED") e.records?.forEach((x) => recordsAffected.add(x));
-          await logEmployeeActivity({ agentSlug: slug, taskId: id, type: e.action?.status === "EXECUTED" ? "action.executed" : e.action?.status === "PENDING_APPROVAL" ? "approval.requested" : e.ok ? "tool.used" : "tool.failed", summary: toolSummary(e.tool, e.ok, e), data: { tool: e.tool, ms: e.ms, records: e.records?.slice(0, 50), approvalId: e.action?.approvalId } });
+          await logEmployeeActivity({ agentSlug: slug, taskId: id, objectiveId: t.objectiveId, type: e.action?.status === "EXECUTED" ? "action.executed" : e.action?.status === "PENDING_APPROVAL" ? "approval.requested" : e.ok ? "tool.used" : "tool.failed", summary: toolSummary(e.tool, e.ok, e), data: { tool: e.tool, ms: e.ms, records: e.records?.slice(0, 50), approvalId: e.action?.approvalId } });
         },
       },
     });
@@ -239,7 +288,8 @@ export async function executeTask(id: string, opts: { provider?: AIProvider | nu
 
   if (r.status === "CANCELLED" || !current || current.status !== "RUNNING" || current.agentSlug !== slug) {
     await db.aITask.update({ where: { id }, data: { ...common, currentStep: current?.status === "PAUSED" ? "Paused" : null } });
-    await logEmployeeActivity({ agentSlug: slug, taskId: id, type: "task.stopped", summary: `Stopped working on "${t.title}" (${r.error ?? "stopped by a person"})` });
+    await logEmployeeActivity({ agentSlug: slug, taskId: id, objectiveId: t.objectiveId, type: "task.stopped", summary: `Stopped working on "${t.title}" (${r.error ?? "stopped by a person"})` });
+    await afterSettle(id);
     return "STOPPED";
   }
   if (r.status === "FAILED" || r.status === "BLOCKED") {
@@ -248,19 +298,39 @@ export async function executeTask(id: string, opts: { provider?: AIProvider | nu
     return fail(r.error ?? "The task could not be completed.");
   }
 
+  await resolveMessages(team.inboxIds);
   const pendingApprovals = await db.aIApproval.count({ where: { taskId: id, status: "PENDING" } });
   const doneText = (summary as { text: string; results: string[] } | null)?.text || r.text.split("\n").find((l) => l.trim())?.slice(0, 300) || "Task completed.";
   if (pendingApprovals) {
     await db.aITask.updateMany({ where: { id, status: "RUNNING" }, data: { ...common, status: "AWAITING_APPROVAL", currentStep: `Waiting for approval (${pendingApprovals})` } });
-    await logEmployeeActivity({ agentSlug: slug, taskId: id, type: "task.awaiting_approval", summary: `Finished its work on "${t.title}"; ${pendingApprovals} action${pendingApprovals === 1 ? "" : "s"} waiting for approval` });
+    await logEmployeeActivity({ agentSlug: slug, taskId: id, objectiveId: t.objectiveId, type: "task.awaiting_approval", summary: `Finished its work on "${t.title}"; ${pendingApprovals} action${pendingApprovals === 1 ? "" : "s"} waiting for approval` });
     if (t.requestedById) await notify({ type: "ai.task", title: `${name} needs your approval to finish "${t.title}"`.slice(0, 200), href: taskHref(id), userIds: [t.requestedById] });
     return "AWAITING_APPROVAL";
   }
+  // Delegated work still open: the manager's task waits and resumes (to review) when its team is finished.
+  const waitingOn = await openChildren(id);
+  if (waitingOn) {
+    await db.aITask.updateMany({ where: { id, status: "RUNNING" }, data: { ...common, status: "WAITING", currentStep: `Waiting on ${waitingOn} delegated task${waitingOn === 1 ? "" : "s"}` } });
+    await logEmployeeActivity({ agentSlug: slug, taskId: id, objectiveId: t.objectiveId, type: "task.waiting", summary: `Waiting on ${waitingOn} delegated task${waitingOn === 1 ? "" : "s"} for "${t.title}"` });
+    if (t.objectiveId) await refreshObjective(t.objectiveId);
+    return "WAITING";
+  }
+  await db.aITask.updateMany({ where: { parentTaskId: id, status: "DONE", reviewStatus: "PENDING_REVIEW" }, data: { reviewStatus: "ACCEPTED", reviewNote: "Accepted when the manager completed the task." } });
   await db.aITask.updateMany({ where: { id, status: "RUNNING" }, data: { ...common, status: "DONE", progress: 100, currentStep: null, completedAt: new Date() } });
-  await logEmployeeActivity({ agentSlug: slug, taskId: id, type: "task.completed", summary: `Task completed: ${t.title}${recordsAffected.size ? ` · ${recordsAffected.size} record${recordsAffected.size === 1 ? "" : "s"} changed` : ""}`, data: { summary: doneText, results: (summary as { results: string[] } | null)?.results ?? [] } });
+  await logEmployeeActivity({ agentSlug: slug, taskId: id, objectiveId: t.objectiveId, type: "task.completed", summary: `Task completed: ${t.title}${recordsAffected.size ? ` · ${recordsAffected.size} record${recordsAffected.size === 1 ? "" : "s"} changed` : ""}`, data: { summary: doneText, results: (summary as { results: string[] } | null)?.results ?? [] } });
   await saveMemory({ agentSlug: slug, kind: "TASK", title: t.title, content: doneText, taskId: id, expiresInDays: 180 });
   if (t.requestedById) await notify({ type: "ai.task", title: `${name} completed "${t.title}"`.slice(0, 200), body: doneText.slice(0, 300), href: taskHref(id), userIds: [t.requestedById] });
+  await afterSettle(id);
   return "DONE";
+}
+
+/** AI company hook after a task settles: report to the delegating manager, resume its task, refresh the objective. */
+async function afterSettle(id: string) {
+  const resume = await settleTask(id).catch((e) => {
+    console.error("[company] settle failed", id, (e as Error).message);
+    return null;
+  });
+  if (resume) kickTask(resume);
 }
 
 /** Called after a person decides an approval: closes the task once nothing is pending and records the decision. */
@@ -277,10 +347,13 @@ export async function onApprovalDecided(a: { id: string; taskId: string | null; 
     await db.aITask.updateMany({ where: { id: a.taskId, status: "AWAITING_APPROVAL" }, data: { currentStep: `Waiting for approval (${pending})` } });
     return;
   }
-  const closed = await db.aITask.updateMany({ where: { id: a.taskId, status: "AWAITING_APPROVAL" }, data: { status: "DONE", progress: 100, currentStep: null, completedAt: new Date() } });
-  if (closed.count) {
-    const t = await db.aITask.findUnique({ where: { id: a.taskId }, select: { title: true } });
-    await logEmployeeActivity({ agentSlug: a.agentSlug, taskId: a.taskId, type: "task.completed", summary: `Task completed after approvals: ${t?.title ?? ""}` });
+  // Approvals decided; delegated work still open → the task waits for its team instead of closing.
+  const waiting = await openChildren(a.taskId);
+  const closed = await db.aITask.updateMany({ where: { id: a.taskId, status: "AWAITING_APPROVAL" }, data: waiting ? { status: "WAITING", currentStep: `Waiting on ${waiting} delegated task${waiting === 1 ? "" : "s"}` } : { status: "DONE", progress: 100, currentStep: null, completedAt: new Date() } });
+  if (closed.count && !waiting) {
+    const t = await db.aITask.findUnique({ where: { id: a.taskId }, select: { title: true, objectiveId: true } });
+    await logEmployeeActivity({ agentSlug: a.agentSlug, taskId: a.taskId, objectiveId: t?.objectiveId, type: "task.completed", summary: `Task completed after approvals: ${t?.title ?? ""}` });
+    await afterSettle(a.taskId);
   }
 }
 
@@ -291,11 +364,26 @@ export async function processDueTasks(limit = 5): Promise<number> {
     const retry = s.attempts < 2;
     const r = await db.aITask.updateMany({ where: { id: s.id, status: "RUNNING" }, data: retry ? { status: "QUEUED", currentStep: "Resuming after an interruption" } : { status: "FAILED", error: "Execution was interrupted twice (time limit). Break the task into smaller tasks.", completedAt: new Date(), currentStep: null } });
     if (r.count) await logEmployeeActivity({ agentSlug: s.agentSlug, taskId: s.id, type: retry ? "task.requeued" : "task.failed", summary: retry ? `Execution of "${s.title}" was interrupted; it will resume` : `Task failed after two interruptions: ${s.title}` });
+    if (r.count && !retry) await afterSettle(s.id);
   }
-  const unavailable = (await db.aIAgent.findMany({ where: { OR: [{ enabled: false }, { available: false }] }, select: { slug: true } })).map((a) => a.slug);
-  const due = await db.aITask.findMany({ where: { status: "QUEUED", runAfter: { lte: new Date() }, agentSlug: { notIn: unavailable } }, orderBy: [{ createdAt: "asc" }], take: limit * 3, select: { id: true, priority: true } });
+  // Safety net: a manager task still WAITING although all of its delegated work is settled (e.g. a crash) resumes.
+  for (const w of await db.aITask.findMany({ where: { status: "WAITING", updatedAt: { lt: new Date(Date.now() - 5 * 60_000) } }, select: { id: true }, take: 20 })) {
+    if (!(await openChildren(w.id))) await db.aITask.updateMany({ where: { id: w.id, status: "WAITING" }, data: { status: "QUEUED", runAfter: new Date(), currentStep: "Reviewing delegated work", attempts: 0 } });
+  }
+  const agents = await db.aIAgent.findMany({ select: { slug: true, enabled: true, available: true, maxConcurrentTasks: true } });
+  const unavailable = agents.filter((a) => !a.enabled || !a.available).map((a) => a.slug);
+  const running = new Map((await db.aITask.groupBy({ by: ["agentSlug"], where: { status: "RUNNING" }, _count: { _all: true } })).map((r) => [r.agentSlug, r._count._all]));
+  const capacity = new Map(agents.map((a) => [a.slug, a.maxConcurrentTasks ?? 1]));
+  const due = await db.aITask.findMany({ where: { status: "QUEUED", runAfter: { lte: new Date() }, agentSlug: { notIn: unavailable } }, orderBy: [{ createdAt: "asc" }], take: limit * 6, select: { id: true, priority: true, agentSlug: true, dependsOn: true } });
   const rank: Record<string, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
   let n = 0;
-  for (const d of due.sort((a, b) => (rank[a.priority] ?? 2) - (rank[b.priority] ?? 2)).slice(0, limit)) if ((await executeTask(d.id)) !== "SKIPPED") n++;
+  for (const d of due.sort((a, b) => (rank[a.priority] ?? 2) - (rank[b.priority] ?? 2))) {
+    if (n >= limit) break;
+    // Employee workload: never more running tasks than the employee's capacity.
+    if ((running.get(d.agentSlug) ?? 0) >= (capacity.get(d.agentSlug) ?? 1)) continue;
+    if (d.dependsOn.length && (await dependencyState(d.dependsOn)) === "wait") continue;
+    const r = await executeTask(d.id);
+    if (r !== "SKIPPED") n++;
+  }
   return n;
 }

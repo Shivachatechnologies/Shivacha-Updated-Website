@@ -5,6 +5,7 @@ import { analyticsConnections } from "@/lib/marketing/attribution";
 import { webSearchEnabled } from "@/lib/ai/provider";
 import { openaiVoice } from "@/lib/voice/provider";
 import type { SocialPlatform } from "./policy";
+import { secretValue } from "@/lib/integrations/vault";
 
 /**
  * Growth provider abstraction. Every provider reports NOT_CONNECTED when its credentials are missing and never
@@ -32,7 +33,8 @@ export interface ProviderStatus {
   note?: string;
 }
 
-const env = (k: string) => (process.env[k] ?? "").trim();
+/** Environment first, then credentials connected in the API & Integrations Center (encrypted vault). */
+const env = (k: string) => secretValue(k);
 const set = (...keys: string[]) => keys.every((k) => env(k).length > 0);
 const notConnected = <T>(name: string, keys: string[]): ProviderResult<T> => ({ ok: false, code: "NOT_CONNECTED", error: `${name} is not connected (set ${keys.join(", ")}).` });
 const TIMEOUT = 15_000;

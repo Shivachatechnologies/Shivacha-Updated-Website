@@ -33,7 +33,9 @@
     "test:growth:db": "tsx --require ./tests/os/server-only-shim.cjs --test --test-concurrency=1 tests/os/growth-db.test.ts",
     "test:growth:safety": "tsx --require ./tests/os/server-only-shim.cjs --test --test-concurrency=1 tests/os/growth-safety.test.ts",
     "test:voice": "tsx --test tests/os/voice-mic.test.ts",
-    "test:unified:db": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/unified-db.test.ts"
+    "test:unified:db": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/unified-db.test.ts",
+    "test:company": "tsx --require ./tests/os/server-only-shim.cjs --test tests/os/company.test.ts",
+    "test:company:db": "tsx --require ./tests/os/server-only-shim.cjs --test --test-concurrency=1 tests/os/company-db.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

@@ -12,6 +12,7 @@ import { getGrowthSettings } from "./settings";
 import { qualifyPending, releaseBudget, releaseClaim, reserveBudget, takeClaim, utcDay } from "./engine";
 import { processDueEmails } from "./email";
 import { publishDue, syncSocialMetrics } from "./social";
+import { hydrateVault } from "@/lib/integrations/vault";
 
 export const GROWTH_TASK_SOURCE = "growth";
 /** Only one loop run at a time across all servers; a run that died is taken over after this long. */
@@ -86,6 +87,7 @@ const AI_WORK: { channel: GrowthChannel; agent: string; title: string; instructi
  * external provider call or AI task. With autonomous mode off nothing runs and no provider is contacted.
  */
 export async function runGrowthLoop(trigger: "SCHEDULE" | "MANUAL" = "SCHEDULE", actorId?: string | null): Promise<number> {
+  await hydrateVault();
   const s = await getGrowthSettings();
   const run = await db.growthRun.create({ data: { trigger, status: "RUNNING" } });
   const steps: Step[] = [];

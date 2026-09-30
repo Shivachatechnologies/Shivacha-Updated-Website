@@ -1,5 +1,6 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import { secretValue } from "@/lib/integrations/vault";
 
 /**
  * Provider abstraction for the AI Workforce. The rest of the platform only talks to `AIProvider`; the Anthropic
@@ -78,16 +79,21 @@ export function costOf(model: string, u: { input: number; output: number; cacheW
   return ((u.input + (u.cacheWrite ?? 0) * 1.25 + (u.cacheRead ?? 0) * 0.1) * i + u.output * o) / 1_000_000;
 }
 
-export const providerStatus = () => ({ name: "Anthropic Claude", connected: !!process.env.ANTHROPIC_API_KEY, env: ["ANTHROPIC_API_KEY", "AI_MODEL", "MAX_DAILY_AI_COST", "MAX_REQUEST_TOKENS", "AI_WEB_SEARCH"] });
+export const providerStatus = () => ({ name: "Anthropic Claude", connected: !!secretValue("ANTHROPIC_API_KEY"), env: ["ANTHROPIC_API_KEY", "AI_MODEL", "MAX_DAILY_AI_COST", "MAX_REQUEST_TOKENS", "AI_WEB_SEARCH"] });
 export const webSearchEnabled = () => providerStatus().connected && process.env.AI_WEB_SEARCH === "true";
 
 let client: Anthropic | null = null;
+let clientKey = "";
 
 class AnthropicProvider implements AIProvider {
   name = "anthropic";
 
   async run(input: AIRunInput): Promise<AIRunResult> {
-    client ??= new Anthropic({ maxRetries: 2, timeout: 120_000 });
+    const apiKey = secretValue("ANTHROPIC_API_KEY");
+    if (!client || clientKey !== apiKey) {
+      client = new Anthropic({ apiKey, maxRetries: 2, timeout: 120_000 });
+      clientKey = apiKey;
+    }
     const tools: Anthropic.Beta.Messages.BetaToolUnion[] = input.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema as Anthropic.Beta.Messages.BetaTool.InputSchema }));
     if (input.webSearch) tools.push({ type: "web_search_20260209", name: "web_search", max_uses: 5 });
     const messages: Anthropic.Beta.Messages.BetaMessageParam[] = [...input.history.map((h) => ({ role: h.role, content: h.content })), { role: "user", content: input.prompt }];
@@ -141,7 +147,7 @@ class AnthropicProvider implements AIProvider {
 }
 
 export function getProvider(): AIProvider | null {
-  return process.env.ANTHROPIC_API_KEY ? new AnthropicProvider() : null;
+  return secretValue("ANTHROPIC_API_KEY") ? new AnthropicProvider() : null;
 }
 
 /** Maps SDK errors to safe, human-readable messages (no request details or keys). */
